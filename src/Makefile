@@ -1,0 +1,86 @@
+CUDA_INSTALL_PATH=/usr/local/cuda
+CUDA_BIN=$(CUDA_INSTALL_PATH)/bin
+
+CC=g++
+NVCC=$(CUDA_BIN)/nvcc
+LINKER=$(CC)
+
+# Flags for producing optimized code
+CCFLAGS=-Wall -O3
+NVCCFLAGS=--use_fast_math -O3 -m64 -gencode=arch=compute_20,code=\"sm_20,compute_20\" -Xcompiler "-O3"
+
+# Verbose compile?
+#NVCCFLAGS+=--verbose
+
+# Profile code?
+#NVCCFLAGS+=-pg
+
+# Debugable code?
+#CCFLAGS+=-g
+#NVCCFLAGS+=-g -G
+
+DATE=`date +'%Y.%m.%d-%H:%M:%S'`
+	BACKUPNAME=sphere.$(DATE).tar.gz
+
+CCFILES=main.cpp file_io.cpp
+CUFILES=device.cu utility.cu
+CCOBJECTS=$(CCFILES:.cpp=.o)
+CUOBJECTS=$(CUFILES:.cu=.o)
+	OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
+
+# Detect OS
+OSUPPER=$(shell uname -s 2>/dev/null | tr [:lower:] [:upper:])
+	DARWIN=$(strip $(findstring DARWIN, $(OSUPPER)))
+	ARCHUPPER=$(shell uname -m 2>/dev/null | tr [:lower:] [:upper:])
+	ARCH:=$(strip $(findstring X86_64, $(ARCHUPPER)))
+
+ifneq ($(DARWIN),) 	# If OS X
+  #GL_LIBS+=-framework glut -framework OpenGL
+  SDKPATH=/Developer/GPU\ Computing/C/common
+  EXECUTABLE=../sphere_darwin_$(ARCH)
+  CCFLAGS+=-arch x86_64
+  LDFLAGS=-L$(SDKPATH)/lib/darwin
+else			# If Linux
+  CCFLAGS+=-DUNIX
+  #GL_LIBS+=-L/usr/X11/lib -lglut -lGL -lGLU
+  SDKPATH=$(HOME)/NVIDIA_GPU_Computing_SDK/C/common
+  EXECUTABLE=../sphere_linux_$(ARCH)
+  LDFLAGS=-L$(SDKPATH)/lib/linux -L$(CUDA_INSTALL_PATH)/lib64
+endif
+
+INCLUDES+=-I. -I$(SDKPATH)/shared/inc -I$(SDKPATH)/inc -I$(CUDA_INSTALL_PATH)/include
+LDFLAGS+=-L$(CUDA_INSTALL_PATH)/lib
+LDFLAGS+=-L$(SDKPATH)/../../shared/lib -L$(SDKPATH)/../lib 
+LDFLAGS+=-lcutil_x86_64 -lcuda -lcudart
+
+all: $(CCFILES) $(CUFILES) $(EXECUTABLE)
+
+$(EXECUTABLE): $(OBJECTS)
+	$(LINKER) $(OBJECTS) $(LDFLAGS) -o $@
+
+utility.o: utility.cu
+	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
+
+file_io.o: file_io.cpp
+	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
+
+device.o: device.cu
+	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
+
+main.o: main.cpp
+	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
+
+../sphere_status: sphere_status.cpp
+	$(CC) $(CCFLAGS) sphere_status.cpp -o ../sphere_status
+
+edit:
+	vim -p Makefile $(CCFILES) $(CUFILES) *.h *.cuh 
+
+backup:
+	tar cvfz ../../sphere_backup/$(BACKUPNAME) ../../sphere
+	cp -v ../../sphere_backup/sphere.*.tar.gz /Volumes/ice/adc/code/sphere_backup/
+
+clean:
+	$(RM) $(OBJECTS)
+	$(RM) $(EXECUTABLE)
+
