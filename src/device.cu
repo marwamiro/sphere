@@ -11,7 +11,7 @@
 #include "datatypes.cuh"
 #include "constants.cuh"
 
-#include "cuPrintf.cu"
+//#include "cuPrintf.cu"
 
 
 // Returns the cellID containing the particle, based cubic grid
@@ -763,8 +763,7 @@ __device__ void findContactsInCell(int3 targetCell,
 				   unsigned int* dev_cellEnd,
 				   unsigned int* dev_gridParticleIndex,
 				   int* nc,
-				   unsigned int* dev_contacts,
-				   float4* dev_x_ab_r_b)
+				   unsigned int* dev_contacts)
 {
   // Variable containing modifier for interparticle
   // vector, if it crosses a periodic boundary
@@ -890,15 +889,14 @@ __device__ void findContactsInCell(int3 targetCell,
 	  }
 
 	  __syncthreads();
-	  //cuPrintf("\nOverlap: idx_a = %u (orig=%u), idx_b = %u (orig=%u), cpos = %d\n", 
-	    //  	   idx_a, idx_a_orig, idx_b, idx_b_orig, cpos);
 
 	  // Write the particle index to the relevant position,
 	  // no matter if it already is there or not (concurrency of write)
 	  dev_contacts[(unsigned int)(idx_a_orig*devC_nc+cpos)] = idx_b_orig;
 
+
 	  // Write the interparticle vector and radius of particle B
-	  dev_x_ab_r_b[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_float4(x_ab, radius_b);
+	 //dev_x_ab_r_b[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_float4(x_ab, radius_b);
 	  
 	  // Increment contact counter
 	  ++*nc;
@@ -929,8 +927,7 @@ __global__ void topology(unsigned int* dev_cellStart,
     			 unsigned int* dev_cellEnd, // Input: Particles in cell 
 			 unsigned int* dev_gridParticleIndex, // Input: Unsorted-sorted key
 			 float4* dev_x_sorted, float* dev_radius_sorted, 
-			 unsigned int* dev_contacts, 
-			 float4* dev_x_ab_r_b)
+			 unsigned int* dev_contacts)
 {
   // Thread index equals index of particle A
   unsigned int idx_a = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
@@ -961,7 +958,7 @@ __global__ void topology(unsigned int* dev_cellStart,
 	       		     dev_x_sorted, dev_radius_sorted,
 			     dev_cellStart, dev_cellEnd,
 			     dev_gridParticleIndex,
-	    		     &nc, dev_contacts, dev_x_ab_r_b);
+	    		     &nc, dev_contacts);
 	}
       }
     }
@@ -977,6 +974,7 @@ __global__ void topology(unsigned int* dev_cellStart,
 __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted-sorted key
 			 unsigned int* dev_cellStart,
 			 unsigned int* dev_cellEnd,
+			 float4* dev_x, float* dev_radius,
     			 float4* dev_x_sorted, float* dev_radius_sorted, 
 			 float4* dev_vel_sorted, float4* dev_angvel_sorted,
 			 float4* dev_vel, float4* dev_angvel,
@@ -985,7 +983,6 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 			 float4* dev_w_nx, float4* dev_w_mvfd, 
 			 float* dev_w_force, //uint4* dev_bonds_sorted,
 			 unsigned int* dev_contacts, 
-			 float4* dev_x_ab_r_b,
 			 float4* dev_delta_t)
 {
   // Thread index equals index of particle A
@@ -1029,7 +1026,8 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     if (devC_shearmodel == 2) {
       unsigned int idx_b_orig, mempos;
       float delta_n, x_ab_length;
-      float4 x_ab_r_b;
+      float4 x_b;
+      float  radius_b;
       float3 x_ab;
       float4 vel_a     = dev_vel_sorted[idx_a];
       float4 angvel4_a = dev_angvel_sorted[idx_a];
@@ -1037,19 +1035,23 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 
       // Loop over all possible contacts, and remove contacts
       // that no longer are valid (delta_n > 0.0)
-      for (int i = 0; i<devC_nc; ++i) {
-	mempos = idx_a_orig * devC_nc + i;
+      for (int i = 0; i<(int)devC_nc; ++i) {
+	mempos = (unsigned int)(idx_a_orig * devC_nc + i);
+	__syncthreads();
 	idx_b_orig = dev_contacts[mempos];
-	x_ab_r_b   = dev_x_ab_r_b[mempos];
-	x_ab       = make_float3(x_ab_r_b.x,
-	    			 x_ab_r_b.y,
-				 x_ab_r_b.z);
+	x_b        = dev_x[idx_b_orig];
+	radius_b   = dev_radius[idx_b_orig];
+	x_ab = make_float3(x_a.x - x_b.x,
+	    		   x_a.y - x_b.y,
+			   x_a.z - x_b.z);
 	x_ab_length = length(x_ab);
-	delta_n = x_ab_length - (radius_a + x_ab_r_b.w);
+	delta_n = x_ab_length - (radius_a + radius_b);
 
-	// Process collision if the particles are overlapping
-	if (delta_n < 0.0f) {
-	  if (idx_b_orig != devC_np) {
+
+	if (idx_b_orig != (unsigned int)devC_np) {
+
+	  // Process collision if the particles are overlapping
+	  if (delta_n < 0.0f) {
 	    //cuPrintf("\nProcessing contact, idx_a_orig = %u, idx_b_orig = %u, contact = %d, delta_n = %f\n",
 	    //  idx_a_orig, idx_b_orig, i, delta_n);
 	    contactLinear(&N, &T, &es_dot, &p, 
@@ -1059,18 +1061,23 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 		dev_vel,
 		angvel_a,
 		dev_angvel,
-		radius_a, x_ab_r_b.w, 
+		radius_a, radius_b, 
 		x_ab, x_ab_length,
 		delta_n, dev_delta_t, 
 		mempos);
+	  } else {
+	    __syncthreads();
+	    // Remove this contact (there is no particle with index=np)
+	    dev_contacts[mempos] = devC_np; 
+	    // Zero sum of shear displacement in this position
+	    dev_delta_t[mempos]  = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 	  }
 	} else {
-	  // Remove this contact (there is no particle with index=np)
-	  dev_contacts[mempos] = devC_np; 
-	  // Zero sum of shear displacement in this position
+	  __syncthreads();
 	  dev_delta_t[mempos]  = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 	}
-      }
+      } // Contact loop end
+
     } else if (devC_shearmodel == 1) {
 
       int3 gridPos;
@@ -1586,8 +1593,6 @@ __host__ void gpuMain(float4* host_x,
   unsigned int* dev_contacts;
   // x,y,z contains the interparticle vector, corrected if contact 
   // is across a periodic boundary. 
-  // w contains radius of particle b.
-  float4* dev_x_ab_r_b;
   float4* dev_delta_t; // Accumulated shear distance of contact
 
   // Particle memory size
@@ -1625,7 +1630,6 @@ __host__ void gpuMain(float4* host_x,
 
   // Particle contact bookkeeping arrays
   cudaMalloc((void**)&dev_contacts, sizeof(unsigned int)*p->np*NC); // Max NC contacts per particle
-  cudaMalloc((void**)&dev_x_ab_r_b, sizeof(float4)*p->np*NC);
   cudaMalloc((void**)&dev_delta_t, sizeof(float4)*p->np*NC);
 
   // Wall arrays
@@ -1668,7 +1672,6 @@ __host__ void gpuMain(float4* host_x,
   float4* zerosf4 = new float4[p->np*NC];
   for (unsigned int i=0; i<(p->np*NC); ++i)
     zerosf4[i] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-  cudaMemcpy(dev_x_ab_r_b, zerosf4, sizeof(float4)*p->np*NC, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_delta_t, zerosf4, sizeof(float4)*p->np*NC, cudaMemcpyHostToDevice);
   delete[] zerosf4;
 
@@ -1824,8 +1827,7 @@ __host__ void gpuMain(float4* host_x,
 				      dev_gridParticleIndex,
 				      dev_x_sorted, 
 				      dev_radius_sorted, 
-				      dev_contacts, 
-				      dev_x_ab_r_b);
+				      dev_contacts);
 
       // Empty cuPrintf() buffer to console
       //cudaThreadSynchronize();
@@ -1836,10 +1838,12 @@ __host__ void gpuMain(float4* host_x,
       checkForCudaErrors("Post topology. Possibly caused by numerical instability. Is the computational time step too large?", iter);
     }
 
+
     // For each particle: Process collisions and compute resulting forces.
     interact<<<dimGrid, dimBlock>>>(dev_gridParticleIndex,
 				    dev_cellStart,
 				    dev_cellEnd,
+				    dev_x, dev_radius,
 				    dev_x_sorted, dev_radius_sorted,
 				    dev_vel_sorted, dev_angvel_sorted,
 				    dev_vel, dev_angvel,
@@ -1847,7 +1851,7 @@ __host__ void gpuMain(float4* host_x,
 				    dev_es_dot, dev_es, dev_p,
 				    dev_w_nx, dev_w_mvfd, dev_w_force,
 				    //dev_bonds_sorted,
-				    dev_contacts, dev_x_ab_r_b, 
+				    dev_contacts, 
 				    dev_delta_t);
 
     // Empty cuPrintf() buffer to console
@@ -1857,7 +1861,6 @@ __host__ void gpuMain(float4* host_x,
     // Synchronization point
     cudaThreadSynchronize();
     checkForCudaErrors("Post interact - often caused if particles move outside the grid", iter);
-
 
     // Update particle kinematics
     integrate<<<dimGrid, dimBlock>>>(dev_x_sorted, dev_vel_sorted, 
@@ -1994,7 +1997,6 @@ __host__ void gpuMain(float4* host_x,
   //cudaFree(dev_bonds);
   //cudaFree(dev_bonds_sorted);
   cudaFree(dev_contacts);
-  cudaFree(dev_x_ab_r_b);
   cudaFree(dev_delta_t);
 
   // Cell-related arrays
