@@ -515,7 +515,7 @@ def render(binary,
   # Delete temporary PPM file
   subprocess.call("rm {0}.ppm".format(out), shell=True)
   
-def visualize(project, method = 'energy', savefig = False):
+def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
   """ Visualize output from the target project,
       where the temporal progress is of interest.
   """
@@ -590,16 +590,15 @@ def visualize(project, method = 'energy', savefig = False):
 
       # Allocate arrays on first run
       if (i == 0):
-	wforce = numpy.zeros(lastfile+1, sb.wn)
-	wvel   = numpy.zeros(lastfile+1, sb.wn)
-	wpos   = numpy.zeros(lastfile+1, sb.wn)
-	wdevs  = numpy.zeros(lastfile+1, sb.wn)
+	wforce = numpy.zeros(lastfile+1, sb.nw[0])
+	wvel   = numpy.zeros(lastfile+1, sb.nw[0])
+	wpos   = numpy.zeros(lastfile+1, sb.nw[0])
+	wdevs  = numpy.zeros(lastfile+1, sb.nw[0])
 
-      for j in range(sb.wn):
-	wforce[i,j] = sb.w_force[j]
-	wvel[i,j]   = sb.w_vel[j]
-	wpos[i,j]   = sb.w_x[j]
-	wdevs[i,j]  = sb.w_devs[j]
+      wforce[i] = sb.w_force
+      wvel[i]   = sb.w_vel
+      wpos[i]   = sb.w_x
+      wdevs[i]  = sb.w_devs
     
     t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
@@ -609,17 +608,17 @@ def visualize(project, method = 'energy', savefig = False):
     plt.ylabel('Position [m]')
     plt.plot(t, wpos, '+-')
 
-    plt.subplot(2,2,1)
+    plt.subplot(2,2,2)
     plt.xlabel('Time [s]')
     plt.ylabel('Velocity [m/s]')
     plt.plot(t, wvel, '+-')
 
-    plt.subplot(2,2,1)
+    plt.subplot(2,2,3)
     plt.xlabel('Time [s]')
     plt.ylabel('Force [N]')
     plt.plot(t, wforce, '+-')
 
-    plt.subplot(2,2,1)
+    plt.subplot(2,2,4)
     plt.xlabel('Time [s]')
     plt.ylabel('Deviatoric stress [Pa]')
     plt.plot(t, wdevs, '+-')
@@ -627,7 +626,7 @@ def visualize(project, method = 'energy', savefig = False):
 
   # Optional save of figure
   if (savefig == True):
-    plt.savefig("{0}-{1}.png".format(project, method))
+    plt.savefig("{0}-{1}.{2}".format(project, method, outformat))
   else:
     plt.show()
 
