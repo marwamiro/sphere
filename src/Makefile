@@ -82,5 +82,5 @@ backup:
 
 clean:
 	$(RM) $(OBJECTS)
-	$(RM) $(EXECUTABLE)
+	$(RM) ../sphere_*
 

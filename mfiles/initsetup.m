@@ -75,7 +75,8 @@ if visualize == 1
 end
 
 % Friction angles
-ang_s = 25; % Angle of shear resistance
+ang_s = 30; % Angle of static shear resistance
+ang_d = 25; % Angle of dynamic shear resistance
 ang_r = 35; % Angle of rolling resistance
 
 % Other particle parameters

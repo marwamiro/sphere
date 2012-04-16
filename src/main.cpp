@@ -156,14 +156,12 @@ int main(int argc, char *argv[])
   p.k_n      = new float[p.np];      // Particle normal stiffnesses
   p.k_s	     = new float[p.np];	     // Particle shear stiffnesses
   p.k_r	     = new float[p.np];	     // Particle rolling stiffnesses
+  p.gamma_n  = new float[p.np];	     // Particle normal viscosity
   p.gamma_s  = new float[p.np];      // Particle shear viscosity
   p.gamma_r  = new float[p.np];	     // Particle rolling viscosity
-  p.mu_s     = new float[p.np];      // Inter-particle shear contact friction coefficients
+  p.mu_s     = new float[p.np];      // Inter-particle static shear contact friction coefficients
+  p.mu_d     = new float[p.np];	     // Inter-particle dynamic shear contact friction coefficients
   p.mu_r     = new float[p.np];	     // Inter-particle rolling contact friction coefficients
-  p.C        = new float[p.np];      // Inter-particle tensile strengths (cohesion)
-  p.E        = new float[p.np];      // Youngs modulus for each particle
-  p.K        = new float[p.np];      // Bulk modulus for each particle
-  p.nu       = new float[p.np];      // Poisson's ratio for each particle
   p.es_dot   = new float[p.np];	     // Rate of shear energy dissipation
   p.es       = new float[p.np];	     // Total shear energy dissipation
   p.p	     = new float[p.np];	     // Pressure excerted onto particle
@@ -247,21 +245,17 @@ int main(int argc, char *argv[])
       return 1;
     if (fread(&p.k_r[j], sizeof(p.k_r[j]), 1, fp) != 1)
       return 1;
+    if (fread(&p.gamma_n[j], sizeof(p.gamma_n[j]), 1, fp) != 1)
+      return 1;
     if (fread(&p.gamma_s[j], sizeof(p.gamma_s[j]), 1, fp) != 1)
       return 1;
     if (fread(&p.gamma_r[j], sizeof(p.gamma_r[j]), 1, fp) != 1)
       return 1;
     if (fread(&p.mu_s[j], sizeof(p.mu_s[j]), 1, fp) != 1)
       return 1;
+    if (fread(&p.mu_d[j], sizeof(p.mu_d[j]), 1, fp) != 1)
+      return 1;
     if (fread(&p.mu_r[j], sizeof(p.mu_r[j]), 1, fp) != 1)
-      return 1;
-    if (fread(&p.C[j], sizeof(p.C[j]), 1, fp) != 1)
-      return 1;
-    if (fread(&p.E[j], sizeof(p.E[j]), 1, fp) != 1)
-      return 1;
-    if (fread(&p.K[j], sizeof(p.K[j]), 1, fp) != 1)
-      return 1;
-    if (fread(&p.nu[j], sizeof(p.nu[j]), 1, fp) != 1)
       return 1;
     if (fread(&p.es_dot[j], sizeof(p.es_dot[j]), 1, fp) != 1)
       return 1;
@@ -431,15 +425,13 @@ int main(int argc, char *argv[])
   delete[] p.k_n;
   delete[] p.k_s;
   delete[] p.k_r;
+  delete[] p.gamma_n;
   delete[] p.gamma_s;
   delete[] p.gamma_r;
   delete[] p.mu_s;
+  delete[] p.mu_d;
   delete[] p.mu_r;
-  delete[] p.C;
   delete[] p.rho;
-  delete[] p.E;
-  delete[] p.K;
-  delete[] p.nu;
   delete[] p.es_dot;
   delete[] p.es;
   delete[] p.p;

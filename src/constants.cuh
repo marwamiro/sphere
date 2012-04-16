@@ -14,15 +14,13 @@ __constant__ unsigned int devC_shearmodel; // Shear force model: 1: viscous, fri
 __constant__ float        devC_k_n;	   // Material normal stiffness
 __constant__ float        devC_k_s;	   // Material shear stiffness
 __constant__ float        devC_k_r;	   // Material rolling stiffness
+__constant__ float        devC_gamma_n;	   // Material normal viscosity
 __constant__ float        devC_gamma_s;	   // Material shear viscosity
 __constant__ float	  devC_gamma_r;	   // Material rolling viscosity
-__constant__ float        devC_mu_s;	   // Material shear friction coefficient
+__constant__ float        devC_mu_s;	   // Material static shear friction coefficient
+__constant__ float        devC_mu_d;	   // Material dynamic shear friction coefficient
 __constant__ float	  devC_mu_r;	   // Material rolling friction coefficient
-__constant__ float        devC_C;	   // Material cohesion
 __constant__ float        devC_rho;	   // Material density
-__constant__ float        devC_E;	   // Material Young's modulus
-__constant__ float        devC_K;	   // Material bulk modulus
-__constant__ float        devC_nu;	   // Material viscosity
 __constant__ float	  devC_kappa;	   // Capillary bond prefactor
 __constant__ float	  devC_db;	   // Debonding distance
 __constant__ float	  devC_V_b;	   // Liquid volume of capillary bond

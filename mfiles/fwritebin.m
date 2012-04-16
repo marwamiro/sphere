@@ -51,6 +51,7 @@ function fwritebin(path, fn, p, grids, time, params, walls)
         fwrite(fid, p.gamma_s(j), 'float');
 	fwrite(fid, p.gamma_r(j), 'float');
         fwrite(fid, p.mu_s(j), 'float');
+        fwrite(fid, p.mu_d(j), 'float');
         fwrite(fid, p.mu_r(j), 'float');
         fwrite(fid, p.C(j), 'float');
         fwrite(fid, p.E(j), 'float');

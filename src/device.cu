@@ -152,65 +152,71 @@ __device__ float contactLinear_wall(float3* N, float3* T, float* es_dot, float* 
 				    float4* dev_vel_sorted, float4* dev_angvel_sorted,
 				    float3 n, float delta, float wvel)
 {
-  // Fetch velocities from global memory
-  float4 linvel_a_tmp = dev_vel_sorted[idx_a];
-  float4 angvel_a_tmp = dev_angvel_sorted[idx_a];
+  // Fetch particle velocities from global memory
+  const float4 linvel_tmp = dev_vel_sorted[idx_a];
+  const float4 angvel_tmp = dev_angvel_sorted[idx_a];
 
   // Convert velocities to three-component vectors
-  float3 linvel_a = make_float3(linvel_a_tmp.x,
-      				linvel_a_tmp.y,
-				linvel_a_tmp.z);
-  float3 angvel_a = make_float3(angvel_a_tmp.x,
-      				angvel_a_tmp.y,
-				angvel_a_tmp.z);
+  const float3 linvel = make_float3(linvel_tmp.x,
+      				    linvel_tmp.y,
+				    linvel_tmp.z);
+  const float3 angvel = make_float3(angvel_tmp.x,
+      			            angvel_tmp.y,
+				    angvel_tmp.z);
 
   // Store the length of the angular velocity for later use
-  float  angvel_length = length(angvel_a);
+  const float angvel_length = length(angvel);
 
   // Contact velocity is the sum of the linear and
   // rotational components
-  float3 vel = linvel_a + radius_a * cross(n, angvel_a) + wvel;
+  const float3 vel = linvel + radius_a * cross(n, angvel) + wvel;
 
   // Normal component of the contact velocity
-  float  vel_n = dot(vel, n);
+  const float vel_n = dot(vel, n);
 
   // The tangential velocity is the contact velocity
   // with the normal component subtracted
-  float3 vel_t = vel - n * (dot(vel, n));
-  float  vel_t_length = length(vel_t);
+  const float3 vel_t = vel - n * (dot(vel, n));
+  const float  vel_t_length = length(vel_t);
 
   // Calculate elastic normal component
   //float3 f_n = -devC_k_n * delta * n;
 
   // Normal force component: Elastic - viscous damping
-  float3 f_n = (-devC_k_n * delta - devC_nu * vel_n) * n;
+  float3 f_n = (-devC_k_n * delta - devC_gamma_n * vel_n) * n;
 
   // Make sure the viscous damping doesn't exceed the elastic component,
   // i.e. the damping factor doesn't exceed the critical damping, 2*sqrt(m*k_n)
   if (dot(f_n, n) < 0.0f)
     f_n = make_float3(0.0f, 0.0f, 0.0f);
 
-  float  f_n_length = length(f_n); // Save length for later use
+  const float  f_n_length = length(f_n); // Save length for later use
 
   // Initialize vectors
-  float3 f_s   = make_float3(0.0f, 0.0f, 0.0f);
+  float3 f_t   = make_float3(0.0f, 0.0f, 0.0f);
   float3 T_res = make_float3(0.0f, 0.0f, 0.0f);
 
   // Check that the tangential velocity is high enough to avoid
   // divide by zero (producing a NaN)
   if (vel_t_length > 0.f) {
 
-    // Shear force component
-    // Limited by Mohr Coulomb failure criterion
-    f_s = -1.0f * fmin(devC_gamma_s * vel_t_length,
-		       devC_mu_s * f_n_length)
-          * vel_t/vel_t_length;
+    const float f_t_visc  = devC_gamma_s * vel_t_length; // Tangential force by viscous model
+    const float f_t_limit = devC_mu_s * f_n_length;      // Max. friction
 
-    // Shear energy production rate [W]
-    *es_dot += -dot(vel_t, f_s);
+    // If the shear force component exceeds the friction,
+    // the particle slips and energy is dissipated
+    if (f_t_visc < f_t_limit) {
+      f_t = -1.0f * f_t_visc * vel_t/vel_t_length;
+
+    } else { // Dynamic friction, friction failure
+      f_t = -1.0f * f_t_limit * vel_t/vel_t_length;
+      
+      // Shear energy production rate [W]
+      //*es_dot += -dot(vel_t, f_t);
+    }
   }
 
-  if (angvel_length > 0.f) {
+/*  if (angvel_length > 0.f) {
     // Apply rolling resistance (Zhou et al. 1999)
     //T_res = -angvel_a/angvel_length * devC_mu_r * radius_a * f_n_length;
 
@@ -218,13 +224,14 @@ __device__ float contactLinear_wall(float3* N, float3* T, float* es_dot, float* 
     T_res = -1.0f * fmin(devC_gamma_r * radius_a * angvel_length,
 			 devC_mu_r * radius_a * f_n_length)
             * angvel_a/angvel_length;
-  }
+  }*/
 
   // Total force from wall
-  *N += f_n + f_s;
+  *N += f_n + f_t;
+//  *N += f_n;
 
   // Total torque from wall
-  *T += -radius_a * cross(n, f_s) + T_res;
+  *T += -radius_a * cross(n, f_t) + T_res;
 
   // Pressure excerted onto particle from this contact
   *p += f_n_length / (4.0f * PI * radius_a*radius_a);
@@ -247,49 +254,49 @@ __device__ void contactLinearViscous(float3* N, float3* T, float* es_dot, float*
 {
 
   // Allocate variables and fetch missing time=t values for particle A and B
-  float4 vel_a     = dev_vel_sorted[idx_a];
-  float4 vel_b     = dev_vel_sorted[idx_b];
-  float4 angvel4_a = dev_angvel_sorted[idx_a];
-  float4 angvel4_b = dev_angvel_sorted[idx_b];
+  const float4 vel_a     = dev_vel_sorted[idx_a];
+  const float4 vel_b     = dev_vel_sorted[idx_b];
+  const float4 angvel4_a = dev_angvel_sorted[idx_a];
+  const float4 angvel4_b = dev_angvel_sorted[idx_b];
 
   // Convert to float3's
-  float3 angvel_a = make_float3(angvel4_a.x, angvel4_a.y, angvel4_a.z);
-  float3 angvel_b = make_float3(angvel4_b.x, angvel4_b.y, angvel4_b.z);
+  const float3 angvel_a = make_float3(angvel4_a.x, angvel4_a.y, angvel4_a.z);
+  const float3 angvel_b = make_float3(angvel4_b.x, angvel4_b.y, angvel4_b.z);
 
   // Force between grain pair decomposed into normal- and tangential part
-  float3 f_n, f_s, f_c, T_res;
+  float3 f_n, f_t, f_c, T_res;
 
   // Normal vector of contact
-  float3 n_ab = x_ab/x_ab_length;
+  const float3 n_ab = x_ab/x_ab_length;
 
   // Relative contact interface velocity, w/o rolling
-  float3 vel_ab_linear = make_float3(vel_a.x - vel_b.x, 
-      				     vel_a.y - vel_b.y, 
-				     vel_a.z - vel_b.z);
+  const float3 vel_ab_linear = make_float3(vel_a.x - vel_b.x, 
+      					   vel_a.y - vel_b.y, 
+					   vel_a.z - vel_b.z);
 
   // Relative contact interface velocity of particle surfaces at
   // the contact, with rolling (Hinrichsen and Wolf 2004, eq. 13.10)
-  float3 vel_ab = vel_ab_linear
-		  + radius_a * cross(n_ab, angvel_a)
-		  + radius_b * cross(n_ab, angvel_b);
+  const float3 vel_ab = vel_ab_linear
+			+ radius_a * cross(n_ab, angvel_a)
+			+ radius_b * cross(n_ab, angvel_b);
 
   // Relative contact interface rolling velocity
-  float3 angvel_ab = angvel_a - angvel_b;
-  float  angvel_ab_length = length(angvel_ab);
+  const float3 angvel_ab = angvel_a - angvel_b;
+  const float  angvel_ab_length = length(angvel_ab);
 
   // Normal component of the relative contact interface velocity
-  float vel_n_ab = dot(vel_ab_linear, n_ab);
+  const float vel_n_ab = dot(vel_ab_linear, n_ab);
 
   // Tangential component of the relative contact interface velocity
   // Hinrichsen and Wolf 2004, eq. 13.9
-  float3 vel_t_ab = vel_ab - (n_ab * dot(vel_ab, n_ab));
-  float  vel_t_ab_length = length(vel_t_ab);
+  const float3 vel_t_ab = vel_ab - (n_ab * dot(vel_ab, n_ab));
+  const float  vel_t_ab_length = length(vel_t_ab);
 
   // Compute the normal stiffness of the contact
   //float k_n_ab = k_n_a * k_n_b / (k_n_a + k_n_b);
 
   // Calculate rolling radius
-  float R_bar = (radius_a + radius_b) / 2.0f;
+  const float R_bar = (radius_a + radius_b) / 2.0f;
 
   // Normal force component: linear-elastic approximation (Augier 2009, eq. 3)
   // with velocity dependant damping
@@ -311,20 +318,20 @@ __device__ void contactLinearViscous(float3* N, float3* T, float* es_dot, float*
   //f_n = -k_n_ab * delta_ab * n_ab;
 
   // Normal force component: Elastic - viscous damping
-  f_n = (-devC_k_n * delta_ab - devC_nu * vel_n_ab) * n_ab;
+  f_n = (-devC_k_n * delta_ab - devC_gamma_n * vel_n_ab) * n_ab;
 
   // Make sure the viscous damping doesn't exceed the elastic component,
   // i.e. the damping factor doesn't exceed the critical damping, 2*sqrt(m*k_n)
   if (dot(f_n, n_ab) < 0.0f)
     f_n = make_float3(0.0f, 0.0f, 0.0f);
 
-  float f_n_length = length(f_n);
+  const float f_n_length = length(f_n);
 
   // Add max. capillary force
   f_c = -kappa * sqrtf(radius_a * radius_b) * n_ab;
 
   // Initialize force vectors to zero
-  f_s   = make_float3(0.0f, 0.0f, 0.0f);
+  f_t   = make_float3(0.0f, 0.0f, 0.0f);
   T_res = make_float3(0.0f, 0.0f, 0.0f);
 
   // Shear force component: Nonlinear relation
@@ -332,16 +339,31 @@ __device__ void contactLinearViscous(float3* N, float3* T, float* es_dot, float*
   // to the normal force
   if (vel_t_ab_length > 0.f) {
 
-    // Shear force
-    f_s = -1.0f * fmin(devC_gamma_s * vel_t_ab_length, 
-		       devC_mu_s * length(f_n-f_c)) 
-          * vel_t_ab/vel_t_ab_length;
+    // Tangential force by viscous model
+    const float f_t_visc  = devC_gamma_s * vel_t_ab_length;
 
-    // Shear friction production rate [W]
-    *es_dot += -dot(vel_t_ab, f_s);
+    // Determine max. friction
+    float f_t_limit;
+    if (vel_t_ab_length > 0.001f) { // Dynamic
+      f_t_limit = devC_mu_d * length(f_n-f_c);
+    } else { // Static
+      f_t_limit = devC_mu_s * length(f_n-f_c);
+    }
+
+    // If the shear force component exceeds the friction,
+    // the particle slips and energy is dissipated
+    if (f_t_visc < f_t_limit) { // Static
+      f_t = -1.0f * f_t_visc * vel_t_ab/vel_t_ab_length;
+
+    } else { // Dynamic, friction failure
+      f_t = -1.0f * f_t_limit * vel_t_ab/vel_t_ab_length;
+
+      // Shear friction production rate [W]
+      //*es_dot += -dot(vel_t_ab, f_t);
+    }
   }
 
-  if (angvel_ab_length > 0.f) {
+/*  if (angvel_ab_length > 0.f) {
     // Apply rolling resistance (Zhou et al. 1999)
     //T_res = -angvel_ab/angvel_ab_length * devC_mu_r * R_bar * length(f_n);
 
@@ -350,11 +372,11 @@ __device__ void contactLinearViscous(float3* N, float3* T, float* es_dot, float*
 			 devC_mu_r * R_bar * f_n_length)
             * angvel_ab/angvel_ab_length;
   }
-
+*/
 
   // Add force components from this collision to total force for particle
-  *N += f_n + f_s + f_c; 
-  *T += -R_bar * cross(n_ab, f_s) + T_res;
+  *N += f_n + f_t + f_c; 
+  *T += -R_bar * cross(n_ab, f_t) + T_res;
 
   // Pressure excerted onto the particle from this contact
   *p += f_n_length / (4.0f * PI * radius_a*radius_a);
@@ -378,88 +400,133 @@ __device__ void contactLinear(float3* N, float3* T,
 {
 
   // Allocate variables and fetch missing time=t values for particle A and B
-  float4 vel_b     = dev_vel[idx_b_orig];
-  float4 angvel4_b = dev_angvel[idx_b_orig];
+  const float4 vel_b     = dev_vel[idx_b_orig];
+  const float4 angvel4_b = dev_angvel[idx_b_orig];
 
   // Fetch previous sum of shear displacement for the contact pair
-  float4 delta_t0  = dev_delta_t[mempos];
+  const float4 delta_t0_4 = dev_delta_t[mempos];
+
+  const float3 delta_t0_uncor = make_float3(delta_t0_4.x,
+      					    delta_t0_4.y,
+					    delta_t0_4.z);
 
   // Convert to float3
-  float3 angvel_b = make_float3(angvel4_b.x, angvel4_b.y, angvel4_b.z);
+  const float3 angvel_b = make_float3(angvel4_b.x, angvel4_b.y, angvel4_b.z);
 
   // Force between grain pair decomposed into normal- and tangential part
-  float3 f_n, f_s, f_c, T_res;
+  float3 f_n, f_t, f_c, T_res;
 
   // Normal vector of contact
-  float3 n_ab = x_ab/x_ab_length;
+  const float3 n_ab = x_ab/x_ab_length;
 
   // Relative contact interface velocity, w/o rolling
-  float3 vel_ab_linear = make_float3(vel_a.x - vel_b.x, 
-      				     vel_a.y - vel_b.y, 
-				     vel_a.z - vel_b.z);
+  const float3 vel_ab_linear = make_float3(vel_a.x - vel_b.x, 
+      					   vel_a.y - vel_b.y, 
+					   vel_a.z - vel_b.z);
 
   // Relative contact interface velocity of particle surfaces at
   // the contact, with rolling (Hinrichsen and Wolf 2004, eq. 13.10)
-  float3 vel_ab = vel_ab_linear
-		  + radius_a * cross(n_ab, angvel_a)
-		  + radius_b * cross(n_ab, angvel_b);
+  const float3 vel_ab = vel_ab_linear
+			+ radius_a * cross(n_ab, angvel_a)
+			+ radius_b * cross(n_ab, angvel_b);
 
   // Relative contact interface rolling velocity
-  float3 angvel_ab = angvel_a - angvel_b;
-  float  angvel_ab_length = length(angvel_ab);
+  const float3 angvel_ab = angvel_a - angvel_b;
+  const float  angvel_ab_length = length(angvel_ab);
 
   // Normal component of the relative contact interface velocity
-  float vel_n_ab = dot(vel_ab_linear, n_ab);
+  const float vel_n_ab = dot(vel_ab_linear, n_ab);
 
   // Tangential component of the relative contact interface velocity
   // Hinrichsen and Wolf 2004, eq. 13.9
-  float3 vel_t_ab = vel_ab - (n_ab * dot(vel_ab, n_ab));
+  const float3 vel_t_ab = vel_ab - (n_ab * dot(vel_ab, n_ab));
+  const float  vel_t_ab_length = length(vel_t_ab);
 
-  // Add tangential displacement to total tangential displacement
-  float3 delta_t  = make_float3(delta_t0.x, delta_t0.y, delta_t0.z) + vel_t_ab * devC_dt;
-  float  delta_t_length = length(delta_t);
+  // Correct tangential displacement vector, which is
+  // necessary if the tangential plane rotated
+  const float3 delta_t0 = delta_t0_uncor - (n_ab * dot(delta_t0_uncor, n_ab));
+  const float  delta_t0_length = length(delta_t0);
+
+  // New tangential displacement vector
+  float3 delta_t;
 
   // Compute the normal stiffness of the contact
   //float k_n_ab = k_n_a * k_n_b / (k_n_a + k_n_b);
 
   // Calculate rolling radius
-  float R_bar = (radius_a + radius_b) / 2.0f;
+  const float R_bar = (radius_a + radius_b) / 2.0f;
 
   // Normal force component: Elastic
   //f_n = -devC_k_n * delta_ab * n_ab;
 
   // Normal force component: Elastic - viscous damping
-  f_n = (-devC_k_n * delta_ab - devC_nu * vel_n_ab) * n_ab;
+  f_n = (-devC_k_n * delta_ab - devC_gamma_n * vel_n_ab) * n_ab;
 
   // Make sure the viscous damping doesn't exceed the elastic component,
   // i.e. the damping factor doesn't exceed the critical damping, 2*sqrt(m*k_n)
   if (dot(f_n, n_ab) < 0.0f)
     f_n = make_float3(0.0f, 0.0f, 0.0f);
 
-  float f_n_length = length(f_n);
+  const float f_n_length = length(f_n);
 
   // Add max. capillary force
   f_c = -devC_kappa * sqrtf(radius_a * radius_b) * n_ab;
 
   // Initialize force vectors to zero
-  f_s   = make_float3(0.0f, 0.0f, 0.0f);
+  f_t   = make_float3(0.0f, 0.0f, 0.0f);
   T_res = make_float3(0.0f, 0.0f, 0.0f);
 
-  // Shear force component: Nonlinear relation
-  // Coulomb's law of friction limits the tangential force to less or equal
-  // to the normal force
-  if (delta_t_length > 0.f) {
+  // Apply a tangential force if the previous tangential displacement
+  // is non-zero, or the current sliding velocity is non-zero.
+  if (delta_t0_length > 0.f || vel_t_ab_length > 0.f) {
 
-    // Shear force: Elastic, limited by Mohr-Coulomb
-    f_s = -1.0f * fmin(devC_k_s * delta_t_length, 
-		       devC_mu_s * length(f_n-f_c)) 
-          * delta_t/delta_t_length;
+    // Shear force: Visco-Elastic, limited by Coulomb friction
+    float3 f_t_elast = -1.0f * devC_k_s * delta_t0;
+    float3 f_t_visc  = -1.0f * devC_gamma_s * vel_t_ab;
 
-    // Shear friction production rate [W]
-    *es_dot += -dot(vel_t_ab, f_s);
+    float f_t_limit;
+    
+    if (vel_t_ab_length > 0.001f) { // Dynamic friciton
+      f_t_limit = devC_mu_d * length(f_n-f_c);
+    } else { // Static friction
+      f_t_limit = devC_mu_s * length(f_n-f_c);
+    }
+
+    // Tangential force before friction limit correction
+    f_t = f_t_elast + f_t_visc;
+    float f_t_length = length(f_t);
+
+    // If failure criterion is not met, contact is viscous-linear elastic.
+    // If failure criterion is met, contact force is limited, 
+    // resulting in a slip and energy dissipation
+    if (f_t_length > f_t_limit) { // Dynamic case
+      
+      // Frictional force is reduced to equal the limit
+      f_t *= f_t_limit/f_t_length;
+
+      // A slip event zeros the displacement vector
+      //delta_t = make_float3(0.0f, 0.0f, 0.0f);
+
+      // In a slip event, the tangential spring is adjusted to a 
+      // length which is consistent with Coulomb's equation
+      // (Hinrichsen and Wolf, 2004)
+      delta_t = -1.0f/devC_k_s * f_t + devC_gamma_s * vel_t_ab;
+
+      // Shear friction heat production rate: 
+      // The energy lost from the tangential spring is dissipated as heat
+      //*es_dot += -dot(vel_t_ab, f_t);
+      *es_dot += length(delta_t0 - delta_t) * devC_k_s / devC_dt; // Seen in EsyS-Particle
+
+    } else { // Static case
+
+      // No correction of f_t is required
+
+      // Add tangential displacement to total tangential displacement
+      delta_t = delta_t0 + vel_t_ab * devC_dt;
+    }
   }
 
-  /*if (angvel_ab_length > 0.f) {
+  if (angvel_ab_length > 0.f) {
     // Apply rolling resistance (Zhou et al. 1999)
     //T_res = -angvel_ab/angvel_ab_length * devC_mu_r * R_bar * length(f_n);
 
@@ -467,11 +534,11 @@ __device__ void contactLinear(float3* N, float3* T,
     T_res = -1.0f * fmin(devC_gamma_r * R_bar * angvel_ab_length,
 			 devC_mu_r * R_bar * f_n_length)
             * angvel_ab/angvel_ab_length;
-  }*/
+  }
 
   // Add force components from this collision to total force for particle
-  *N += f_n + f_s + f_c; 
-  *T += -R_bar * cross(n_ab, f_s) + T_res;
+  *N += f_n + f_t + f_c; 
+  *T += -R_bar * cross(n_ab, f_t) + T_res;
 
   // Pressure excerted onto the particle from this contact
   *p += f_n_length / (4.0f * PI * radius_a*radius_a);
@@ -533,7 +600,7 @@ __device__ void bondLinear(float3* N, float3* T, float* es_dot, float* p,
     //float  vel_t_ab_length = length(vel_t_ab);
 
     float3 f_n = make_float3(0.0f, 0.0f, 0.0f);
-    float3 f_s = make_float3(0.0f, 0.0f, 0.0f);
+    float3 f_t = make_float3(0.0f, 0.0f, 0.0f);
 
     // Mean radius
     float R_bar = (radius_a + radius_b)/2.0f;
@@ -543,15 +610,15 @@ __device__ void bondLinear(float3* N, float3* T, float* es_dot, float* p,
 
     if (length(vel_t_ab) > 0.f) {
       // Shear force component: Viscous
-      f_s = -1.0f * devC_gamma_s * vel_t_ab;
+      f_t = -1.0f * devC_gamma_s * vel_t_ab;
 
       // Shear friction production rate [W]
-      *es_dot += -dot(vel_t_ab, f_s);
+      //*es_dot += -dot(vel_t_ab, f_t);
     }
 
     // Add force components from this bond to total force for particle
-    *N += f_n + f_s;
-    *T += -R_bar * cross(n_ab, f_s);
+    *N += f_n + f_t;
+    *T += -R_bar * cross(n_ab, f_t);
 
     // Pressure excerted onto the particle from this bond
     *p += length(f_n) / (4.0f * PI * radius_a*radius_a);
@@ -763,7 +830,8 @@ __device__ void findContactsInCell(int3 targetCell,
 				   unsigned int* dev_cellEnd,
 				   unsigned int* dev_gridParticleIndex,
 				   int* nc,
-				   unsigned int* dev_contacts)
+				   unsigned int* dev_contacts,
+				   float4* dev_distmod)
 {
   // Variable containing modifier for interparticle
   // vector, if it crosses a periodic boundary
@@ -897,10 +965,14 @@ __device__ void findContactsInCell(int3 targetCell,
 
 	  // Write the interparticle vector and radius of particle B
 	 //dev_x_ab_r_b[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_float4(x_ab, radius_b);
+	  dev_distmod[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_float4(distmod, radius_b);
 	  
 	  // Increment contact counter
 	  ++*nc;
 	}
+
+	// Write the inter-particle position vector correction and radius of particle B
+	//dev_distmod[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_float4(distmod, radius_b);
 
 	// Check wether particles are bonded together
 	/*if (bonds.x == idx_b || bonds.y == idx_b ||
@@ -927,7 +999,8 @@ __global__ void topology(unsigned int* dev_cellStart,
     			 unsigned int* dev_cellEnd, // Input: Particles in cell 
 			 unsigned int* dev_gridParticleIndex, // Input: Unsorted-sorted key
 			 float4* dev_x_sorted, float* dev_radius_sorted, 
-			 unsigned int* dev_contacts)
+			 unsigned int* dev_contacts,
+			 float4* dev_distmod)
 {
   // Thread index equals index of particle A
   unsigned int idx_a = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
@@ -958,7 +1031,7 @@ __global__ void topology(unsigned int* dev_cellStart,
 	       		     dev_x_sorted, dev_radius_sorted,
 			     dev_cellStart, dev_cellEnd,
 			     dev_gridParticleIndex,
-	    		     &nc, dev_contacts);
+	    		     &nc, dev_contacts, dev_distmod);
 	}
       }
     }
@@ -983,6 +1056,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 			 float4* dev_w_nx, float4* dev_w_mvfd, 
 			 float* dev_w_force, //uint4* dev_bonds_sorted,
 			 unsigned int* dev_contacts, 
+			 float4* dev_distmod,
 			 float4* dev_delta_t)
 {
   // Thread index equals index of particle A
@@ -1027,6 +1101,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
       unsigned int idx_b_orig, mempos;
       float delta_n, x_ab_length;
       float4 x_b;
+      float4 distmod;
       float  radius_b;
       float3 x_ab;
       float4 vel_a     = dev_vel_sorted[idx_a];
@@ -1039,11 +1114,16 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	mempos = (unsigned int)(idx_a_orig * devC_nc + i);
 	__syncthreads();
 	idx_b_orig = dev_contacts[mempos];
+	distmod    = dev_distmod[mempos];
 	x_b        = dev_x[idx_b_orig];
-	radius_b   = dev_radius[idx_b_orig];
-	x_ab = make_float3(x_a.x - x_b.x,
-	    		   x_a.y - x_b.y,
-			   x_a.z - x_b.z);
+	//radius_b   = dev_radius[idx_b_orig];
+	radius_b   = distmod.w;
+
+	// Inter-particle vector, corrected for periodic boundaries
+	x_ab = make_float3(x_a.x - x_b.x + distmod.x,
+	    		   x_a.y - x_b.y + distmod.y,
+			   x_a.z - x_b.z + distmod.z);
+
 	x_ab_length = length(x_ab);
 	delta_n = x_ab_length - (radius_a + radius_b);
 
@@ -1055,16 +1135,16 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	    //cuPrintf("\nProcessing contact, idx_a_orig = %u, idx_b_orig = %u, contact = %d, delta_n = %f\n",
 	    //  idx_a_orig, idx_b_orig, i, delta_n);
 	    contactLinear(&N, &T, &es_dot, &p, 
-		idx_a_orig,
-		idx_b_orig,
-		vel_a,
-		dev_vel,
-		angvel_a,
-		dev_angvel,
-		radius_a, radius_b, 
-		x_ab, x_ab_length,
-		delta_n, dev_delta_t, 
-		mempos);
+			  idx_a_orig,
+			  idx_b_orig,
+			  vel_a,
+			  dev_vel,
+			  angvel_a,
+			  dev_angvel,
+			  radius_a, radius_b, 
+			  x_ab, x_ab_length,
+			  delta_n, dev_delta_t, 
+			  mempos);
 	  } else {
 	    __syncthreads();
 	    // Remove this contact (there is no particle with index=np)
@@ -1074,7 +1154,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	  }
 	} else {
 	  __syncthreads();
-	  dev_delta_t[mempos]  = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+	  dev_delta_t[mempos] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 	}
       } // Contact loop end
 
@@ -1266,29 +1346,30 @@ __global__ void integrate(float4* dev_x_sorted, float4* dev_vel_sorted, // Input
     acc.z += devC_g[2];
     //acc.z -= 9.82f;
 
-    // Only update velocity (and position) if the horizontal velocity is not fixed
+    // Update angular velocity
+    angvel.x += angacc.x * dt;
+    angvel.y += angacc.y * dt;
+    angvel.z += angacc.z * dt;
+
+    // Check if particle has a fixed horizontal velocity
     if (vel.w > 0.0f) {
 
-      // Zero horizontal acceleration
+      // Zero horizontal acceleration and disable
+      // gravity to counteract segregation.
+      // Particles may move in the z-dimension,
+      // to allow for dilation.
       acc.x = 0.0f;
       acc.y = 0.0f;
-
-      // Update vertical linear velocity
-      vel.z += acc.z * dt;
+      acc.z -= devC_g[2];
 
       // Zero the angular acceleration and -velocity
-      angacc = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+      angvel = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     } 
 
     // Update linear velocity
     vel.x += acc.x * dt;
     vel.y += acc.y * dt;
     vel.z += acc.z * dt;
-
-    // Update angular velocity
-    angvel.x += angacc.x * dt;
-    angvel.y += angacc.y * dt;
-    angvel.z += angacc.z * dt;
 
     // Update position. First-order Euler's scheme:
     //x.x += vel.x * dt;
@@ -1490,27 +1571,23 @@ __host__ void transferToConstantMemory(Particles* p,
     params->k_n     = p->k_n[0];
     params->k_s	    = p->k_s[0];
     params->k_r	    = p->k_r[0];
+    params->gamma_n = p->gamma_n[0];
     params->gamma_s = p->gamma_s[0];
     params->gamma_r = p->gamma_r[0];
     params->mu_s    = p->mu_s[0];
+    params->mu_d    = p->mu_d[0];
     params->mu_r    = p->mu_r[0];
-    params->C       = p->C[0];
     params->rho     = p->rho[0];
-    params->E       = p->E[0];
-    params->K       = p->K[0];
-    params->nu      = p->nu[0];
     cudaMemcpyToSymbol("devC_k_n", &params->k_n, sizeof(float));
     cudaMemcpyToSymbol("devC_k_s", &params->k_s, sizeof(float));
     cudaMemcpyToSymbol("devC_k_r", &params->k_r, sizeof(float));
+    cudaMemcpyToSymbol("devC_gamma_n", &params->gamma_n, sizeof(float));
     cudaMemcpyToSymbol("devC_gamma_s", &params->gamma_s, sizeof(float));
     cudaMemcpyToSymbol("devC_gamma_r", &params->gamma_r, sizeof(float));
     cudaMemcpyToSymbol("devC_mu_s", &params->mu_s, sizeof(float));
+    cudaMemcpyToSymbol("devC_mu_d", &params->mu_d, sizeof(float));
     cudaMemcpyToSymbol("devC_mu_r", &params->mu_r, sizeof(float));
-    cudaMemcpyToSymbol("devC_C", &params->C, sizeof(float));
     cudaMemcpyToSymbol("devC_rho", &params->rho, sizeof(float));
-    cudaMemcpyToSymbol("devC_E", &params->E, sizeof(float));
-    cudaMemcpyToSymbol("devC_K", &params->K, sizeof(float));
-    cudaMemcpyToSymbol("devC_nu", &params->nu, sizeof(float));
     cudaMemcpyToSymbol("devC_kappa", &params->kappa, sizeof(float));
     cudaMemcpyToSymbol("devC_db", &params->db, sizeof(float));
     cudaMemcpyToSymbol("devC_V_b", &params->V_b, sizeof(float));
@@ -1591,6 +1668,8 @@ __host__ void gpuMain(float4* host_x,
 
   // Particle contact bookkeeping
   unsigned int* dev_contacts;
+  // Particle pair distance correction across periodic boundaries
+  float4* dev_distmod;
   // x,y,z contains the interparticle vector, corrected if contact 
   // is across a periodic boundary. 
   float4* dev_delta_t; // Accumulated shear distance of contact
@@ -1630,6 +1709,7 @@ __host__ void gpuMain(float4* host_x,
 
   // Particle contact bookkeeping arrays
   cudaMalloc((void**)&dev_contacts, sizeof(unsigned int)*p->np*NC); // Max NC contacts per particle
+  cudaMalloc((void**)&dev_distmod, sizeof(float4)*p->np*NC);
   cudaMalloc((void**)&dev_delta_t, sizeof(float4)*p->np*NC);
 
   // Wall arrays
@@ -1668,10 +1748,12 @@ __host__ void gpuMain(float4* host_x,
   cudaMemcpy(dev_contacts, npu, sizeof(unsigned int)*p->np*NC, cudaMemcpyHostToDevice);
   delete[] npu;
 
-  // Create array of 0.0 values on the host and transfer these to the shear displacement array
+  // Create array of 0.0 values on the host and transfer these to the distance 
+  // modifier and shear displacement arrays
   float4* zerosf4 = new float4[p->np*NC];
   for (unsigned int i=0; i<(p->np*NC); ++i)
     zerosf4[i] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+  cudaMemcpy(dev_distmod, zerosf4, sizeof(float4)*p->np*NC, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_delta_t, zerosf4, sizeof(float4)*p->np*NC, cudaMemcpyHostToDevice);
   delete[] zerosf4;
 
@@ -1827,7 +1909,8 @@ __host__ void gpuMain(float4* host_x,
 				      dev_gridParticleIndex,
 				      dev_x_sorted, 
 				      dev_radius_sorted, 
-				      dev_contacts);
+				      dev_contacts,
+				      dev_distmod);
 
       // Empty cuPrintf() buffer to console
       //cudaThreadSynchronize();
@@ -1835,7 +1918,7 @@ __host__ void gpuMain(float4* host_x,
 
       // Synchronization point
       cudaThreadSynchronize();
-      checkForCudaErrors("Post topology. Possibly caused by numerical instability. Is the computational time step too large?", iter);
+      checkForCudaErrors("Post topology: One or more particles moved outside the grid.\nThis could possibly be caused by a numerical instability.\nIs the computational time step too large?", iter);
     }
 
 
@@ -1851,7 +1934,8 @@ __host__ void gpuMain(float4* host_x,
 				    dev_es_dot, dev_es, dev_p,
 				    dev_w_nx, dev_w_mvfd, dev_w_force,
 				    //dev_bonds_sorted,
-				    dev_contacts, 
+				    dev_contacts,
+				    dev_distmod,
 				    dev_delta_t);
 
     // Empty cuPrintf() buffer to console
@@ -1885,6 +1969,7 @@ __host__ void gpuMain(float4* host_x,
     // Synchronization point
     cudaThreadSynchronize();
     checkForCudaErrors("Post integrateWalls");
+
 
     // Update timers and counters
     time->current    += time->dt;
@@ -1997,6 +2082,7 @@ __host__ void gpuMain(float4* host_x,
   //cudaFree(dev_bonds);
   //cudaFree(dev_bonds_sorted);
   cudaFree(dev_contacts);
+  cudaFree(dev_distmod);
   cudaFree(dev_delta_t);
 
   // Cell-related arrays

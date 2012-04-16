@@ -85,14 +85,12 @@ int fwritebin(char *target, Particles *p, float4 *host_x, float4 *host_vel, floa
     fwrite(&p->k_n[j], sizeof(p->k_n[j]), 1, fp);
     fwrite(&p->k_s[j], sizeof(p->k_s[j]), 1, fp);
     fwrite(&p->k_r[j], sizeof(p->k_r[j]), 1, fp);
+    fwrite(&p->gamma_n[j], sizeof(p->gamma_n[j]), 1, fp);
     fwrite(&p->gamma_s[j], sizeof(p->gamma_s[j]), 1, fp);
     fwrite(&p->gamma_r[j], sizeof(p->gamma_r[j]), 1, fp);
     fwrite(&p->mu_s[j], sizeof(p->mu_s[j]), 1, fp);
+    fwrite(&p->mu_d[j], sizeof(p->mu_d[j]), 1, fp);
     fwrite(&p->mu_r[j], sizeof(p->mu_r[j]), 1, fp);
-    fwrite(&p->C[j], sizeof(p->C[j]), 1, fp);
-    fwrite(&p->E[j], sizeof(p->E[j]), 1, fp);
-    fwrite(&p->K[j], sizeof(p->K[j]), 1, fp);
-    fwrite(&p->nu[j], sizeof(p->nu[j]), 1, fp);
     fwrite(&p->es_dot[j], sizeof(p->es_dot[j]), 1, fp);
     fwrite(&p->es[j], sizeof(p->es[j]), 1, fp);
     fwrite(&p->p[j], sizeof(p->p[j]), 1, fp);

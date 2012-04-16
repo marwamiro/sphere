@@ -1,7 +1,10 @@
 #!/usr/bin/env python2.7
 import math
 import numpy
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
 import subprocess
 
 numpy.seterr(all='warn', over='raise')
@@ -43,14 +46,12 @@ class Spherebin:
     self.k_n     = numpy.zeros(self.np, dtype=numpy.float32)
     self.k_s     = numpy.zeros(self.np, dtype=numpy.float32)
     self.k_r	 = numpy.zeros(self.np, dtype=numpy.float32)
+    self.gamma_n = numpy.zeros(self.np, dtype=numpy.float32)
     self.gamma_s = numpy.zeros(self.np, dtype=numpy.float32)
     self.gamma_r = numpy.zeros(self.np, dtype=numpy.float32)
     self.mu_s    = numpy.zeros(self.np, dtype=numpy.float32)
+    self.mu_d    = numpy.zeros(self.np, dtype=numpy.float32)
     self.mu_r    = numpy.zeros(self.np, dtype=numpy.float32)
-    self.C       = numpy.zeros(self.np, dtype=numpy.float32)
-    self.E       = numpy.zeros(self.np, dtype=numpy.float32)
-    self.K       = numpy.zeros(self.np, dtype=numpy.float32)
-    self.nu      = numpy.zeros(self.np, dtype=numpy.float32)
     self.es_dot  = numpy.zeros(self.np, dtype=numpy.float32)
     self.es	 = numpy.zeros(self.np, dtype=numpy.float32)
     self.p	 = numpy.zeros(self.np, dtype=numpy.float32)
@@ -66,7 +67,7 @@ class Spherebin:
     self.shearmodel   = numpy.zeros(1, dtype=numpy.uint32)
 
     # Wall data
-    self.nw 	 = numpy.ones(1, dtype=numpy.uint32)
+    self.nw 	 = numpy.ones(1, dtype=numpy.uint32) * nw
     self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float32).reshape(self.nw,self.nd)
     self.w_x     = numpy.zeros(self.nw, dtype=numpy.float32)
     self.w_m     = numpy.zeros(self.nw, dtype=numpy.float32)
@@ -112,14 +113,12 @@ class Spherebin:
       self.k_n     = numpy.zeros(self.np, dtype=numpy.float32)
       self.k_s     = numpy.zeros(self.np, dtype=numpy.float32)
       self.k_r	   = numpy.zeros(self.np, dtype=numpy.float32)
+      self.gamma_n = numpy.zeros(self.np, dtype=numpy.float32)
       self.gamma_s = numpy.zeros(self.np, dtype=numpy.float32)
       self.gamma_r = numpy.zeros(self.np, dtype=numpy.float32)
       self.mu_s    = numpy.zeros(self.np, dtype=numpy.float32)
+      self.mu_d    = numpy.zeros(self.np, dtype=numpy.float32)
       self.mu_r    = numpy.zeros(self.np, dtype=numpy.float32)
-      self.C       = numpy.zeros(self.np, dtype=numpy.float32)
-      self.E       = numpy.zeros(self.np, dtype=numpy.float32)
-      self.K       = numpy.zeros(self.np, dtype=numpy.float32)
-      self.nu      = numpy.zeros(self.np, dtype=numpy.float32)
       self.es_dot  = numpy.zeros(self.np, dtype=numpy.float32)
       self.es	   = numpy.zeros(self.np, dtype=numpy.float32)
       self.p	   = numpy.zeros(self.np, dtype=numpy.float32)
@@ -148,14 +147,12 @@ class Spherebin:
         self.k_n[j]     = numpy.fromfile(fh, dtype=numpy.float32, count=1)
         self.k_s[j]     = numpy.fromfile(fh, dtype=numpy.float32, count=1)
 	self.k_r[j]     = numpy.fromfile(fh, dtype=numpy.float32, count=1)
+	self.gamma_n[j] = numpy.fromfile(fh, dtype=numpy.float32, count=1)
 	self.gamma_s[j] = numpy.fromfile(fh, dtype=numpy.float32, count=1)
 	self.gamma_r[j] = numpy.fromfile(fh, dtype=numpy.float32, count=1)
         self.mu_s[j]    = numpy.fromfile(fh, dtype=numpy.float32, count=1) 
+        self.mu_d[j]    = numpy.fromfile(fh, dtype=numpy.float32, count=1) 
         self.mu_r[j]    = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.C[j]       = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.E[j]       = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.K[j]       = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.nu[j]      = numpy.fromfile(fh, dtype=numpy.float32, count=1)
         self.es_dot[j]  = numpy.fromfile(fh, dtype=numpy.float32, count=1)
         self.es[j]      = numpy.fromfile(fh, dtype=numpy.float32, count=1)
         self.p[j]       = numpy.fromfile(fh, dtype=numpy.float32, count=1)
@@ -170,6 +167,7 @@ class Spherebin:
 
       # Wall data
       self.nw 	   = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
+
       self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float32).reshape(self.nw,self.nd)
       self.w_x     = numpy.zeros(self.nw, dtype=numpy.float32)
       self.w_m     = numpy.zeros(self.nw, dtype=numpy.float32)
@@ -245,14 +243,12 @@ class Spherebin:
         fh.write(self.k_n[j].astype(numpy.float32))
         fh.write(self.k_s[j].astype(numpy.float32))
 	fh.write(self.k_r[j].astype(numpy.float32))
+	fh.write(self.gamma_n[j].astype(numpy.float32))
 	fh.write(self.gamma_s[j].astype(numpy.float32))
 	fh.write(self.gamma_r[j].astype(numpy.float32))
         fh.write(self.mu_s[j].astype(numpy.float32))
+        fh.write(self.mu_d[j].astype(numpy.float32))
         fh.write(self.mu_r[j].astype(numpy.float32))
-        fh.write(self.C[j].astype(numpy.float32))
-        fh.write(self.E[j].astype(numpy.float32))
-        fh.write(self.K[j].astype(numpy.float32))
-        fh.write(self.nu[j].astype(numpy.float32))
         fh.write(self.es_dot[j].astype(numpy.float32))
         fh.write(self.es[j].astype(numpy.float32))
         fh.write(self.p[j].astype(numpy.float32))
@@ -310,22 +306,26 @@ class Spherebin:
 
     # Show radii as histogram
     if histogram == 1:
+      fig = plt.figure(figsize=(15,10), dpi=300)
+      figtitle = 'Particle size distribution, {0} particles'.format(self.np[0])
+      fig.text(0.5,0.95,figtitle,horizontalalignment='center',fontproperties=FontProperties(size=18))
       bins = 20
       # Create histogram
       plt.hist(self.radius, bins)
       # Plot
-      plt.title('Particle size distribution, {0} particles'.format(self.np))
       plt.xlabel('Radii [m]')
       plt.ylabel('Count')
       plt.axis('tight')
-      plt.show()
+      fig.savefig('psd.png')
+      fig.clf()
  
 
-  # Initialize particle positions to non-overlapping configuration
-  def initsetup(self, g = numpy.array([0.0, 0.0, -9.80665]), 
-      		      gridnum = numpy.array([12, 12, 36]),
-		      periodic = 1,
-		      shearmodel = 1):
+  # Initialize particle positions to completely random, non-overlapping configuration.
+  # This method is very compute intensive at high particle numbers.
+  def initRandomPos(self, g = numpy.array([0.0, 0.0, -9.80665]), 
+      		          gridnum = numpy.array([12, 12, 36]),
+		          periodic = 1,
+		          shearmodel = 2):
     """ Initialize particle positions in loose, cubic configuration.
         Radii must be set beforehand.
 	xynum is the number of rows in both x- and y- directions.
@@ -358,7 +358,7 @@ class Spherebin:
 	  delta = self.x[i] - self.x[j]
 	  delta_len = math.sqrt(numpy.dot(delta,delta)) \
 	              - (self.radius[i] + self.radius[j])
-	  if (delta_len < 0):
+	  if (delta_len < 0.0):
 	    overlaps = True
       print "\rFinding non-overlapping particle positions, {0} % complete".format(numpy.ceil(i/self.np[0]*100)),
    
@@ -372,9 +372,222 @@ class Spherebin:
     self.w_vel[0] = 0.0
     self.w_force[0] = 0.0
     self.w_devs[0] = 0.0
-    self.nw[0] = numpy.ones(1, dtype=numpy.uint32) * 1
+    #self.nw[0] = numpy.ones(1, dtype=numpy.uint32) * 1
+    self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
+
+  # Initialize particle positions to regular, grid-like, non-overlapping configuration
+  def initGridPos(self, g = numpy.array([0.0, 0.0, -9.80665]), 
+      		        gridnum = numpy.array([12, 12, 36]),
+		        periodic = 1,
+		        shearmodel = 2):
+    """ Initialize particle positions in loose, cubic configuration.
+        Radii must be set beforehand.
+	xynum is the number of rows in both x- and y- directions.
+    """
+    self.g = g
+    self.periodic[0] = periodic
+
+    # Calculate cells in grid
+    self.num = gridnum
+
+    # World size
+    r_max = numpy.amax(self.radius)
+    cellsize = 2.1 * r_max
+    self.L = self.num * cellsize
+
+    # Check whether there are enough grid cells 
+    if ((self.num[0]*self.num[1]*self.num[2]-(2**3)) < self.np):
+      print "Error! The grid is not sufficiently large."
+      raise NameError('Error! The grid is not sufficiently large.')
+
+    gridpos = numpy.zeros(self.nd, dtype=numpy.uint32)
+
+    # Make sure grid is sufficiently large if every second level is moved
+    if (self.periodic[0] == 1):
+      self.num[0] -= 1
+      self.num[1] -= 1
+      
+      # Check whether there are enough grid cells 
+      if ((self.num[0]*self.num[1]*self.num[2]-(2*3*3)) < self.np):
+        print "Error! The grid is not sufficiently large."
+        raise NameError('Error! The grid is not sufficiently large.')
 
 
+    # Particle positions randomly distributed without overlap
+    for i in range(self.np):
+
+      # Find position in 3d mesh from linear index
+      gridpos[0] = (i % (self.num[0]))
+      gridpos[1] = numpy.floor(i/(self.num[0])) % (self.num[0])
+      gridpos[2] = numpy.floor(i/((self.num[0])*(self.num[1]))) #\
+	           #% ((self.num[0])*(self.num[1]))
+	
+      for d in range(self.nd):
+        self.x[i,d] = gridpos[d] * cellsize + 0.5*cellsize
+
+      if (self.periodic[0] == 1): # Allow pushing every 2.nd level out of lateral boundaries
+        # Offset every second level
+        if (gridpos[2] % 2):
+	  self.x[i,0] += 0.5*cellsize
+	  self.x[i,1] += 0.5*cellsize
+
+    self.shearmodel[0] = shearmodel
+
+    # Readjust grid to correct size
+    if (self.periodic[0] == 1):
+      self.num[0] += 1
+      self.num[1] += 1
+
+    # Initialize upper wall
+    self.w_n[0,2] = -1.0
+    self.w_x[0] = self.L[2]
+    self.w_m[0] = self.rho[0] * self.np * math.pi * r_max**3
+    self.w_vel[0] = 0.0
+    self.w_force[0] = 0.0
+    self.w_devs[0] = 0.0
+    self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
+
+
+  # Initialize particle positions to non-overlapping configuration
+  # in grid, with a certain element of randomness
+  def initRandomGridPos(self, g = numpy.array([0.0, 0.0, -9.80665]), 
+      		              gridnum = numpy.array([12, 12, 32]),
+			      periodic = 1,
+			      shearmodel = 2):
+    """ Initialize particle positions in loose, cubic configuration.
+        Radii must be set beforehand.
+	xynum is the number of rows in both x- and y- directions.
+    """
+    self.g = g
+    self.periodic[0] = periodic
+
+    # Calculate cells in grid
+    coarsegrid = numpy.floor(gridnum/2) 
+
+    # World size 
+    r_max = numpy.amax(self.radius)
+    cellsize = 2.1 * r_max * 2 # Cells in grid 2*size to make space for random offset
+
+    # Check whether there are enough grid cells 
+    if (((coarsegrid[0]-1)*(coarsegrid[1]-1)*(coarsegrid[2]-1)) < self.np):
+      print "Error! The grid is not sufficiently large."
+      raise NameError('Error! The grid is not sufficiently large.')
+
+    gridpos = numpy.zeros(self.nd, dtype=numpy.uint32)
+
+    # Particle positions randomly distributed without overlap
+    for i in range(self.np):
+
+      # Find position in 3d mesh from linear index
+      gridpos[0] = (i % (coarsegrid[0]))
+      gridpos[1] = numpy.floor(i/(coarsegrid[0])) % (coarsegrid[0])
+      gridpos[2] = numpy.floor(i/((coarsegrid[0])*(coarsegrid[1])))
+	
+      # Place particles in grid structure, and randomly adjust the positions
+      # within the oversized cells (uniform distribution)
+      for d in range(self.nd):
+	r = self.radius[i]*1.05
+        self.x[i,d] = gridpos[d] * cellsize \
+		      + ((cellsize-r) - r) * numpy.random.random_sample() + r
+
+    self.shearmodel[0] = shearmodel
+
+    # Calculate new grid with cell size equal to max. particle diameter
+    x_max = numpy.max(self.x[:,0] + self.radius)
+    y_max = numpy.max(self.x[:,1] + self.radius)
+    z_max = numpy.max(self.x[:,2] + self.radius)
+    cellsize = 2.1 * r_max
+    # Adjust size of world
+    self.num[0] = numpy.ceil(x_max/cellsize)
+    self.num[1] = numpy.ceil(y_max/cellsize)
+    self.num[2] = numpy.ceil(z_max/cellsize)
+    self.L = self.num * cellsize
+
+    # Initialize upper wall
+    self.w_n[0,2] = -1.0
+    self.w_x[0] = self.L[2]
+    self.w_m[0] = self.rho[0] * self.np * math.pi * r_max**3
+    self.w_vel[0] = 0.0
+    self.w_force[0] = 0.0
+    self.w_devs[0] = 0.0
+    self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
+
+  # Adjust grid and upper wall for consolidation
+  def consolidate(self, deviatoric_stress = 10e3, 
+      			periodic = 1):
+    """ Setup consolidation experiment. Specify the upper wall 
+        deviatoric stress in Pascal, default value is 10 kPa.
+    """
+
+    # Compute new grid, scaled to fit max. and min. particle positions
+    z_min = numpy.min(self.x[:,2] - self.radius)
+    z_max = numpy.max(self.x[:,2] + self.radius)
+    cellsize = self.L[0] / self.num[0]
+    z_adjust = 1.1	# Overheightening of grid. 1.0 = no overheightening
+    self.num[2] = numpy.ceil((z_max-z_min)*z_adjust/cellsize)
+    self.L[2] = (z_max-z_min)*z_adjust
+
+    # Initialize upper wall
+    self.w_n[0,2] = -1.0
+    self.w_x[0] = self.L[2]
+    self.w_m[0] = self.rho[0] * self.np * math.pi * (cellsize/2.0)**3
+    self.w_vel[0] = 0.0
+    self.w_force[0] = 0.0
+    self.w_devs[0] = deviatoric_stress
+    self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
+
+
+  # Adjust grid and upper wall for shear, and fix boundary particle velocities
+  def shear(self, deviatoric_stress = 10e3, 
+      		  shear_strain_rate = 1,
+      		  periodic = 1):
+    """ Setup shear experiment. Specify the upper wall 
+        deviatoric stress in Pascal, default value is 10 kPa.
+	The shear strain rate is the shear length divided by the
+	initial height per second.
+    """
+
+    # Compute new grid, scaled to fit max. and min. particle positions
+    z_min = numpy.min(self.x[:,2] - self.radius)
+    z_max = numpy.max(self.x[:,2] + self.radius)
+    cellsize = self.L[0] / self.num[0]
+    z_adjust = 1.3	# Overheightening of grid. 1.0 = no overheightening
+    self.num[2] = numpy.ceil((z_max-z_min)*z_adjust/cellsize)
+    self.L[2] = (z_max-z_min)*z_adjust
+
+    # Initialize upper wall
+    self.w_devs[0] = deviatoric_stress
+
+    # Zero kinematics
+    self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
+    self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
+
+    #fixheight = 2*cellsize
+    fixheight = cellsize
+ 
+    # Fix horizontal velocity to 0.0 of lowermost particles
+    I = numpy.nonzero(self.x[:,2] < (z_min + fixheight)) # Find indices of lowermost 10%
+    self.fixvel[I] = 1;
+    self.angvel[I,0] = 0.0;
+    self.angvel[I,1] = 0.0;
+    self.angvel[I,2] = 0.0;
+    self.vel[I,0] = 0.0; # x-dim
+    self.vel[I,1] = 0.0; # y-dim
+
+    # Fix horizontal velocity to specific value of uppermost particles
+    I = numpy.nonzero(self.x[:,2] > (z_max - fixheight)) # Find indices of lowermost 10%
+    self.fixvel[I] = 1;
+    self.angvel[I,0] = 0.0;
+    self.angvel[I,1] = 0.0;
+    self.angvel[I,2] = 0.0;
+    self.vel[I,0] = (z_max-z_min)*shear_strain_rate
+    self.vel[I,1] = 0.0; # y-dim
+
+    # Zero x-axis displacement
+    self.xsum = numpy.zeros(self.np, dtype=numpy.float32)
+
+
+ 
   def initTemporal(self, total,
       			 current = 0.0,
 			 file_dt = 0.01,
@@ -395,14 +608,16 @@ class Spherebin:
     self.time_file_dt[0] = file_dt
     self.time_step_count[0] = 0
 
-  def defaultparams(self, ang_s = 25,
-      			  ang_r = 35,
+  def defaultParams(self, ang_s = 20,
+      			  ang_d = 15,
+      			  ang_r = 0,
 			  rho = 3600,
-			  k_n = 4e5,
-			  k_s = 4e5,
+			  k_n = 1e9,
+			  k_s = 6.6e8,
 			  k_r = 4e6,
-			  gamma_s = 4e2,
-			  gamma_r = 4e2,
+			  gamma_n = 1e3,
+			  gamma_s = 1e3,
+			  gamma_r = 2e3,
 			  capillaryCohesion = 0):
     """ Initialize particle parameters to default values.
         Radii must be set prior to calling this function.
@@ -422,26 +637,28 @@ class Spherebin:
     # Contact rolling elastic stiffness (for shearmodel = 2), N/m
     self.k_r = numpy.ones(self.np, dtype=numpy.float32) * k_r
 
-    # Contact shear viscosity (for shearmodel = 1), Ns/m
+    # Contact normal viscosity. Critical damping: 2*sqrt(m*k_n).
+    # Normal force component elastic if nu = 0.0.
+    #self.gamma_n = numpy.ones(self.np, dtype=numpy.float32) \
+    #	      * nu_frac * 2.0 * math.sqrt(4.0/3.0 * math.pi * numpy.amin(self.radius)**3 \
+    #	      * self.rho[0] * self.k_n[0])
+    self.gamma_n = numpy.ones(self.np, dtype=numpy.float32) * gamma_n
+		      
+    # Contact shear viscosity, Ns/m
     self.gamma_s = numpy.ones(self.np, dtype=numpy.float32) * gamma_s
 
-    # Contact rolling visscosity (for shearmodel = 1), Ns/m?
+    # Contact rolling viscosity, Ns/m?
     self.gamma_r = numpy.ones(self.np, dtype=numpy.float32) * gamma_r
 
-    # Contact shear friction coefficient
+    # Contact static shear friction coefficient
     self.mu_s = numpy.ones(self.np, dtype=numpy.float32) * numpy.tan(numpy.radians(ang_s))
+
+    # Contact dynamic shear friction coefficient
+    self.mu_d = numpy.ones(self.np, dtype=numpy.float32) * numpy.tan(numpy.radians(ang_d))
 
     # Contact rolling friction coefficient
     self.mu_r = numpy.ones(self.np, dtype=numpy.float32) * numpy.tan(numpy.radians(ang_r))
 
-    r_min = numpy.amin(self.radius)
-    
-    # Poisson's ratio. Critical damping: 2*sqrt(m*k_n).
-    # Normal force component elastic if nu = 0.0.
-    self.nu = numpy.ones(self.np, dtype=numpy.float32) \
-	      * 0.1 * 2.0 * math.sqrt(4.0/3.0 * math.pi * r_min**3 \
-	      * self.rho[0] * self.k_n[0])
-    
     # Global parameters
     # if 1 = all particles have the same values for the physical parameters
     self.globalparams[0] = 1
@@ -522,6 +739,12 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
 
   lastfile = status(project)
 
+  ### Plotting
+  fig = plt.figure(figsize=(15,10),dpi=300)
+  figtitle = "{0}, simulation {1}".format(method, project)
+  fig.text(0.5,0.95,figtitle,horizontalalignment='center',fontproperties=FontProperties(size=18))
+
+
   if method == 'energy':
 
     # Allocate arrays
@@ -547,38 +770,50 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
     
     t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
-    # Plotting
-    plt.subplot(2,3,1)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Total potential energy [J]')
-    plt.plot(t, Epot, '+-')
+    # Potential energy
+    ax1 = plt.subplot2grid((2,3),(0,0))
+    ax1.set_xlabel('Time [s]')
+    ax1.set_ylabel('Total potential energy [J]')
+    ax1.plot(t, Epot, '+-')
 
-    plt.subplot(2,3,2)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Total kinetic energy [J]')
-    plt.plot(t, Ekin, '+-')
+    # Kinetic energy
+    ax2 = plt.subplot2grid((2,3),(0,1))
+    ax2.set_xlabel('Time [s]')
+    ax2.set_ylabel('Total kinetic energy [J]')
+    ax2.plot(t, Ekin, '+-')
 
-    plt.subplot(2,3,3)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Total rotational energy [J]')
-    plt.plot(t, Erot, '+-')
+    # Rotational energy
+    ax3 = plt.subplot2grid((2,3),(0,2))
+    ax3.set_xlabel('Time [s]')
+    ax3.set_ylabel('Total rotational energy [J]')
+    ax3.plot(t, Erot, '+-')
 
-    plt.subplot(2,3,4)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Shear energy rate [W]')
-    plt.plot(t, Es_dot, '+-')
+    # Shear energy rate
+    ax4 = plt.subplot2grid((2,3),(1,0))
+    ax4.set_xlabel('Time [s]')
+    ax4.set_ylabel('Shear energy rate [W]')
+    ax4.plot(t, Es_dot, '+-')
+    
+    # Shear energy
+    ax5 = plt.subplot2grid((2,3),(1,1))
+    ax5.set_xlabel('Time [s]')
+    ax5.set_ylabel('Total shear energy [J]')
+    ax5.plot(t, Es, '+-')
 
-    plt.subplot(2,3,5)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Total shear energy [J]')
-    plt.plot(t, Es, '+-')
+    # Total energy
+    #ax6 = plt.subplot2grid((2,3),(1,2))
+    #ax6.set_xlabel('Time [s]')
+    #ax6.set_ylabel('Total energy [J]')
+    #ax6.plot(t, Esum, '+-')
 
-    plt.subplot(2,3,6)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Total energy [J]')
-    plt.plot(t, Esum, '+-')
-
-    #plt.show()
+    # Combined view
+    ax6 = plt.subplot2grid((2,3),(1,2))
+    ax6.set_xlabel('Time [s]')
+    ax6.set_ylabel('Energy [J]')
+    ax6.plot(t, Epot, '+-g')
+    ax6.plot(t, Ekin, '+-b')
+    ax6.plot(t, Erot, '+-r')
+    ax6.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
 
   elif method == 'walls':
 
@@ -590,43 +825,92 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
 
       # Allocate arrays on first run
       if (i == 0):
-	wforce = numpy.zeros(lastfile+1, sb.nw[0])
-	wvel   = numpy.zeros(lastfile+1, sb.nw[0])
-	wpos   = numpy.zeros(lastfile+1, sb.nw[0])
-	wdevs  = numpy.zeros(lastfile+1, sb.nw[0])
+	wforce = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float32).reshape((lastfile+1), sb.nw[0])
+	wvel   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float32).reshape((lastfile+1), sb.nw[0])
+	wpos   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float32).reshape((lastfile+1), sb.nw[0])
+	wdevs  = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float32).reshape((lastfile+1), sb.nw[0])
 
-      wforce[i] = sb.w_force
-      wvel[i]   = sb.w_vel
-      wpos[i]   = sb.w_x
-      wdevs[i]  = sb.w_devs
+      wforce[i] = sb.w_force[0]
+      wvel[i]   = sb.w_vel[0]
+      wpos[i]   = sb.w_x[0]
+      wdevs[i]  = sb.w_devs[0]
     
     t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
     # Plotting
-    plt.subplot(2,2,1)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Position [m]')
-    plt.plot(t, wpos, '+-')
+    ax1 = plt.subplot2grid((2,2),(0,0))
+    ax1.set_xlabel('Time [s]')
+    ax1.set_ylabel('Position [m]')
+    ax1.plot(t, wpos, '+-')
 
-    plt.subplot(2,2,2)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Velocity [m/s]')
-    plt.plot(t, wvel, '+-')
+    ax2 = plt.subplot2grid((2,2),(0,1))
+    ax2.set_xlabel('Time [s]')
+    ax2.set_ylabel('Velocity [m/s]')
+    ax2.plot(t, wvel, '+-')
 
-    plt.subplot(2,2,3)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Force [N]')
-    plt.plot(t, wforce, '+-')
+    ax3 = plt.subplot2grid((2,2),(1,0))
+    ax3.set_xlabel('Time [s]')
+    ax3.set_ylabel('Force [N]')
+    ax3.plot(t, wforce, '+-')
 
-    plt.subplot(2,2,4)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Deviatoric stress [Pa]')
-    plt.plot(t, wdevs, '+-')
+    ax4 = plt.subplot2grid((2,2),(1,1))
+    ax4.set_xlabel('Time [s]')
+    ax4.set_ylabel('Deviatoric stress [Pa]')
+    ax4.plot(t, wdevs, '+-')
+
+
+  elif method == 'shear':
+
+    sb = Spherebin()
+    # Read stress values from project binaries
+    for i in range(lastfile+1):
+
+      fn = "../output/{0}.output{1}.bin".format(project, i)
+      sb.readbin(fn, verbose = False)
+
+      # First iteration: Allocate arrays and find constant values
+      if (i == 0):
+	xdisp    = numpy.zeros(lastfile+1, dtype=numpy.float32)  # Shear displacement
+	sigma    = numpy.zeros(lastfile+1, dtype=numpy.float32)  # Normal stress
+	tau      = numpy.zeros(lastfile+1, dtype=numpy.float32)  # Shear stress
+	dilation = numpy.zeros(lastfile+1, dtype=numpy.float32)  # Upper wall position
+
+	fixvel = numpy.nonzero(sb.fixvel > 0.0)
+	#fixvel_upper = numpy.nonzero(sb.vel[fixvel,0] > 0.0)
+	shearvel = sb.vel[fixvel,0].max()
+	w_x0 = sb.w_x[0]
+	A = sb.L[0] * sb.L[1]   # Upper surface area
+
+      # Summation of shear stress contributions
+      for j in fixvel[0]:
+	if (sb.vel[j,0] > 0.0):
+	  tau[i] += -sb.force[j,0]
+
+      xdisp[i]    = sb.time_current[0] * shearvel
+      sigma[i]    = sb.w_force[0] / A
+      sigma[i]    = sb.w_devs[0]
+      #tau[i]      = sb.force[fixvel_upper,0].sum() / A
+      dilation[i] = sb.w_x[0] - w_x0
+
+    # Plot stresses
+    ax1 = plt.subplot2grid((2,1),(0,0))
+    ax1.set_xlabel('Shear distance [m]')
+    ax1.set_ylabel('Stress [Pa]')
+    ax1.plot(xdisp, sigma, '+-g')
+    ax1.plot(xdisp, tau, '+-r')
+    #plt.legend('$\sigma`$','$\tau$')
+
+    # Plot dilation
+    ax2 = plt.subplot2grid((2,1),(1,0))
+    ax2.set_xlabel('Shear distance [m]')
+    ax2.set_ylabel('Dilation [m]')
+    ax2.plot(xdisp, dilation, '+-')
 
 
   # Optional save of figure
   if (savefig == True):
-    plt.savefig("{0}-{1}.{2}".format(project, method, outformat))
+    fig.savefig("{0}-{1}.{2}".format(project, method, outformat))
+    fig.clf()
   else:
     plt.show()
 

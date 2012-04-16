@@ -26,6 +26,6 @@ int rt(float4* p, const unsigned int np,
        rgb* img, const unsigned int width, const unsigned int height,
        f3 origo, f3 L, f3 eye, f3 lookat, float imgw,
        const int visualize, const float max_val, 
-       float* pres, float* es_dot, float* es);
+       float* fixvel, float* pres, float* es_dot, float* es);
 
 #endif
