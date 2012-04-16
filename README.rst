@@ -20,6 +20,12 @@ The build requirements are:
  - The Nvidia CUDA toolkit and SDK
 The runtime requirements are:
  - A Nvidia CUDA-enabled GPU and device driver
+Optional tools, required for simulation setup and data processing:
+ - Python 2
+ - Numpy
+ - Matplotlib
+ - Imagemagick
+ - ffmpeg
 
 Obtaining SPHERE
 ================
