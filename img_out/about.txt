@@ -1,0 +1,2 @@
+This folder will contain images rendered from ../output binaries, and
+graphs plotted with ../python/sphere.py.
