@@ -5,8 +5,9 @@
 #include <cuda.h>
 #include <cutil_math.h>
 #include <string.h>
+#include <stdlib.h>
 #include "header.h"
-#include "rt_kernel_cpu.h"
+#include "rt-kernel-cpu.h"
 
 // Constants
 float3 constc_u;
@@ -35,10 +36,10 @@ __inline__ float lengthf3(float3 in)
 // Kernel for initializing image data
 void imageInit_cpu(unsigned char* _img, unsigned int pixels)
 {
-  for (unsigned int mempos=0; mempos<pixels; mempos++) {
-    _img[mempos*4]     = 0;	// Red channel
-    _img[mempos*4 + 1] = 0;	// Green channel
-    _img[mempos*4 + 2] = 0;	// Blue channel
+  for (unsigned int mempos=0; mempos<pixels; ++mempos) {
+    _img[mempos*4]     = 255;	// Red channel
+    _img[mempos*4 + 1] = 255;	// Green channel
+    _img[mempos*4 + 2] = 255;	// Blue channel
   }
 }
 
@@ -49,17 +50,19 @@ void rayInitPerspective_cpu(float3* _ray_origo,
                         unsigned int width,
 			unsigned int height)
 {
-  int i;
-  #pragma omp parallel for
-  for (i=0; i<width; i++) {
-    for (unsigned int j=0; j<height; j++) {
+  int i,j;
+  unsigned int mempos;
+  float p_u, p_v;
+  #pragma omp parallel for private(mempos,j,p_u,p_v)
+  for (i=0; i<(int)width; ++i) {
+    for (j=0; j<(int)height; ++j) {
 
-      unsigned int mempos = i + j*height;
+      mempos = i + j*width;
 
       // Calculate pixel coordinates in image plane
-      float p_u = constc_imgplane.x + (constc_imgplane.y - constc_imgplane.x)
+      p_u = constc_imgplane.x + (constc_imgplane.y - constc_imgplane.x)
 	* (i + 0.5f) / width;
-      float p_v = constc_imgplane.z + (constc_imgplane.w - constc_imgplane.z)
+      p_v = constc_imgplane.z + (constc_imgplane.w - constc_imgplane.z)
 	* (j + 0.5f) / height;
 
       // Write ray origo and direction to global memory
@@ -74,37 +77,34 @@ void rayInitPerspective_cpu(float3* _ray_origo,
 void rayIntersectSpheres_cpu(float3* _ray_origo, 
                          float3* _ray_direction,
                          float4* _p, 
+			 float* _nuance,
 			 unsigned char* _img, 
 			 unsigned int pixels,
 			 unsigned int np)
 {
-  int mempos;
-  #pragma omp parallel for
-  for (mempos=0; mempos<pixels; mempos++) {
+  long int mempos;
+  float3 e, d, n, p, c;
+  float tdist, R, Delta, t_minus, dotprod, I_d, k_d, k_a, I_a, nuance;
+  Inttype i, ifinal;
+  #pragma omp parallel for private(e,d,n,p,c,tdist,R,Delta,t_minus,dotprod,I_d,k_d,k_a,I_a,nuance,i,ifinal)
+  for (mempos=0; mempos<pixels; ++mempos) {
     
     // Read ray data from global memory
-    float3 e = _ray_origo[mempos];
-    float3 d = _ray_direction[mempos];
-    //float  step = lengthf3(d);
+    e = _ray_origo[mempos];
+    d = _ray_direction[mempos];
 
     // Distance, in ray steps, between object and eye initialized with a large value
-    float tdist = 1e10f;
-
-    // Surface normal at closest sphere intersection
-    float3 n;
-
-    // Intersection point coordinates
-    float3 p;
+    tdist = 1e10f;
 
     // Iterate through all particles
-    for (unsigned int i=0; i<np; i++) {
+    for (i=0; i<np; ++i) {
 
       // Read sphere coordinate and radius
-      float3 c = f4_to_f3(_p[i]);
-      float  R = _p[i].w;
+      c = f4_to_f3(_p[i]);
+      R = _p[i].w;
 
       // Calculate the discriminant: d = B^2 - 4AC
-      float Delta = (2.0f*dot(d,(e-c)))*(2.0f*dot(d,(e-c)))  // B^2
+      Delta = (2.0f*dot(d,(e-c)))*(2.0f*dot(d,(e-c)))  // B^2
 	- 4.0f*dot(d,d)	// -4*A
 	* (dot((e-c),(e-c)) - R*R);  // C
 
@@ -113,7 +113,7 @@ void rayIntersectSpheres_cpu(float3* _ray_origo,
       if (Delta > 0.0f) { 
 
 	// Calculate roots, Shirley 2009 p. 77
-	float t_minus = ((dot(-d,(e-c)) - sqrt( dot(d,(e-c))*dot(d,(e-c)) - dot(d,d)
+	t_minus = ((dot(-d,(e-c)) - sqrt( dot(d,(e-c))*dot(d,(e-c)) - dot(d,d)
 		* (dot((e-c),(e-c)) - R*R) ) ) / dot(d,d));
 
 	// Check wether intersection is closer than previous values
@@ -121,6 +121,7 @@ void rayIntersectSpheres_cpu(float3* _ray_origo,
 	  p = e + t_minus*d;
 	  tdist = fabs(t_minus);
 	  n = normalize(2.0f * (p - c));   // Surface normal
+	  ifinal = i;
 	}
 
       } // End of solution branch
@@ -131,21 +132,25 @@ void rayIntersectSpheres_cpu(float3* _ray_origo,
     if (tdist < 1e10) {
 
       // Lambertian shading parameters
-      float dotprod = fabs(dot(n, constc_light));
-      float I_d = 40.0f;  // Light intensity
-      float k_d = 5.0f;  // Diffuse coefficient
+      //float dotprod = fabs(dot(n, constc_light));
+      dotprod = fmax(0.0f,dot(n, constc_light));
+      I_d = 70.0f;  // Light intensity
+      k_d = 5.0f;  // Diffuse coefficient
 
       // Ambient shading
-      float k_a = 10.0f;
-      float I_a = 5.0f;
+      k_a = 30.0f;
+      I_a = 5.0f;
+
+      // Read color nuance of grain
+      nuance = _nuance[ifinal];
 
       // Write shading model values to pixel color channels
       _img[mempos*4]     = (unsigned char) ((k_d * I_d * dotprod 
-	    + k_a * I_a)*0.48f);
+	    + k_a * I_a)*0.48f*nuance);
       _img[mempos*4 + 1] = (unsigned char) ((k_d * I_d * dotprod
-	    + k_a * I_a)*0.41f);
+	    + k_a * I_a)*0.41f*nuance);
       _img[mempos*4 + 2] = (unsigned char) ((k_d * I_d * dotprod
-	    + k_a * I_a)*0.27f);
+	    + k_a * I_a)*0.27f*nuance);
     }
   }
 }
@@ -160,9 +165,11 @@ void cameraInit_cpu(float3 eye, float3 lookat, float imgw, float hw_ratio)
   float3 view = eye - lookat;
 
   // Construct the camera view orthonormal base
-  float3 v = make_float3(0.0f, 1.0f, 0.0f);  // v: Pointing upward
-  float3 w = -view/lengthf3(view);		   // w: Pointing backwards
-  float3 u = cross(make_float3(v.x, v.y, v.z), make_float3(w.x, w.y, w.z)); // u: Pointing right
+  //float3 up = make_float3(0.0f, 1.0f, 0.0f);  // Pointing upward along +y
+  float3 up = make_float3(0.0f, 0.0f, 1.0f);  // Pointing upward along +z
+  float3 w = -view/length(view);		   // w: Pointing backwards
+  float3 u = cross(up, w) / length(cross(up, w));
+  float3 v = cross(w, u);
 
   // Focal length 20% of eye vector length
   float d = lengthf3(view)*0.8f;
@@ -179,6 +186,8 @@ void cameraInit_cpu(float3 eye, float3 lookat, float imgw, float hw_ratio)
   constc_imgplane = imgplane;
   constc_d = d;
   constc_light = light;
+
+  std::cout << "Rendering image...";
 }
 
 
@@ -197,8 +206,15 @@ int rt_cpu(float4* p, unsigned int np,
   // Start timer 1
   t1_go = clock();
 
+  // Generate random nuance values for all grains
+  static float* _nuance; // Values between 0.5 and 1.0
+  _nuance = new float[np];
+  srand(0); // Initialize seed at same value at every run
+  for (unsigned int i=0; i<np; ++i)
+    _nuance[i] = (float)rand()/RAND_MAX * 0.5f + 0.5f;
+
   // Allocate memory
-  cout << "  Allocating device memory\n";
+  cout << "  Allocating memory\n";
   static unsigned char *_img; 		// RGBw values in image
   static float3* _ray_origo;		// Ray origo (x,y,z)
   static float3* _ray_direction;	// Ray direction (x,y,z)
@@ -230,7 +246,7 @@ int rt_cpu(float4* p, unsigned int np,
   // Find closest intersection between rays and spheres
   rayIntersectSpheres_cpu(
       _ray_origo, _ray_direction,
-      p, _img, pixels, np);
+      p, _nuance, _img, pixels, np);
 
   // Stop timer 2
   t2_stop = clock();
@@ -238,6 +254,7 @@ int rt_cpu(float4* p, unsigned int np,
   memcpy(img, _img, sizeof(unsigned char)*pixels*4);
 
   // Free dynamically allocated device memory
+  delete [] _nuance;
   delete [] _img;
   delete [] _ray_origo;
   delete [] _ray_direction;
@@ -246,7 +263,8 @@ int rt_cpu(float4* p, unsigned int np,
   t1_stop = clock();
   
   // Report time spent 
-  cout << "  Time spent on entire CPU raytracing routine: "
+  cout << " done.\n"
+       << "  Time spent on entire CPU raytracing routine: "
        << (t1_stop-t1_go)/CLOCKS_PER_SEC*1000.0 << " ms\n";
   cout << "  - Functions: " << (t2_stop-t2_go)/CLOCKS_PER_SEC*1000.0 << " ms\n";
 

@@ -2,10 +2,10 @@
 /*  SPHERE source code by Anders Damsgaard Christensen, 2010-12,       */
 /*  a 3D Discrete Element Method algorithm with CUDA GPU acceleration. */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+// Licence: Gnu Public License (GPL) v. 3. See license.txt.
 // See doc/sphere-doc.pdf for full documentation.
 // Compile with GNU make by typing 'make' in the src/ directory.               
-// SPHERE is called from the command line with e.g. './sphere_<architecture> projectname' 
+// SPHERE is called from the command line with './sphere_<architecture> projectname' 
 
 
 // Including library files
@@ -15,7 +15,7 @@
 #include <unistd.h> // UNIX only: For getcwd
 #include <string.h> // For strerror and strcmp
 #include <errno.h>  // For errno
-#include <math.h>   // Basic floating point mathematical operations
+#include <math.h>   // Basic Floating point mathematical operations
 #include <time.h>   // Time and date functions for timer
 
 // Including user files
@@ -139,41 +139,41 @@ int main(int argc, char *argv[])
        << time.step_count << "\n";
 
 
-  // For spatial vectors an array of float4 vectors is chosen for best fit with 
+  // For spatial vectors an array of Float4 vectors is chosen for best fit with 
   // GPU memory handling. Vector variable structure: ( x, y, z, <empty>).
   // Indexing starts from 0.
 
   // Allocate host arrays
   cout << "\n  Allocating host memory:                         ";
-  grid.origo = new float[ND];        // Coordinate system origo
-  grid.L     = new float[ND];        // Model world dimensions
+  grid.origo = new Float[ND];        // Coordinate system origo
+  grid.L     = new Float[ND];        // Model world dimensions
   grid.num   = new unsigned int[ND]; // Number of cells in each dimension
-  params.g   = new float[ND];	     // Gravitational acceleration vector
-  p.radius   = new float[p.np];      // Particle radii
-  p.rho      = new float[p.np];      // Particle densities
-  p.m        = new float[p.np];      // Particle masses
-  p.I        = new float[p.np];      // Particle moment of inertia
-  p.k_n      = new float[p.np];      // Particle normal stiffnesses
-  p.k_s	     = new float[p.np];	     // Particle shear stiffnesses
-  p.k_r	     = new float[p.np];	     // Particle rolling stiffnesses
-  p.gamma_n  = new float[p.np];	     // Particle normal viscosity
-  p.gamma_s  = new float[p.np];      // Particle shear viscosity
-  p.gamma_r  = new float[p.np];	     // Particle rolling viscosity
-  p.mu_s     = new float[p.np];      // Inter-particle static shear contact friction coefficients
-  p.mu_d     = new float[p.np];	     // Inter-particle dynamic shear contact friction coefficients
-  p.mu_r     = new float[p.np];	     // Inter-particle rolling contact friction coefficients
-  p.es_dot   = new float[p.np];	     // Rate of shear energy dissipation
-  p.es       = new float[p.np];	     // Total shear energy dissipation
-  p.p	     = new float[p.np];	     // Pressure excerted onto particle
+  params.g   = new Float[ND];	     // Gravitational acceleration vector
+  p.radius   = new Float[p.np];      // Particle radii
+  p.rho      = new Float[p.np];      // Particle densities
+  p.m        = new Float[p.np];      // Particle masses
+  p.I        = new Float[p.np];      // Particle moment of inertia
+  p.k_n      = new Float[p.np];      // Particle normal stiffnesses
+  p.k_s	     = new Float[p.np];	     // Particle shear stiffnesses
+  p.k_r	     = new Float[p.np];	     // Particle rolling stiffnesses
+  p.gamma_n  = new Float[p.np];	     // Particle normal viscosity
+  p.gamma_s  = new Float[p.np];      // Particle shear viscosity
+  p.gamma_r  = new Float[p.np];	     // Particle rolling viscosity
+  p.mu_s     = new Float[p.np];      // Inter-particle static shear contact friction coefficients
+  p.mu_d     = new Float[p.np];	     // Inter-particle dynamic shear contact friction coefficients
+  p.mu_r     = new Float[p.np];	     // Inter-particle rolling contact friction coefficients
+  p.es_dot   = new Float[p.np];	     // Rate of shear energy dissipation
+  p.es       = new Float[p.np];	     // Total shear energy dissipation
+  p.p	     = new Float[p.np];	     // Pressure excerted onto particle
 
-  // Allocate float4 host arrays
-  float4 *host_x      = new float4[p.np];  // Center coordinates for each particle (x)
-  float4 *host_vel    = new float4[p.np];  // Particle velocities (dotx = v)
-  float4 *host_acc    = new float4[p.np];  // Particle accellerations (dotdotx = a)
-  float4 *host_angvel = new float4[p.np];  // Particle angular velocity vector (omega)
-  float4 *host_angacc = new float4[p.np];  // Particle angular acceleration vector (dotomega)
-  float4 *host_force  = new float4[p.np];  // Particle summed force
-  float4 *host_torque = new float4[p.np];  // Particle summed torque
+  // Allocate Float4 host arrays
+  Float4 *host_x      = new Float4[p.np];  // Center coordinates for each particle (x)
+  Float4 *host_vel    = new Float4[p.np];  // Particle velocities (dotx = v)
+  Float4 *host_acc    = new Float4[p.np];  // Particle accellerations (dotdotx = a)
+  Float4 *host_angvel = new Float4[p.np];  // Particle angular velocity vector (omega)
+  Float4 *host_angacc = new Float4[p.np];  // Particle angular acceleration vector (dotomega)
+  Float4 *host_force  = new Float4[p.np];  // Particle summed force
+  Float4 *host_torque = new Float4[p.np];  // Particle summed torque
 
   uint4  *host_bonds  = new uint4[p.np];   // Bonds from particle [i] to two particles
   cout << "Done\n";
@@ -196,44 +196,44 @@ int main(int argc, char *argv[])
   }
 
   for (j=0; j<p.np; ++j) {
-    if (fread(&host_x[j].x, sizeof(float), 1, fp) != 1)
+    if (fread(&host_x[j].x, sizeof(Float), 1, fp) != 1)
       return 1; // Return unsuccessful exit status
-    if (fread(&host_vel[j].x, sizeof(float), 1, fp) != 1)
+    if (fread(&host_vel[j].x, sizeof(Float), 1, fp) != 1)
       return 1;
-    if (fread(&host_angvel[j].x, sizeof(float), 1, fp) != 1)
+    if (fread(&host_angvel[j].x, sizeof(Float), 1, fp) != 1)
       return 1;
-    if (fread(&host_force[j].x, sizeof(float), 1, fp) != 1)
+    if (fread(&host_force[j].x, sizeof(Float), 1, fp) != 1)
       return 1;
-    if (fread(&host_torque[j].x, sizeof(float), 1, fp) != 1)
+    if (fread(&host_torque[j].x, sizeof(Float), 1, fp) != 1)
       return 1;
 
-    if (fread(&host_x[j].y, sizeof(float), 1, fp) != 1)
+    if (fread(&host_x[j].y, sizeof(Float), 1, fp) != 1)
       return 1; // Return unsuccessful exit status
-    if (fread(&host_vel[j].y, sizeof(float), 1, fp) != 1)
+    if (fread(&host_vel[j].y, sizeof(Float), 1, fp) != 1)
       return 1;
-    if (fread(&host_angvel[j].y, sizeof(float), 1, fp) != 1)
+    if (fread(&host_angvel[j].y, sizeof(Float), 1, fp) != 1)
       return 1;
-    if (fread(&host_force[j].y, sizeof(float), 1, fp) != 1)
+    if (fread(&host_force[j].y, sizeof(Float), 1, fp) != 1)
       return 1;
-    if (fread(&host_torque[j].y, sizeof(float), 1, fp) != 1)
+    if (fread(&host_torque[j].y, sizeof(Float), 1, fp) != 1)
       return 1;
 
-    if (fread(&host_x[j].z, sizeof(float), 1, fp) != 1)
+    if (fread(&host_x[j].z, sizeof(Float), 1, fp) != 1)
       return 1; // Return unsuccessful exit status
-    if (fread(&host_vel[j].z, sizeof(float), 1, fp) != 1)
+    if (fread(&host_vel[j].z, sizeof(Float), 1, fp) != 1)
       return 1;
-    if (fread(&host_angvel[j].z, sizeof(float), 1, fp) != 1)
+    if (fread(&host_angvel[j].z, sizeof(Float), 1, fp) != 1)
       return 1;
-    if (fread(&host_force[j].z, sizeof(float), 1, fp) != 1)
+    if (fread(&host_force[j].z, sizeof(Float), 1, fp) != 1)
       return 1;
-    if (fread(&host_torque[j].z, sizeof(float), 1, fp) != 1)
+    if (fread(&host_torque[j].z, sizeof(Float), 1, fp) != 1)
       return 1;
   }
 
   for (j=0; j<p.np; ++j) {
-    if (fread(&host_vel[j].w, sizeof(float), 1, fp) != 1) // Fixvel
+    if (fread(&host_vel[j].w, sizeof(Float), 1, fp) != 1) // Fixvel
       return 1; // Return unsuccessful exit status
-    if (fread(&host_x[j].w, sizeof(float), 1, fp) != 1) // xsum
+    if (fread(&host_x[j].w, sizeof(Float), 1, fp) != 1) // xsum
       return 1;
     if (fread(&p.radius[j], sizeof(p.radius[j]), 1, fp) != 1)
       return 1;
@@ -288,39 +288,39 @@ int main(int argc, char *argv[])
   // Allocate host memory for walls
   // Wall normal (x,y,z), w: wall position on axis parallel to wall normal
   // Wall mass (x), velocity (y), force (z), and deviatoric stress (w)
-  float4 *host_w_nx   = new float4[params.nw];
-  float4 *host_w_mvfd = new float4[params.nw]; 
+  Float4 *host_w_nx   = new Float4[params.nw];
+  Float4 *host_w_mvfd = new Float4[params.nw]; 
 
   // Read wall data
   for (j=0; j<params.nw; ++j) {
     // Wall normal, x-dimension
-    if (fread(&host_w_nx[j].x, sizeof(float), 1, fp) != 1) // Read in single precision
+    if (fread(&host_w_nx[j].x, sizeof(Float), 1, fp) != 1) // Read in single precision
       return 1;
     // Wall normal, y-dimension
-    if (fread(&host_w_nx[j].y, sizeof(float), 1, fp) != 1)
+    if (fread(&host_w_nx[j].y, sizeof(Float), 1, fp) != 1)
       return 1;
     // Wall normal, z-dimension
-    if (fread(&host_w_nx[j].z, sizeof(float), 1, fp) != 1)
+    if (fread(&host_w_nx[j].z, sizeof(Float), 1, fp) != 1)
       return 1;
 
     // Wall position along axis parallel to wall normal
-    if (fread(&host_w_nx[j].w, sizeof(float), 1, fp) != 1)
+    if (fread(&host_w_nx[j].w, sizeof(Float), 1, fp) != 1)
       return 1;
 
     // Wall mass
-    if (fread(&host_w_mvfd[j].x, sizeof(float), 1, fp) != 1)
+    if (fread(&host_w_mvfd[j].x, sizeof(Float), 1, fp) != 1)
       return 1;
 
     // Wall velocity along axis parallel to wall normal
-    if (fread(&host_w_mvfd[j].y, sizeof(float), 1, fp) != 1)
+    if (fread(&host_w_mvfd[j].y, sizeof(Float), 1, fp) != 1)
       return 1;
 
     // Wall force along axis parallel to wall normal
-    if (fread(&host_w_mvfd[j].z, sizeof(float), 1, fp) != 1)
+    if (fread(&host_w_mvfd[j].z, sizeof(Float), 1, fp) != 1)
       return 1;
 
     // Wall deviatoric stress
-    if (fread(&host_w_mvfd[j].w, sizeof(float), 1, fp) != 1)
+    if (fread(&host_w_mvfd[j].w, sizeof(Float), 1, fp) != 1)
       return 1;
   }
   // x- and y boundary behavior.
@@ -329,6 +329,15 @@ int main(int argc, char *argv[])
     cout << "  - x- and y boundaries: Behavior not set, assuming frictional walls.";
     params.periodic = 0;
   }
+
+  // Wall viscosities
+  if (fread(&params.gamma_wn, sizeof(params.gamma_wn), 1, fp) != 1)
+    return 1;
+  if (fread(&params.gamma_ws, sizeof(params.gamma_ws), 1, fp) != 1)
+    return 1;
+  if (fread(&params.gamma_wr, sizeof(params.gamma_wr), 1, fp) != 1)
+    return 1;
+
 
   for (i=0; i<p.np; ++i) {
     if (fread(&host_bonds[i].x, sizeof(unsigned int), 1, fp) != 1)

@@ -2,8 +2,8 @@
 #include <iostream>
 #include <cstdio>
 #include <cuda.h>
-#include <cutil_math.h>
 
+#include "vector_arithmetic.h"
 #include "thrust/device_ptr.h"
 #include "thrust/sort.h"
 
@@ -11,1488 +11,11 @@
 #include "datatypes.cuh"
 #include "constants.cuh"
 
-//#include "cuPrintf.cu"
-
-
-// Returns the cellID containing the particle, based cubic grid
-// See Bayraktar et al. 2009
-// Kernel is executed on the device, and is callable from the device only
-__device__ int calcCellID(float3 x) 
-{ 
-  unsigned int i_x, i_y, i_z;
-
-  // Calculate integral coordinates:
-  i_x = floor((x.x - devC_origo[0]) / (devC_L[0]/devC_num[0]));
-  i_y = floor((x.y - devC_origo[1]) / (devC_L[1]/devC_num[1]));
-  i_z = floor((x.z - devC_origo[2]) / (devC_L[2]/devC_num[2]));
-
-  // Integral coordinates are converted to 1D coordinate:
-  return __umul24(__umul24(i_z, devC_num[1]),
-      		  devC_num[0]) 
-    	 + __umul24(i_y, devC_num[0]) + i_x;
-
-} // End of calcCellID(...)
-
-
-// Calculate hash value for each particle, based on position in grid.
-// Kernel executed on device, and callable from host only.
-__global__ void calcParticleCellID(unsigned int* dev_gridParticleCellID, 
-    				   unsigned int* dev_gridParticleIndex, 
-				   float4* dev_x) 
-{
-  //unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
-  unsigned int idx = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
-
-  if (idx < devC_np) { // Condition prevents block size error
-
-    //volatile float4 x = dev_x[idx]; // Ensure coalesced read
-    float4 x = dev_x[idx]; // Ensure coalesced read
-
-    unsigned int cellID = calcCellID(make_float3(x.x, x.y, x.z));
-
-    // Store values    
-    dev_gridParticleCellID[idx] = cellID;
-    dev_gridParticleIndex[idx]  = idx;
-
-  }
-} // End of calcParticleCellID(...)
-
-
-// Reorder particle data into sorted order, and find the start and end particle indexes
-// of each cell in the sorted hash array.
-// Kernel executed on device, and callable from host only.
-__global__ void reorderArrays(unsigned int* dev_cellStart, unsigned int* dev_cellEnd,
-			      unsigned int* dev_gridParticleCellID, 
-			      unsigned int* dev_gridParticleIndex,
-			      float4* dev_x, float4* dev_vel, 
-			      float4* dev_angvel, float* dev_radius,
-			      //uint4* dev_bonds,
-			      float4* dev_x_sorted, float4* dev_vel_sorted,
-			      float4* dev_angvel_sorted, float* dev_radius_sorted)
-			      //uint4* dev_bonds_sorted)
-{ 
-
-  // Create hash array in shared on-chip memory. The size of the array 
-  // (threadsPerBlock + 1) is determined at launch time (extern notation).
-  extern __shared__ unsigned int shared_data[]; 
-
-  // Thread index in block
-  unsigned int tidx = threadIdx.x;
-
-  // Thread index in grid
-  unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; 
-  //unsigned int idx = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
-
-  // CellID hash value of particle idx
-  unsigned int cellID;
-
-  // Read cellID data and store it in shared memory (shared_data)
-  if (idx < devC_np) { // Condition prevents block size error
-    cellID = dev_gridParticleCellID[idx];
-
-    // Load hash data into shared memory, allowing access to neighbor particle cellID values
-    shared_data[tidx+1] = cellID; 
-
-    if (idx > 0 && tidx == 0) {
-      // First thread in block must load neighbor particle hash
-      shared_data[0] = dev_gridParticleCellID[idx-1];
-    }
-  }
-
-  // Pause completed threads in this block, until all 
-  // threads are done loading data into shared memory
-  __syncthreads();
-
-  // Find lowest and highest particle index in each cell
-  if (idx < devC_np) { // Condition prevents block size error
-    // If this particle has a different cell index to the previous particle, it's the first
-    // particle in the cell -> Store the index of this particle in the cell.
-    // The previous particle must be the last particle in the previous cell.
-    if (idx == 0 || cellID != shared_data[tidx]) {
-      dev_cellStart[cellID] = idx;
-      if (idx > 0)
-	dev_cellEnd[shared_data[tidx]] = idx;
-    }
-
-    // Check wether the thread is the last one
-    if (idx == (devC_np - 1)) 
-      dev_cellEnd[cellID] = idx + 1;
-
-
-    // Use the sorted index to reorder the position and velocity data
-    unsigned int sortedIndex = dev_gridParticleIndex[idx];
-
-    // Fetch from global read
-    float4 x      = dev_x[sortedIndex];
-    float4 vel    = dev_vel[sortedIndex];
-    float4 angvel = dev_angvel[sortedIndex];
-    float  radius = dev_radius[sortedIndex];
-    //uint4  bonds  = dev_bonds[sortedIndex];
-
-    __syncthreads();
-    // Write sorted data to global memory
-    dev_x_sorted[idx]      = x;
-    dev_vel_sorted[idx]    = vel;
-    dev_angvel_sorted[idx] = angvel;
-    dev_radius_sorted[idx] = radius;
-    //dev_bonds_sorted[idx]  = bonds;
-  }
-} // End of reorderArrays(...)
-
-
-
-
-// COLLISION LOCATION AND PROCESSING FUNCTIONS
-
-
-// Linear viscoelastic contact model for particle-wall interactions
-// with tangential friction and rolling resistance
-__device__ float contactLinear_wall(float3* N, float3* T, float* es_dot, float* p,
-				    unsigned int idx_a, float radius_a,
-				    float4* dev_vel_sorted, float4* dev_angvel_sorted,
-				    float3 n, float delta, float wvel)
-{
-  // Fetch particle velocities from global memory
-  const float4 linvel_tmp = dev_vel_sorted[idx_a];
-  const float4 angvel_tmp = dev_angvel_sorted[idx_a];
-
-  // Convert velocities to three-component vectors
-  const float3 linvel = make_float3(linvel_tmp.x,
-      				    linvel_tmp.y,
-				    linvel_tmp.z);
-  const float3 angvel = make_float3(angvel_tmp.x,
-      			            angvel_tmp.y,
-				    angvel_tmp.z);
-
-  // Store the length of the angular velocity for later use
-  const float angvel_length = length(angvel);
-
-  // Contact velocity is the sum of the linear and
-  // rotational components
-  const float3 vel = linvel + radius_a * cross(n, angvel) + wvel;
-
-  // Normal component of the contact velocity
-  const float vel_n = dot(vel, n);
-
-  // The tangential velocity is the contact velocity
-  // with the normal component subtracted
-  const float3 vel_t = vel - n * (dot(vel, n));
-  const float  vel_t_length = length(vel_t);
-
-  // Calculate elastic normal component
-  //float3 f_n = -devC_k_n * delta * n;
-
-  // Normal force component: Elastic - viscous damping
-  float3 f_n = (-devC_k_n * delta - devC_gamma_n * vel_n) * n;
-
-  // Make sure the viscous damping doesn't exceed the elastic component,
-  // i.e. the damping factor doesn't exceed the critical damping, 2*sqrt(m*k_n)
-  if (dot(f_n, n) < 0.0f)
-    f_n = make_float3(0.0f, 0.0f, 0.0f);
-
-  const float  f_n_length = length(f_n); // Save length for later use
-
-  // Initialize vectors
-  float3 f_t   = make_float3(0.0f, 0.0f, 0.0f);
-  float3 T_res = make_float3(0.0f, 0.0f, 0.0f);
-
-  // Check that the tangential velocity is high enough to avoid
-  // divide by zero (producing a NaN)
-  if (vel_t_length > 0.f) {
-
-    const float f_t_visc  = devC_gamma_s * vel_t_length; // Tangential force by viscous model
-    const float f_t_limit = devC_mu_s * f_n_length;      // Max. friction
-
-    // If the shear force component exceeds the friction,
-    // the particle slips and energy is dissipated
-    if (f_t_visc < f_t_limit) {
-      f_t = -1.0f * f_t_visc * vel_t/vel_t_length;
-
-    } else { // Dynamic friction, friction failure
-      f_t = -1.0f * f_t_limit * vel_t/vel_t_length;
-      
-      // Shear energy production rate [W]
-      //*es_dot += -dot(vel_t, f_t);
-    }
-  }
-
-/*  if (angvel_length > 0.f) {
-    // Apply rolling resistance (Zhou et al. 1999)
-    //T_res = -angvel_a/angvel_length * devC_mu_r * radius_a * f_n_length;
-
-    // New rolling resistance model
-    T_res = -1.0f * fmin(devC_gamma_r * radius_a * angvel_length,
-			 devC_mu_r * radius_a * f_n_length)
-            * angvel_a/angvel_length;
-  }*/
-
-  // Total force from wall
-  *N += f_n + f_t;
-//  *N += f_n;
-
-  // Total torque from wall
-  *T += -radius_a * cross(n, f_t) + T_res;
-
-  // Pressure excerted onto particle from this contact
-  *p += f_n_length / (4.0f * PI * radius_a*radius_a);
-
-  // Return force excerted onto the wall
-  //return -dot(*N, n);
-  return dot(f_n, n);
-}
-
-
-// Linear vicoelastic contact model for particle-particle interactions
-// with tangential friction and rolling resistance
-__device__ void contactLinearViscous(float3* N, float3* T, float* es_dot, float* p,
-    			      	     unsigned int idx_a, unsigned int idx_b, 
-				     float4* dev_vel_sorted, 
-				     float4* dev_angvel_sorted,
-				     float radius_a, float radius_b, 
-				     float3 x_ab, float x_ab_length, 
-				     float delta_ab, float kappa) 
-{
-
-  // Allocate variables and fetch missing time=t values for particle A and B
-  const float4 vel_a     = dev_vel_sorted[idx_a];
-  const float4 vel_b     = dev_vel_sorted[idx_b];
-  const float4 angvel4_a = dev_angvel_sorted[idx_a];
-  const float4 angvel4_b = dev_angvel_sorted[idx_b];
-
-  // Convert to float3's
-  const float3 angvel_a = make_float3(angvel4_a.x, angvel4_a.y, angvel4_a.z);
-  const float3 angvel_b = make_float3(angvel4_b.x, angvel4_b.y, angvel4_b.z);
-
-  // Force between grain pair decomposed into normal- and tangential part
-  float3 f_n, f_t, f_c, T_res;
-
-  // Normal vector of contact
-  const float3 n_ab = x_ab/x_ab_length;
-
-  // Relative contact interface velocity, w/o rolling
-  const float3 vel_ab_linear = make_float3(vel_a.x - vel_b.x, 
-      					   vel_a.y - vel_b.y, 
-					   vel_a.z - vel_b.z);
-
-  // Relative contact interface velocity of particle surfaces at
-  // the contact, with rolling (Hinrichsen and Wolf 2004, eq. 13.10)
-  const float3 vel_ab = vel_ab_linear
-			+ radius_a * cross(n_ab, angvel_a)
-			+ radius_b * cross(n_ab, angvel_b);
-
-  // Relative contact interface rolling velocity
-  const float3 angvel_ab = angvel_a - angvel_b;
-  const float  angvel_ab_length = length(angvel_ab);
-
-  // Normal component of the relative contact interface velocity
-  const float vel_n_ab = dot(vel_ab_linear, n_ab);
-
-  // Tangential component of the relative contact interface velocity
-  // Hinrichsen and Wolf 2004, eq. 13.9
-  const float3 vel_t_ab = vel_ab - (n_ab * dot(vel_ab, n_ab));
-  const float  vel_t_ab_length = length(vel_t_ab);
-
-  // Compute the normal stiffness of the contact
-  //float k_n_ab = k_n_a * k_n_b / (k_n_a + k_n_b);
-
-  // Calculate rolling radius
-  const float R_bar = (radius_a + radius_b) / 2.0f;
-
-  // Normal force component: linear-elastic approximation (Augier 2009, eq. 3)
-  // with velocity dependant damping
-  //   Damping coefficient: alpha = 0.8
-  //f_n = (-k_n_ab * delta_ab + 2.0f * 0.8f * sqrtf(m_eff*k_n_ab) * vel_ab) * n_ab;
-
-  // Linear spring for normal component (Renzo 2004, eq. 35)
-  // Dissipation due to  plastic deformation is modelled by using a different
-  // unloading spring constant (Walton and Braun 1986)
-  // Here the factor in the second term determines the relative strength of the
-  // unloading spring relative to the loading spring.
-  /*  if (vel_n_ab > 0.0f) {	// Loading
-      f_n = (-k_n_ab * delta_ab) * n_ab;
-      } else {			// Unloading
-      f_n = (-k_n_ab * 0.90f * delta_ab) * n_ab;
-      } // f_n is OK! */
-
-  // Normal force component: Elastic
-  //f_n = -k_n_ab * delta_ab * n_ab;
-
-  // Normal force component: Elastic - viscous damping
-  f_n = (-devC_k_n * delta_ab - devC_gamma_n * vel_n_ab) * n_ab;
-
-  // Make sure the viscous damping doesn't exceed the elastic component,
-  // i.e. the damping factor doesn't exceed the critical damping, 2*sqrt(m*k_n)
-  if (dot(f_n, n_ab) < 0.0f)
-    f_n = make_float3(0.0f, 0.0f, 0.0f);
-
-  const float f_n_length = length(f_n);
-
-  // Add max. capillary force
-  f_c = -kappa * sqrtf(radius_a * radius_b) * n_ab;
-
-  // Initialize force vectors to zero
-  f_t   = make_float3(0.0f, 0.0f, 0.0f);
-  T_res = make_float3(0.0f, 0.0f, 0.0f);
-
-  // Shear force component: Nonlinear relation
-  // Coulomb's law of friction limits the tangential force to less or equal
-  // to the normal force
-  if (vel_t_ab_length > 0.f) {
-
-    // Tangential force by viscous model
-    const float f_t_visc  = devC_gamma_s * vel_t_ab_length;
-
-    // Determine max. friction
-    float f_t_limit;
-    if (vel_t_ab_length > 0.001f) { // Dynamic
-      f_t_limit = devC_mu_d * length(f_n-f_c);
-    } else { // Static
-      f_t_limit = devC_mu_s * length(f_n-f_c);
-    }
-
-    // If the shear force component exceeds the friction,
-    // the particle slips and energy is dissipated
-    if (f_t_visc < f_t_limit) { // Static
-      f_t = -1.0f * f_t_visc * vel_t_ab/vel_t_ab_length;
-
-    } else { // Dynamic, friction failure
-      f_t = -1.0f * f_t_limit * vel_t_ab/vel_t_ab_length;
-
-      // Shear friction production rate [W]
-      //*es_dot += -dot(vel_t_ab, f_t);
-    }
-  }
-
-/*  if (angvel_ab_length > 0.f) {
-    // Apply rolling resistance (Zhou et al. 1999)
-    //T_res = -angvel_ab/angvel_ab_length * devC_mu_r * R_bar * length(f_n);
-
-    // New rolling resistance model
-    T_res = -1.0f * fmin(devC_gamma_r * R_bar * angvel_ab_length,
-			 devC_mu_r * R_bar * f_n_length)
-            * angvel_ab/angvel_ab_length;
-  }
-*/
-
-  // Add force components from this collision to total force for particle
-  *N += f_n + f_t + f_c; 
-  *T += -R_bar * cross(n_ab, f_t) + T_res;
-
-  // Pressure excerted onto the particle from this contact
-  *p += f_n_length / (4.0f * PI * radius_a*radius_a);
-
-} // End of contactLinearViscous()
-
-
-// Linear elastic contact model for particle-particle interactions
-__device__ void contactLinear(float3* N, float3* T, 
-    			      float* es_dot, float* p,
-			      unsigned int idx_a_orig,
-			      unsigned int idx_b_orig, 
-			      float4  vel_a, 
-			      float4* dev_vel,
-			      float3  angvel_a,
-			      float4* dev_angvel,
-			      float radius_a, float radius_b, 
-			      float3 x_ab, float x_ab_length, 
-			      float delta_ab, float4* dev_delta_t,
-			      unsigned int mempos) 
-{
-
-  // Allocate variables and fetch missing time=t values for particle A and B
-  const float4 vel_b     = dev_vel[idx_b_orig];
-  const float4 angvel4_b = dev_angvel[idx_b_orig];
-
-  // Fetch previous sum of shear displacement for the contact pair
-  const float4 delta_t0_4 = dev_delta_t[mempos];
-
-  const float3 delta_t0_uncor = make_float3(delta_t0_4.x,
-      					    delta_t0_4.y,
-					    delta_t0_4.z);
-
-  // Convert to float3
-  const float3 angvel_b = make_float3(angvel4_b.x, angvel4_b.y, angvel4_b.z);
-
-  // Force between grain pair decomposed into normal- and tangential part
-  float3 f_n, f_t, f_c, T_res;
-
-  // Normal vector of contact
-  const float3 n_ab = x_ab/x_ab_length;
-
-  // Relative contact interface velocity, w/o rolling
-  const float3 vel_ab_linear = make_float3(vel_a.x - vel_b.x, 
-      					   vel_a.y - vel_b.y, 
-					   vel_a.z - vel_b.z);
-
-  // Relative contact interface velocity of particle surfaces at
-  // the contact, with rolling (Hinrichsen and Wolf 2004, eq. 13.10)
-  const float3 vel_ab = vel_ab_linear
-			+ radius_a * cross(n_ab, angvel_a)
-			+ radius_b * cross(n_ab, angvel_b);
-
-  // Relative contact interface rolling velocity
-  const float3 angvel_ab = angvel_a - angvel_b;
-  const float  angvel_ab_length = length(angvel_ab);
-
-  // Normal component of the relative contact interface velocity
-  const float vel_n_ab = dot(vel_ab_linear, n_ab);
-
-  // Tangential component of the relative contact interface velocity
-  // Hinrichsen and Wolf 2004, eq. 13.9
-  const float3 vel_t_ab = vel_ab - (n_ab * dot(vel_ab, n_ab));
-  const float  vel_t_ab_length = length(vel_t_ab);
-
-  // Correct tangential displacement vector, which is
-  // necessary if the tangential plane rotated
-  const float3 delta_t0 = delta_t0_uncor - (n_ab * dot(delta_t0_uncor, n_ab));
-  const float  delta_t0_length = length(delta_t0);
-
-  // New tangential displacement vector
-  float3 delta_t;
-
-  // Compute the normal stiffness of the contact
-  //float k_n_ab = k_n_a * k_n_b / (k_n_a + k_n_b);
-
-  // Calculate rolling radius
-  const float R_bar = (radius_a + radius_b) / 2.0f;
-
-  // Normal force component: Elastic
-  //f_n = -devC_k_n * delta_ab * n_ab;
-
-  // Normal force component: Elastic - viscous damping
-  f_n = (-devC_k_n * delta_ab - devC_gamma_n * vel_n_ab) * n_ab;
-
-  // Make sure the viscous damping doesn't exceed the elastic component,
-  // i.e. the damping factor doesn't exceed the critical damping, 2*sqrt(m*k_n)
-  if (dot(f_n, n_ab) < 0.0f)
-    f_n = make_float3(0.0f, 0.0f, 0.0f);
-
-  const float f_n_length = length(f_n);
-
-  // Add max. capillary force
-  f_c = -devC_kappa * sqrtf(radius_a * radius_b) * n_ab;
-
-  // Initialize force vectors to zero
-  f_t   = make_float3(0.0f, 0.0f, 0.0f);
-  T_res = make_float3(0.0f, 0.0f, 0.0f);
-
-  // Apply a tangential force if the previous tangential displacement
-  // is non-zero, or the current sliding velocity is non-zero.
-  if (delta_t0_length > 0.f || vel_t_ab_length > 0.f) {
-
-    // Shear force: Visco-Elastic, limited by Coulomb friction
-    float3 f_t_elast = -1.0f * devC_k_s * delta_t0;
-    float3 f_t_visc  = -1.0f * devC_gamma_s * vel_t_ab;
-
-    float f_t_limit;
-    
-    if (vel_t_ab_length > 0.001f) { // Dynamic friciton
-      f_t_limit = devC_mu_d * length(f_n-f_c);
-    } else { // Static friction
-      f_t_limit = devC_mu_s * length(f_n-f_c);
-    }
-
-    // Tangential force before friction limit correction
-    f_t = f_t_elast + f_t_visc;
-    float f_t_length = length(f_t);
-
-    // If failure criterion is not met, contact is viscous-linear elastic.
-    // If failure criterion is met, contact force is limited, 
-    // resulting in a slip and energy dissipation
-    if (f_t_length > f_t_limit) { // Dynamic case
-      
-      // Frictional force is reduced to equal the limit
-      f_t *= f_t_limit/f_t_length;
-
-      // A slip event zeros the displacement vector
-      //delta_t = make_float3(0.0f, 0.0f, 0.0f);
-
-      // In a slip event, the tangential spring is adjusted to a 
-      // length which is consistent with Coulomb's equation
-      // (Hinrichsen and Wolf, 2004)
-      delta_t = -1.0f/devC_k_s * f_t + devC_gamma_s * vel_t_ab;
-
-      // Shear friction heat production rate: 
-      // The energy lost from the tangential spring is dissipated as heat
-      //*es_dot += -dot(vel_t_ab, f_t);
-      *es_dot += length(delta_t0 - delta_t) * devC_k_s / devC_dt; // Seen in EsyS-Particle
-
-    } else { // Static case
-
-      // No correction of f_t is required
-
-      // Add tangential displacement to total tangential displacement
-      delta_t = delta_t0 + vel_t_ab * devC_dt;
-    }
-  }
-
-  if (angvel_ab_length > 0.f) {
-    // Apply rolling resistance (Zhou et al. 1999)
-    //T_res = -angvel_ab/angvel_ab_length * devC_mu_r * R_bar * length(f_n);
-
-    // New rolling resistance model
-    T_res = -1.0f * fmin(devC_gamma_r * R_bar * angvel_ab_length,
-			 devC_mu_r * R_bar * f_n_length)
-            * angvel_ab/angvel_ab_length;
-  }
-
-  // Add force components from this collision to total force for particle
-  *N += f_n + f_t + f_c; 
-  *T += -R_bar * cross(n_ab, f_t) + T_res;
-
-  // Pressure excerted onto the particle from this contact
-  *p += f_n_length / (4.0f * PI * radius_a*radius_a);
-
-  // Store sum of tangential displacements
-  dev_delta_t[mempos] = make_float4(delta_t, 0.0f);
-
-} // End of contactLinear()
-
-
-// Linear-elastic bond: Attractive force with normal- and shear components
-// acting upon particle A in a bonded particle pair
-__device__ void bondLinear(float3* N, float3* T, float* es_dot, float* p,
-			   unsigned int idx_a, unsigned int idx_b, 
-			   float4* dev_x_sorted, float4* dev_vel_sorted, 
-			   float4* dev_angvel_sorted,
-			   float radius_a, float radius_b, 
-			   float3 x_ab, float x_ab_length, 
-			   float delta_ab) 
-{
-
-  // If particles are not overlapping, apply bond force
-  if (delta_ab > 0.0f) {
-
-    // Allocate variables and fetch missing time=t values for particle A and B
-    float4 vel_a     = dev_vel_sorted[idx_a];
-    float4 vel_b     = dev_vel_sorted[idx_b];
-    float4 angvel4_a = dev_angvel_sorted[idx_a];
-    float4 angvel4_b = dev_angvel_sorted[idx_b];
-
-    // Convert to float3's
-    float3 angvel_a = make_float3(angvel4_a.x, angvel4_a.y, angvel4_a.z);
-    float3 angvel_b = make_float3(angvel4_b.x, angvel4_b.y, angvel4_b.z);
-
-    // Normal vector of contact
-    float3 n_ab = x_ab/x_ab_length;
-
-    // Relative contact interface velocity, w/o rolling
-    float3 vel_ab_linear = make_float3(vel_a.x - vel_b.x, 
-				       vel_a.y - vel_b.y, 
-				       vel_a.z - vel_b.z);
-
-    // Relative contact interface velocity of particle surfaces at
-    // the contact, with rolling (Hinrichsen and Wolf 2004, eq. 13.10)
-    float3 vel_ab = vel_ab_linear
-		    + radius_a * cross(n_ab, angvel_a)
-		    + radius_b * cross(n_ab, angvel_b);
-
-    // Relative contact interface rolling velocity
-    //float3 angvel_ab = angvel_a - angvel_b;
-    //float  angvel_ab_length = length(angvel_ab);
-
-    // Normal component of the relative contact interface velocity
-    //float vel_n_ab = dot(vel_ab_linear, n_ab);
-
-    // Tangential component of the relative contact interface velocity
-    // Hinrichsen and Wolf 2004, eq. 13.9
-    float3 vel_t_ab = vel_ab - (n_ab * dot(vel_ab, n_ab));
-    //float  vel_t_ab_length = length(vel_t_ab);
-
-    float3 f_n = make_float3(0.0f, 0.0f, 0.0f);
-    float3 f_t = make_float3(0.0f, 0.0f, 0.0f);
-
-    // Mean radius
-    float R_bar = (radius_a + radius_b)/2.0f;
-
-    // Normal force component: Elastic
-    f_n = devC_k_n * delta_ab * n_ab;
-
-    if (length(vel_t_ab) > 0.f) {
-      // Shear force component: Viscous
-      f_t = -1.0f * devC_gamma_s * vel_t_ab;
-
-      // Shear friction production rate [W]
-      //*es_dot += -dot(vel_t_ab, f_t);
-    }
-
-    // Add force components from this bond to total force for particle
-    *N += f_n + f_t;
-    *T += -R_bar * cross(n_ab, f_t);
-
-    // Pressure excerted onto the particle from this bond
-    *p += length(f_n) / (4.0f * PI * radius_a*radius_a);
-
-  }
-} // End of bondLinear()
-
-
-// Capillary cohesion after Richefeu et al. (2006)
-__device__ void capillaryCohesion_exp(float3* N, float radius_a, 
-    				      float radius_b, float delta_ab,
-    				      float3 x_ab, float x_ab_length, 
-				      float kappa)
-{
-
-  // Normal vector 
-  float3 n_ab = x_ab/x_ab_length;
-
-  float3 f_c;
-  float lambda, R_geo, R_har, r, h;
-
-  // Determine the ratio; r = max{Ri/Rj;Rj/Ri}
-  if ((radius_a/radius_b) > (radius_b/radius_a))
-    r = radius_a/radius_b;
-  else
-    r = radius_b/radius_a;
-
-  // Exponential decay function
-  h = -sqrtf(r);
-
-  // The harmonic mean
-  R_har = (2.0f * radius_a * radius_b) / (radius_a + radius_b);
-
-  // The geometrical mean
-  R_geo = sqrtf(radius_a * radius_b);
-
-  // The exponential falloff of the capillary force with distance
-  lambda = 0.9f * h * sqrtf(devC_V_b/R_har);
-
-  // Calculate cohesional force
-  f_c = -kappa * R_geo * expf(-delta_ab/lambda) * n_ab;
-
-  // Add force components from this collision to total force for particle
-  *N += f_c;
-
-} // End of capillaryCohesion_exp
-
-
-
-// Find overlaps between particle no. 'idx' and particles in cell 'gridpos'
-// Kernel executed on device, and callable from device only.
-__device__ void overlapsInCell(int3 targetCell, 
-    			       unsigned int idx_a, 
-			       float4 x_a, float radius_a,
-			       float3* N, float3* T, 
-			       float* es_dot, float* p,
-			       float4* dev_x_sorted, 
-			       float* dev_radius_sorted,
-			       float4* dev_vel_sorted, 
-			       float4* dev_angvel_sorted,
-			       unsigned int* dev_cellStart, 
-			       unsigned int* dev_cellEnd,
-			       float4* dev_w_nx, 
-			       float4* dev_w_mvfd)
-			       //uint4 bonds)
-{
-
-  // Variable containing modifier for interparticle
-  // vector, if it crosses a periodic boundary
-  float3 distmod = make_float3(0.0f, 0.0f, 0.0f);
-
-  // Check whether x- and y boundaries are to be treated as periodic
-  // 1: x- and y boundaries periodic
-  // 2: x boundaries periodic
-  if (devC_periodic == 1) {
-
-    // Periodic x-boundary
-    if (targetCell.x < 0) {
-      targetCell.x = devC_num[0] - 1;
-      distmod += make_float3(devC_L[0], 0.0f, 0.0f);
-    }
-    if (targetCell.x == devC_num[0]) {
-      targetCell.x = 0;
-      distmod -= make_float3(devC_L[0], 0.0f, 0.0f);
-    }
-
-    // Periodic y-boundary
-    if (targetCell.y < 0) {
-      targetCell.y = devC_num[1] - 1;
-      distmod += make_float3(0.0f, devC_L[1], 0.0f);
-    }
-    if (targetCell.y == devC_num[1]) {
-      targetCell.y = 0;
-      distmod -= make_float3(0.0f, devC_L[1], 0.0f);
-    }
-
-  } else if (devC_periodic == 2) {
-
-    // Periodic x-boundary
-    if (targetCell.x < 0) {
-      targetCell.x = devC_num[0] - 1;
-      distmod += make_float3(devC_L[0], 0.0f, 0.0f);
-    }
-    if (targetCell.x == devC_num[0]) {
-      targetCell.x = 0;
-      distmod -= make_float3(devC_L[0], 0.0f, 0.0f);
-    }
-
-    // Hande out-of grid cases on y-axis
-    if (targetCell.y < 0 || targetCell.y == devC_num[1])
-      return;
-
-  } else {
-
-    // Hande out-of grid cases on x- and y-axes
-    if (targetCell.x < 0 || targetCell.x == devC_num[0])
-      return;
-    if (targetCell.y < 0 || targetCell.y == devC_num[1])
-      return;
-  }
-
-  // Handle out-of-grid cases on z-axis
-  if (targetCell.z < 0 || targetCell.z == devC_num[2])
-    return;
-
-
-  //// Check and process particle-particle collisions
-
-  // Calculate linear cell ID
-  unsigned int cellID = targetCell.x  
-    			+ __umul24(targetCell.y, devC_num[0]) 
-			+ __umul24(__umul24(devC_num[0], 
-			      		    devC_num[1]), 
-			 	   targetCell.z); 
-
-  // Lowest particle index in cell
-  unsigned int startIdx = dev_cellStart[cellID];
-
-  // Make sure cell is not empty
-  if (startIdx != 0xffffffff) {
-
-    // Highest particle index in cell + 1
-    unsigned int endIdx = dev_cellEnd[cellID];
-
-    // Iterate over cell particles
-    for (unsigned int idx_b = startIdx; idx_b<endIdx; ++idx_b) {
-      if (idx_b != idx_a) { // Do not collide particle with itself
-
-	// Fetch position and velocity of particle B.
-	float4 x_b      = dev_x_sorted[idx_b];
-	float  radius_b = dev_radius_sorted[idx_b];
-	float  kappa 	= devC_kappa;
-
-	// Distance between particle centers (float4 -> float3)
-	float3 x_ab = make_float3(x_a.x - x_b.x, 
-	    			  x_a.y - x_b.y, 
-				  x_a.z - x_b.z);
-
-	// Adjust interparticle vector if periodic boundary/boundaries
-	// are crossed
-	x_ab += distmod;
-
-	float x_ab_length = length(x_ab);
-
-	// Distance between particle perimeters
-	float delta_ab = x_ab_length - (radius_a + radius_b); 
-
-	// Check for particle overlap
-	if (delta_ab < 0.0f) {
-		  contactLinearViscous(N, T, es_dot, p, 
-	      		       idx_a, idx_b,
-			       dev_vel_sorted, 
-			       dev_angvel_sorted,
-			       radius_a, radius_b, 
-			       x_ab, x_ab_length,
-			       delta_ab, kappa);
-	} else if (delta_ab < devC_db) { 
-	  // Check wether particle distance satisfies the capillary bond distance
-	  capillaryCohesion_exp(N, radius_a, radius_b, delta_ab, 
-	      			x_ab, x_ab_length, kappa);
-	}
-
-	// Check wether particles are bonded together
-	/*if (bonds.x == idx_b || bonds.y == idx_b ||
-	    bonds.z == idx_b || bonds.w == idx_b) {
-	  bondLinear(N, T, es_dot, p, 
-	      	     idx_a, idx_b,
-	   	     dev_x_sorted, dev_vel_sorted,
-		     dev_angvel_sorted,
-		     radius_a, radius_b,
-		     x_ab, x_ab_length,
-		     delta_ab);
-	}*/
-
-      } // Do not collide particle with itself end
-    } // Iterate over cell particles end
-  } // Check wether cell is empty end
-} // End of overlapsInCell(...)
-
-// Find overlaps between particle no. 'idx' and particles in cell 'gridpos'
-// Write the indexes of the overlaps in array contacts[]
-// Kernel executed on device, and callable from device only.
-__device__ void findContactsInCell(int3 targetCell, 
-    			           unsigned int idx_a, 
-				   float4 x_a, float radius_a,
-				   float4* dev_x_sorted, 
-				   float* dev_radius_sorted,
-				   unsigned int* dev_cellStart, 
-				   unsigned int* dev_cellEnd,
-				   unsigned int* dev_gridParticleIndex,
-				   int* nc,
-				   unsigned int* dev_contacts,
-				   float4* dev_distmod)
-{
-  // Variable containing modifier for interparticle
-  // vector, if it crosses a periodic boundary
-  float3 distmod = make_float3(0.0f, 0.0f, 0.0f);
-
-  // Check whether x- and y boundaries are to be treated as periodic
-  // 1: x- and y boundaries periodic
-  // 2: x boundaries periodic
-  if (devC_periodic == 1) {
-
-    // Periodic x-boundary
-    if (targetCell.x < 0) {
-      targetCell.x = devC_num[0] - 1;
-      distmod += make_float3(devC_L[0], 0.0f, 0.0f);
-    }
-    if (targetCell.x == devC_num[0]) {
-      targetCell.x = 0;
-      distmod -= make_float3(devC_L[0], 0.0f, 0.0f);
-    }
-
-    // Periodic y-boundary
-    if (targetCell.y < 0) {
-      targetCell.y = devC_num[1] - 1;
-      distmod += make_float3(0.0f, devC_L[1], 0.0f);
-    }
-    if (targetCell.y == devC_num[1]) {
-      targetCell.y = 0;
-      distmod -= make_float3(0.0f, devC_L[1], 0.0f);
-    }
-
-  } else if (devC_periodic == 2) {
-
-    // Periodic x-boundary
-    if (targetCell.x < 0) {
-      targetCell.x = devC_num[0] - 1;
-      distmod += make_float3(devC_L[0], 0.0f, 0.0f);
-    }
-    if (targetCell.x == devC_num[0]) {
-      targetCell.x = 0;
-      distmod -= make_float3(devC_L[0], 0.0f, 0.0f);
-    }
-
-    // Hande out-of grid cases on y-axis
-    if (targetCell.y < 0 || targetCell.y == devC_num[1])
-      return;
-
-  } else {
-
-    // Hande out-of grid cases on x- and y-axes
-    if (targetCell.x < 0 || targetCell.x == devC_num[0])
-      return;
-    if (targetCell.y < 0 || targetCell.y == devC_num[1])
-      return;
-  }
-
-  // Handle out-of-grid cases on z-axis
-  if (targetCell.z < 0 || targetCell.z == devC_num[2])
-    return;
-
-
-  //// Check and process particle-particle collisions
-
-  // Calculate linear cell ID
-  unsigned int cellID = targetCell.x  
-    			+ __umul24(targetCell.y, devC_num[0]) 
-			+ __umul24(__umul24(devC_num[0], 
-			      		    devC_num[1]), 
-			 	   targetCell.z); 
-
-  // Lowest particle index in cell
-  unsigned int startIdx = dev_cellStart[cellID];
-
-  // Make sure cell is not empty
-  if (startIdx != 0xffffffff) {
-
-    // Highest particle index in cell + 1
-    unsigned int endIdx = dev_cellEnd[cellID];
-
-    // Read the original index of particle A
-    unsigned int idx_a_orig = dev_gridParticleIndex[idx_a];
-
-    // Iterate over cell particles
-    for (unsigned int idx_b = startIdx; idx_b<endIdx; ++idx_b) {
-      if (idx_b != idx_a) { // Do not collide particle with itself
-
-	// Fetch position and radius of particle B.
-	float4 x_b      = dev_x_sorted[idx_b];
-	float  radius_b = dev_radius_sorted[idx_b];
-
-	// Read the original index of particle B
-	unsigned int idx_b_orig = dev_gridParticleIndex[idx_b];
-
-	__syncthreads();
-
-	// Distance between particle centers (float4 -> float3)
-	float3 x_ab = make_float3(x_a.x - x_b.x, 
-	    			  x_a.y - x_b.y, 
-				  x_a.z - x_b.z);
-
-	// Adjust interparticle vector if periodic boundary/boundaries
-	// are crossed
-	x_ab += distmod;
-
-	float x_ab_length = length(x_ab);
-
-	// Distance between particle perimeters
-	float delta_ab = x_ab_length - (radius_a + radius_b); 
-
-	// Check for particle overlap
-	if (delta_ab < 0.0f) {
-	  
-	  // If the particle is not yet registered in the contact list,
-	  // use the next position in the array
-	  int cpos = *nc;
-	  unsigned int cidx;
-
-	  // Find out, if particle is already registered in contact list
-	  for (int i=0; i<devC_nc; ++i) {
-	    __syncthreads();
-	    cidx = dev_contacts[(unsigned int)(idx_a_orig*devC_nc+i)];
-	    if (cidx == idx_b_orig)
-	      cpos = i;
-	  }
-
-	  __syncthreads();
-
-	  // Write the particle index to the relevant position,
-	  // no matter if it already is there or not (concurrency of write)
-	  dev_contacts[(unsigned int)(idx_a_orig*devC_nc+cpos)] = idx_b_orig;
-
-
-	  // Write the interparticle vector and radius of particle B
-	 //dev_x_ab_r_b[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_float4(x_ab, radius_b);
-	  dev_distmod[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_float4(distmod, radius_b);
-	  
-	  // Increment contact counter
-	  ++*nc;
-	}
-
-	// Write the inter-particle position vector correction and radius of particle B
-	//dev_distmod[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_float4(distmod, radius_b);
-
-	// Check wether particles are bonded together
-	/*if (bonds.x == idx_b || bonds.y == idx_b ||
-	    bonds.z == idx_b || bonds.w == idx_b) {
-	  bondLinear(N, T, es_dot, p, 
-	      	     idx_a, idx_b,
-	   	     dev_x_sorted, dev_vel_sorted,
-		     dev_angvel_sorted,
-		     radius_a, radius_b,
-		     x_ab, x_ab_length,
-		     delta_ab);
-	}*/
-
-      } // Do not collide particle with itself end
-    } // Iterate over cell particles end
-  } // Check wether cell is empty end
-} // End of findContactsInCell(...)
-
-
-// For a single particle:
-// Search for neighbors to particle 'idx' inside the 27 closest cells, 
-// and save the contact pairs in global memory.
-__global__ void topology(unsigned int* dev_cellStart, 
-    			 unsigned int* dev_cellEnd, // Input: Particles in cell 
-			 unsigned int* dev_gridParticleIndex, // Input: Unsorted-sorted key
-			 float4* dev_x_sorted, float* dev_radius_sorted, 
-			 unsigned int* dev_contacts,
-			 float4* dev_distmod)
-{
-  // Thread index equals index of particle A
-  unsigned int idx_a = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
-  if (idx_a < devC_np) {
-    // Fetch particle data in global read
-    float4 x_a      = dev_x_sorted[idx_a];
-    float  radius_a = dev_radius_sorted[idx_a];
-
-    // Count the number of contacts in this time step
-    int nc = 0;
-
-    // Grid position of host and neighbor cells in uniform, cubic grid
-    int3 gridPos;
-    int3 targetPos;
-
-    // Calculate cell address in grid from position of particle
-    gridPos.x = floor((x_a.x - devC_origo[0]) / (devC_L[0]/devC_num[0]));
-    gridPos.y = floor((x_a.y - devC_origo[1]) / (devC_L[1]/devC_num[1]));
-    gridPos.z = floor((x_a.z - devC_origo[2]) / (devC_L[2]/devC_num[2]));
-
-    // Find overlaps between particle no. idx and all particles
-    // from its own cell + 26 neighbor cells
-    for (int z_dim=-1; z_dim<2; ++z_dim) { // z-axis
-      for (int y_dim=-1; y_dim<2; ++y_dim) { // y-axis
-	for (int x_dim=-1; x_dim<2; ++x_dim) { // x-axis
-	  targetPos = gridPos + make_int3(x_dim, y_dim, z_dim);
-	  findContactsInCell(targetPos, idx_a, x_a, radius_a,
-	       		     dev_x_sorted, dev_radius_sorted,
-			     dev_cellStart, dev_cellEnd,
-			     dev_gridParticleIndex,
-	    		     &nc, dev_contacts, dev_distmod);
-	}
-      }
-    }
-  }
-} // End of topology(...)
-
-
-// For a single particle:
-// Search for neighbors to particle 'idx' inside the 27 closest cells, 
-// and compute the resulting normal- and shear force on it.
-// Collide with top- and bottom walls, save resulting force on upper wall.
-// Kernel is executed on device, and is callable from host only.
-__global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted-sorted key
-			 unsigned int* dev_cellStart,
-			 unsigned int* dev_cellEnd,
-			 float4* dev_x, float* dev_radius,
-    			 float4* dev_x_sorted, float* dev_radius_sorted, 
-			 float4* dev_vel_sorted, float4* dev_angvel_sorted,
-			 float4* dev_vel, float4* dev_angvel,
-			 float4* dev_force, float4* dev_torque,
-			 float* dev_es_dot, float* dev_es, float* dev_p,
-			 float4* dev_w_nx, float4* dev_w_mvfd, 
-			 float* dev_w_force, //uint4* dev_bonds_sorted,
-			 unsigned int* dev_contacts, 
-			 float4* dev_distmod,
-			 float4* dev_delta_t)
-{
-  // Thread index equals index of particle A
-  unsigned int idx_a = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
-
-  if (idx_a < devC_np) {
-
-    // Fetch particle data in global read
-    unsigned int idx_a_orig = dev_gridParticleIndex[idx_a];
-    float4 x_a      = dev_x_sorted[idx_a];
-    float  radius_a = dev_radius_sorted[idx_a];
-
-    // Fetch wall data in global read
-    float4 w_up_nx   = dev_w_nx[0];
-    float4 w_up_mvfd = dev_w_mvfd[0];
-
-    // Fetch world dimensions in constant memory read
-    float3 origo = make_float3(devC_origo[0], 
-			       devC_origo[1], 
-			       devC_origo[2]); 
-    float3 L = make_float3(devC_L[0], 
-			   devC_L[1], 
-			   devC_L[2]);
-
-    // Index of particle which is bonded to particle A.
-    // The index is equal to the particle no (p.np)
-    // if particle A is bond-less.
-    //uint4 bonds = dev_bonds_sorted[idx_a];
-
-    // Initiate shear friction loss rate at 0.0
-    float es_dot = 0.0f; 
-
-    // Initiate pressure on particle at 0.0
-    float p = 0.0f;
-
-    // Allocate memory for temporal force/torque vector values
-    float3 N = make_float3(0.0f, 0.0f, 0.0f);
-    float3 T = make_float3(0.0f, 0.0f, 0.0f);
-
-    // Apply linear elastic, frictional contact model to registered contacts
-    if (devC_shearmodel == 2) {
-      unsigned int idx_b_orig, mempos;
-      float delta_n, x_ab_length;
-      float4 x_b;
-      float4 distmod;
-      float  radius_b;
-      float3 x_ab;
-      float4 vel_a     = dev_vel_sorted[idx_a];
-      float4 angvel4_a = dev_angvel_sorted[idx_a];
-      float3 angvel_a  = make_float3(angvel4_a.x, angvel4_a.y, angvel4_a.z);
-
-      // Loop over all possible contacts, and remove contacts
-      // that no longer are valid (delta_n > 0.0)
-      for (int i = 0; i<(int)devC_nc; ++i) {
-	mempos = (unsigned int)(idx_a_orig * devC_nc + i);
-	__syncthreads();
-	idx_b_orig = dev_contacts[mempos];
-	distmod    = dev_distmod[mempos];
-	x_b        = dev_x[idx_b_orig];
-	//radius_b   = dev_radius[idx_b_orig];
-	radius_b   = distmod.w;
-
-	// Inter-particle vector, corrected for periodic boundaries
-	x_ab = make_float3(x_a.x - x_b.x + distmod.x,
-	    		   x_a.y - x_b.y + distmod.y,
-			   x_a.z - x_b.z + distmod.z);
-
-	x_ab_length = length(x_ab);
-	delta_n = x_ab_length - (radius_a + radius_b);
-
-
-	if (idx_b_orig != (unsigned int)devC_np) {
-
-	  // Process collision if the particles are overlapping
-	  if (delta_n < 0.0f) {
-	    //cuPrintf("\nProcessing contact, idx_a_orig = %u, idx_b_orig = %u, contact = %d, delta_n = %f\n",
-	    //  idx_a_orig, idx_b_orig, i, delta_n);
-	    contactLinear(&N, &T, &es_dot, &p, 
-			  idx_a_orig,
-			  idx_b_orig,
-			  vel_a,
-			  dev_vel,
-			  angvel_a,
-			  dev_angvel,
-			  radius_a, radius_b, 
-			  x_ab, x_ab_length,
-			  delta_n, dev_delta_t, 
-			  mempos);
-	  } else {
-	    __syncthreads();
-	    // Remove this contact (there is no particle with index=np)
-	    dev_contacts[mempos] = devC_np; 
-	    // Zero sum of shear displacement in this position
-	    dev_delta_t[mempos]  = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-	  }
-	} else {
-	  __syncthreads();
-	  dev_delta_t[mempos] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-	}
-      } // Contact loop end
-
-    } else if (devC_shearmodel == 1) {
-
-      int3 gridPos;
-      int3 targetPos;
-
-      // Calculate address in grid from position
-      gridPos.x = floor((x_a.x - devC_origo[0]) / (devC_L[0]/devC_num[0]));
-      gridPos.y = floor((x_a.y - devC_origo[1]) / (devC_L[1]/devC_num[1]));
-      gridPos.z = floor((x_a.z - devC_origo[2]) / (devC_L[2]/devC_num[2]));
-
-      // Find overlaps between particle no. idx and all particles
-      // from its own cell + 26 neighbor cells.
-      // Calculate resulting normal- and shear-force components and
-      // torque for the particle on the base of contactLinearViscous()
-      for (int z_dim=-1; z_dim<2; ++z_dim) { // z-axis
-	for (int y_dim=-1; y_dim<2; ++y_dim) { // y-axis
-	  for (int x_dim=-1; x_dim<2; ++x_dim) { // x-axis
-	    targetPos = gridPos + make_int3(x_dim, y_dim, z_dim);
-	    overlapsInCell(targetPos, idx_a, x_a, radius_a,
-			   &N, &T, &es_dot, &p,
-			   dev_x_sorted, dev_radius_sorted, 
-			   dev_vel_sorted, dev_angvel_sorted,
-			   dev_cellStart, dev_cellEnd,
-			   dev_w_nx, dev_w_mvfd);
-	  }
-	}
-      }
-
-    }
-
-    //// Interact with walls
-    float delta_w; // Overlap distance
-    float3 w_n;    // Wall surface normal
-    float w_force = 0.0f; // Force on wall from particle A
-
-    // Upper wall (idx 0)
-    delta_w = w_up_nx.w - (x_a.z + radius_a);
-    w_n = make_float3(0.0f, 0.0f, -1.0f);
-    if (delta_w < 0.0f) {
-      w_force = contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
-	  			   dev_vel_sorted, dev_angvel_sorted,
-				   w_n, delta_w, w_up_mvfd.y);
-    }
-
-    // Lower wall (force on wall not stored)
-    delta_w = x_a.z - radius_a - origo.z;
-    w_n = make_float3(0.0f, 0.0f, 1.0f);
-    if (delta_w < 0.0f) {
-      (void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
-	  		       dev_vel_sorted, dev_angvel_sorted,
-	  		       w_n, delta_w, 0.0f);
-    }
-
-
-    if (devC_periodic == 0) {
-
-      // Left wall
-      delta_w = x_a.x - radius_a - origo.x;
-      w_n = make_float3(1.0f, 0.0f, 0.0f);
-      if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
-	    			 dev_vel_sorted, dev_angvel_sorted,
-				 w_n, delta_w, 0.0f);
-      }
-
-      // Right wall
-      delta_w = L.x - (x_a.x + radius_a);
-      w_n = make_float3(-1.0f, 0.0f, 0.0f);
-      if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
-	    			 dev_vel_sorted, dev_angvel_sorted,
-				 w_n, delta_w, 0.0f);
-      }
-
-      // Front wall
-      delta_w = x_a.y - radius_a - origo.y;
-      w_n = make_float3(0.0f, 1.0f, 0.0f);
-      if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
-	    			 dev_vel_sorted, dev_angvel_sorted,
-				 w_n, delta_w, 0.0f);
-      }
-
-      // Back wall
-      delta_w = L.y - (x_a.y + radius_a);
-      w_n = make_float3(0.0f, -1.0f, 0.0f);
-      if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
-	    			 dev_vel_sorted, dev_angvel_sorted,
-				 w_n, delta_w, 0.0f);
-      }
-
-    } else if (devC_periodic == 2) {
-
-      // Front wall
-      delta_w = x_a.y - radius_a - origo.y;
-      w_n = make_float3(0.0f, 1.0f, 0.0f);
-      if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
-	    			 dev_vel_sorted, dev_angvel_sorted,
-				 w_n, delta_w, 0.0f);
-      }
-
-      // Back wall
-      delta_w = L.y - (x_a.y + radius_a);
-      w_n = make_float3(0.0f, -1.0f, 0.0f);
-      if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
-	    			 dev_vel_sorted, dev_angvel_sorted,
-				 w_n, delta_w, 0.0f);
-      }
-    }
-
-
-    // Hold threads for coalesced write
-    __syncthreads();
-
-    // Write force to unsorted position
-    unsigned int orig_idx = dev_gridParticleIndex[idx_a];
-    dev_force[orig_idx]   = make_float4(N, 0.0f);
-    dev_torque[orig_idx]  = make_float4(T, 0.0f);
-    dev_es_dot[orig_idx]  = es_dot;
-    dev_es[orig_idx]     += es_dot * devC_dt;
-    dev_p[orig_idx]       = p;
-    dev_w_force[orig_idx] = w_force;
-  }
-} // End of interact(...)
-
-
-
-
-
-// FUNCTION FOR UPDATING TRAJECTORIES
-
-// Second order integration scheme based on Taylor expansion of particle kinematics. 
-// Kernel executed on device, and callable from host only.
-__global__ void integrate(float4* dev_x_sorted, float4* dev_vel_sorted, // Input
-			  float4* dev_angvel_sorted, float* dev_radius_sorted, // Input
-			  float4* dev_x, float4* dev_vel, float4* dev_angvel, // Output
-			  float4* dev_force, float4* dev_torque, // Input
-			  unsigned int* dev_gridParticleIndex) // Input: Sorted-Unsorted key
-{
-  unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
-
-  if (idx < devC_np) { // Condition prevents block size error
-
-    // Copy data to temporary arrays to avoid any potential read-after-write, 
-    // write-after-read, or write-after-write hazards. 
-    unsigned int orig_idx = dev_gridParticleIndex[idx];
-    float4 force  = dev_force[orig_idx];
-    float4 torque = dev_torque[orig_idx];
-
-    // Initialize acceleration vectors to zero
-    float4 acc    = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    float4 angacc = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-
-    // Fetch particle position and velocity values from global read
-    float4 x      = dev_x_sorted[idx];
-    float4 vel    = dev_vel_sorted[idx];
-    float4 angvel = dev_angvel_sorted[idx];
-    float  radius = dev_radius_sorted[idx];
-
-    // Coherent read from constant memory to registers
-    float  dt    = devC_dt;
-    float3 origo = make_float3(devC_origo[0], devC_origo[1], devC_origo[2]); 
-    float3 L     = make_float3(devC_L[0], devC_L[1], devC_L[2]);
-    float  rho   = devC_rho;
-
-    // Particle mass
-    float m = 4.0f/3.0f * PI * radius*radius*radius * rho;
-
-    // Update linear acceleration of particle
-    acc.x = force.x / m;
-    acc.y = force.y / m;
-    acc.z = force.z / m;
-
-    // Update angular acceleration of particle 
-    // (angacc = (total moment)/Intertia, intertia = 2/5*m*r^2)
-    angacc.x = torque.x * 1.0f / (2.0f/5.0f * m * radius*radius);
-    angacc.y = torque.y * 1.0f / (2.0f/5.0f * m * radius*radius);
-    angacc.z = torque.z * 1.0f / (2.0f/5.0f * m * radius*radius);
-
-    // Add gravity
-    acc.x += devC_g[0];
-    acc.y += devC_g[1];
-    acc.z += devC_g[2];
-    //acc.z -= 9.82f;
-
-    // Update angular velocity
-    angvel.x += angacc.x * dt;
-    angvel.y += angacc.y * dt;
-    angvel.z += angacc.z * dt;
-
-    // Check if particle has a fixed horizontal velocity
-    if (vel.w > 0.0f) {
-
-      // Zero horizontal acceleration and disable
-      // gravity to counteract segregation.
-      // Particles may move in the z-dimension,
-      // to allow for dilation.
-      acc.x = 0.0f;
-      acc.y = 0.0f;
-      acc.z -= devC_g[2];
-
-      // Zero the angular acceleration and -velocity
-      angvel = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    } 
-
-    // Update linear velocity
-    vel.x += acc.x * dt;
-    vel.y += acc.y * dt;
-    vel.z += acc.z * dt;
-
-    // Update position. First-order Euler's scheme:
-    //x.x += vel.x * dt;
-    //x.y += vel.y * dt;
-    //x.z += vel.z * dt;
-
-    // Update position. Second-order scheme based on Taylor expansion 
-    // (greater accuracy than the first-order Euler's scheme)
-    x.x += vel.x * dt + (acc.x * dt*dt)/2.0f;
-    x.y += vel.y * dt + (acc.y * dt*dt)/2.0f;
-    x.z += vel.z * dt + (acc.z * dt*dt)/2.0f;
-
-
-    // Add x-displacement for this time step to 
-    // sum of x-displacements
-    x.w += vel.x * dt + (acc.x * dt*dt)/2.0f;
-
-    // Move particle across boundary if it is periodic
-    if (devC_periodic == 1) {
-      if (x.x < origo.x)
-	x.x += L.x;
-      if (x.x > L.x)
-	x.x -= L.x;
-      if (x.y < origo.y)
-	x.y += L.y;
-      if (x.y > L.y)
-	x.y -= L.y;
-    } else if (devC_periodic == 2) {
-      if (x.x < origo.x)
-	x.x += L.x;
-      if (x.x > L.x)
-	x.x -= L.x;
-    }
-
-    // Hold threads for coalesced write
-    __syncthreads();
-
-    // Store data in global memory at original, pre-sort positions
-    dev_angvel[orig_idx] = angvel;
-    dev_vel[orig_idx]    = vel;
-    dev_x[orig_idx]      = x;
-  } 
-} // End of integrate(...)
-
-
-// Reduce wall force contributions from particles to a single value per wall
-__global__ void summation(float* in, float *out)
-{
-  __shared__ float cache[256];
-  unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  unsigned int cacheIdx = threadIdx.x;
-
-  float temp = 0.0f;
-  while (idx < devC_np) {
-    temp += in[idx];
-    idx += blockDim.x * gridDim.x;
-  }
-
-  // Set the cache values
-  cache[cacheIdx] = temp;
-
-  __syncthreads();
-
-  // For reductions, threadsPerBlock must be a power of two
-  // because of the following code
-  unsigned int i = blockDim.x/2;
-  while (i != 0) {
-    if (cacheIdx < i)
-      cache[cacheIdx] += cache[cacheIdx + i];
-    __syncthreads();
-    i /= 2;
-  }
-
-  // Write sum for block to global memory
-  if (cacheIdx == 0)
-    out[blockIdx.x] = cache[0];
-}
-
-// Update wall positions
-__global__ void integrateWalls(float4* dev_w_nx, 
-    			       float4* dev_w_mvfd,
-			       float* dev_w_force_partial,
-			       unsigned int blocksPerGrid)
-{
-  unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
-
-  if (idx < devC_nw) { // Condition prevents block size error
-
-    // Copy data to temporary arrays to avoid any potential read-after-write, 
-    // write-after-read, or write-after-write hazards. 
-    float4 w_nx   = dev_w_nx[idx];
-    float4 w_mvfd = dev_w_mvfd[idx];
-
-    // Find the final sum of forces on wall
-    w_mvfd.z = 0.0f;
-    for (int i=0; i<blocksPerGrid; ++i) {
-      w_mvfd.z += dev_w_force_partial[i];
-    }
-
-    float dt = devC_dt;
-
-    // Normal load = Deviatoric stress times wall surface area,
-    // directed downwards.
-    float N = -w_mvfd.w*devC_L[0]*devC_L[1];
-
-    // Calculate resulting acceleration of wall
-    // (Wall mass is stored in w component of position float4)
-    float acc = (w_mvfd.z+N)/w_mvfd.x;
-
-    // Update linear velocity
-    w_mvfd.y += acc * dt;
-
-    // Update position. Second-order scheme based on Taylor expansion 
-    // (greater accuracy than the first-order Euler's scheme)
-    w_nx.w += w_mvfd.y * dt + (acc * dt*dt)/2.0f;
-
-    // Store data in global memory
-    dev_w_nx[idx]   = w_nx;
-    dev_w_mvfd[idx] = w_mvfd;
-  }
-} // End of integrateWalls(...)
-
-
+#include "sorting.cuh"	
+#include "contactmodels.cuh"
+#include "cohesion.cuh"
+#include "contactsearch.cuh"
+#include "integration.cuh"
 
 
 // Wrapper function for initializing the CUDA components.
@@ -1542,6 +65,24 @@ __host__ void initializeGPU(void)
   checkForCudaErrors("After initializing CUDA device");
 }
 
+// Start timer for kernel profiling
+__host__ void startTimer(cudaEvent_t* kernel_tic)
+{
+  cudaEventRecord(*kernel_tic);
+}
+
+// Stop timer for kernel profiling and time to function sum
+__host__ void stopTimer(cudaEvent_t *kernel_tic,
+    			cudaEvent_t *kernel_toc,
+			float *kernel_elapsed,
+			double* sum)
+{
+    cudaEventRecord(*kernel_toc, 0);
+    cudaEventSynchronize(*kernel_toc);
+    cudaEventElapsedTime(kernel_elapsed, *kernel_tic, *kernel_toc);
+    *sum += *kernel_elapsed;
+}
+
 // Copy selected constant components to constant device memory.
 //extern "C"
 __host__ void transferToConstantMemory(Particles* p,
@@ -1555,12 +96,12 @@ __host__ void transferToConstantMemory(Particles* p,
 
   cudaMemcpyToSymbol("devC_np", &p->np, sizeof(p->np));
   cudaMemcpyToSymbol("devC_nc", &NC, sizeof(char));
-  cudaMemcpyToSymbol("devC_origo", grid->origo, sizeof(float)*ND);
-  cudaMemcpyToSymbol("devC_L", grid->L, sizeof(float)*ND);
+  cudaMemcpyToSymbol("devC_origo", grid->origo, sizeof(Float)*ND);
+  cudaMemcpyToSymbol("devC_L", grid->L, sizeof(Float)*ND);
   cudaMemcpyToSymbol("devC_num", grid->num, sizeof(unsigned int)*ND);
-  cudaMemcpyToSymbol("devC_dt", &time->dt, sizeof(float));
+  cudaMemcpyToSymbol("devC_dt", &time->dt, sizeof(Float));
   cudaMemcpyToSymbol("devC_global", &params->global, sizeof(int));
-  cudaMemcpyToSymbol("devC_g", params->g, sizeof(float)*ND);
+  cudaMemcpyToSymbol("devC_g", params->g, sizeof(Float)*ND);
   cudaMemcpyToSymbol("devC_nw", &params->nw, sizeof(unsigned int));
   cudaMemcpyToSymbol("devC_periodic", &params->periodic, sizeof(int));
 
@@ -1578,19 +119,22 @@ __host__ void transferToConstantMemory(Particles* p,
     params->mu_d    = p->mu_d[0];
     params->mu_r    = p->mu_r[0];
     params->rho     = p->rho[0];
-    cudaMemcpyToSymbol("devC_k_n", &params->k_n, sizeof(float));
-    cudaMemcpyToSymbol("devC_k_s", &params->k_s, sizeof(float));
-    cudaMemcpyToSymbol("devC_k_r", &params->k_r, sizeof(float));
-    cudaMemcpyToSymbol("devC_gamma_n", &params->gamma_n, sizeof(float));
-    cudaMemcpyToSymbol("devC_gamma_s", &params->gamma_s, sizeof(float));
-    cudaMemcpyToSymbol("devC_gamma_r", &params->gamma_r, sizeof(float));
-    cudaMemcpyToSymbol("devC_mu_s", &params->mu_s, sizeof(float));
-    cudaMemcpyToSymbol("devC_mu_d", &params->mu_d, sizeof(float));
-    cudaMemcpyToSymbol("devC_mu_r", &params->mu_r, sizeof(float));
-    cudaMemcpyToSymbol("devC_rho", &params->rho, sizeof(float));
-    cudaMemcpyToSymbol("devC_kappa", &params->kappa, sizeof(float));
-    cudaMemcpyToSymbol("devC_db", &params->db, sizeof(float));
-    cudaMemcpyToSymbol("devC_V_b", &params->V_b, sizeof(float));
+    cudaMemcpyToSymbol("devC_k_n", &params->k_n, sizeof(Float));
+    cudaMemcpyToSymbol("devC_k_s", &params->k_s, sizeof(Float));
+    cudaMemcpyToSymbol("devC_k_r", &params->k_r, sizeof(Float));
+    cudaMemcpyToSymbol("devC_gamma_n", &params->gamma_n, sizeof(Float));
+    cudaMemcpyToSymbol("devC_gamma_s", &params->gamma_s, sizeof(Float));
+    cudaMemcpyToSymbol("devC_gamma_r", &params->gamma_r, sizeof(Float));
+    cudaMemcpyToSymbol("devC_gamma_wn", &params->gamma_wn, sizeof(Float));
+    cudaMemcpyToSymbol("devC_gamma_ws", &params->gamma_ws, sizeof(Float));
+    cudaMemcpyToSymbol("devC_gamma_wr", &params->gamma_wr, sizeof(Float));
+    cudaMemcpyToSymbol("devC_mu_s", &params->mu_s, sizeof(Float));
+    cudaMemcpyToSymbol("devC_mu_d", &params->mu_d, sizeof(Float));
+    cudaMemcpyToSymbol("devC_mu_r", &params->mu_r, sizeof(Float));
+    cudaMemcpyToSymbol("devC_rho", &params->rho, sizeof(Float));
+    cudaMemcpyToSymbol("devC_kappa", &params->kappa, sizeof(Float));
+    cudaMemcpyToSymbol("devC_db", &params->db, sizeof(Float));
+    cudaMemcpyToSymbol("devC_V_b", &params->V_b, sizeof(Float));
     cudaMemcpyToSymbol("devC_shearmodel", &params->shearmodel, sizeof(unsigned int));
   } else {
     //printf("(params.global == %d) ", params.global);
@@ -1609,20 +153,20 @@ __host__ void transferToConstantMemory(Particles* p,
 
 
 //extern "C"
-__host__ void gpuMain(float4* host_x,
-		      float4* host_vel,
-		      float4* host_acc,
-		      float4* host_angvel,
-		      float4* host_angacc,
-		      float4* host_force,
-		      float4* host_torque,
+__host__ void gpuMain(Float4* host_x,
+		      Float4* host_vel,
+		      Float4* host_acc,
+		      Float4* host_angvel,
+		      Float4* host_angacc,
+		      Float4* host_force,
+		      Float4* host_torque,
 		      uint4*  host_bonds,
 		      Particles* p, 
 		      Grid* grid, 
 		      Time* time, 
 		      Params* params,
-		      float4* host_w_nx,
-		      float4* host_w_mvfd,
+		      Float4* host_w_nx,
+		      Float4* host_w_mvfd,
 		      const char* cwd, 
 		      const char* inputbin)
 {
@@ -1633,31 +177,31 @@ __host__ void gpuMain(float4* host_x,
   transferToConstantMemory(p, grid, time, params);
 
   // Declare pointers for particle variables on the device
-  float4* dev_x;	// Particle position
-  float4* dev_vel;	// Particle linear velocity
-  float4* dev_angvel;	// Particle angular velocity
-  float4* dev_acc;	// Particle linear acceleration
-  float4* dev_angacc;	// Particle angular acceleration
-  float4* dev_force;	// Sum of forces
-  float4* dev_torque;	// Sum of torques
-  float*  dev_radius;	// Particle radius
-  float*  dev_es_dot;	// Current shear energy producion rate
-  float*  dev_es;	// Total shear energy excerted on particle
-  float*  dev_p;	// Pressure excerted onto particle
+  Float4* dev_x;	// Particle position
+  Float4* dev_vel;	// Particle linear velocity
+  Float4* dev_angvel;	// Particle angular velocity
+  Float4* dev_acc;	// Particle linear acceleration
+  Float4* dev_angacc;	// Particle angular acceleration
+  Float4* dev_force;	// Sum of forces
+  Float4* dev_torque;	// Sum of torques
+  Float*  dev_radius;	// Particle radius
+  Float*  dev_es_dot;	// Current shear energy producion rate
+  Float*  dev_es;	// Total shear energy excerted on particle
+  Float*  dev_p;	// Pressure excerted onto particle
   //uint4*  dev_bonds;	// Particle bond pairs
 
   // Declare pointers for wall vectors on the device
-  float4* dev_w_nx;            // Wall normal (x,y,z) and position (w)
-  float4* dev_w_mvfd;          // Wall mass (x), velocity (y), force (z) 
+  Float4* dev_w_nx;            // Wall normal (x,y,z) and position (w)
+  Float4* dev_w_mvfd;          // Wall mass (x), velocity (y), force (z) 
   			       // and deviatoric stress (w)
-  float*  dev_w_force;	       // Resulting force on wall per particle
-  float*  dev_w_force_partial; // Partial sum from block of threads
+  Float*  dev_w_force;	       // Resulting force on wall per particle
+  Float*  dev_w_force_partial; // Partial sum from block of threads
 
   // Memory for sorted particle data
-  float4* dev_x_sorted;
-  float4* dev_vel_sorted;
-  float4* dev_angvel_sorted;
-  float*  dev_radius_sorted; 
+  Float4* dev_x_sorted;
+  Float4* dev_vel_sorted;
+  Float4* dev_angvel_sorted;
+  Float*  dev_radius_sorted; 
   //uint4*  dev_bonds_sorted;
 
   // Grid-particle array pointers
@@ -1669,35 +213,35 @@ __host__ void gpuMain(float4* host_x,
   // Particle contact bookkeeping
   unsigned int* dev_contacts;
   // Particle pair distance correction across periodic boundaries
-  float4* dev_distmod;
+  Float4* dev_distmod;
   // x,y,z contains the interparticle vector, corrected if contact 
   // is across a periodic boundary. 
-  float4* dev_delta_t; // Accumulated shear distance of contact
+  Float4* dev_delta_t; // Accumulated shear distance of contact
 
   // Particle memory size
-  unsigned int memSizef  = sizeof(float) * p->np;
-  unsigned int memSizef4 = sizeof(float4) * p->np;
+  unsigned int memSizeF  = sizeof(Float) * p->np;
+  unsigned int memSizeF4 = sizeof(Float4) * p->np;
 
   // Allocate device memory for particle variables,
   // tie to previously declared pointers
   cout << "  Allocating device memory:                       ";
 
   // Particle arrays
-  cudaMalloc((void**)&dev_x, memSizef4);
-  cudaMalloc((void**)&dev_x_sorted, memSizef4);
-  cudaMalloc((void**)&dev_vel, memSizef4);
-  cudaMalloc((void**)&dev_vel_sorted, memSizef4);
-  cudaMalloc((void**)&dev_angvel, memSizef4);
-  cudaMalloc((void**)&dev_angvel_sorted, memSizef4);
-  cudaMalloc((void**)&dev_acc, memSizef4);
-  cudaMalloc((void**)&dev_angacc, memSizef4);
-  cudaMalloc((void**)&dev_force, memSizef4);
-  cudaMalloc((void**)&dev_torque, memSizef4);
-  cudaMalloc((void**)&dev_radius, memSizef);
-  cudaMalloc((void**)&dev_radius_sorted, memSizef);
-  cudaMalloc((void**)&dev_es_dot, memSizef);
-  cudaMalloc((void**)&dev_es, memSizef);
-  cudaMalloc((void**)&dev_p, memSizef);
+  cudaMalloc((void**)&dev_x, memSizeF4);
+  cudaMalloc((void**)&dev_x_sorted, memSizeF4);
+  cudaMalloc((void**)&dev_vel, memSizeF4);
+  cudaMalloc((void**)&dev_vel_sorted, memSizeF4);
+  cudaMalloc((void**)&dev_angvel, memSizeF4);
+  cudaMalloc((void**)&dev_angvel_sorted, memSizeF4);
+  cudaMalloc((void**)&dev_acc, memSizeF4);
+  cudaMalloc((void**)&dev_angacc, memSizeF4);
+  cudaMalloc((void**)&dev_force, memSizeF4);
+  cudaMalloc((void**)&dev_torque, memSizeF4);
+  cudaMalloc((void**)&dev_radius, memSizeF);
+  cudaMalloc((void**)&dev_radius_sorted, memSizeF);
+  cudaMalloc((void**)&dev_es_dot, memSizeF);
+  cudaMalloc((void**)&dev_es, memSizeF);
+  cudaMalloc((void**)&dev_p, memSizeF);
   //cudaMalloc((void**)&dev_bonds, sizeof(uint4) * p->np);
   //cudaMalloc((void**)&dev_bonds_sorted, sizeof(uint4) * p->np);
 
@@ -1709,13 +253,13 @@ __host__ void gpuMain(float4* host_x,
 
   // Particle contact bookkeeping arrays
   cudaMalloc((void**)&dev_contacts, sizeof(unsigned int)*p->np*NC); // Max NC contacts per particle
-  cudaMalloc((void**)&dev_distmod, sizeof(float4)*p->np*NC);
-  cudaMalloc((void**)&dev_delta_t, sizeof(float4)*p->np*NC);
+  cudaMalloc((void**)&dev_distmod, sizeof(Float4)*p->np*NC);
+  cudaMalloc((void**)&dev_delta_t, sizeof(Float4)*p->np*NC);
 
   // Wall arrays
-  cudaMalloc((void**)&dev_w_nx, sizeof(float)*params->nw*4);
-  cudaMalloc((void**)&dev_w_mvfd, sizeof(float)*params->nw*4);
-  cudaMalloc((void**)&dev_w_force, sizeof(float)*params->nw*p->np);
+  cudaMalloc((void**)&dev_w_nx, sizeof(Float)*params->nw*4);
+  cudaMalloc((void**)&dev_w_mvfd, sizeof(Float)*params->nw*4);
+  cudaMalloc((void**)&dev_w_force, sizeof(Float)*params->nw*p->np);
 
   checkForCudaErrors("Post device memory allocation");
   cout << "Done\n";
@@ -1724,22 +268,22 @@ __host__ void gpuMain(float4* host_x,
   cout << "  Transfering data to the device:                 ";
 
   // Particle data
-  cudaMemcpy(dev_x, host_x, memSizef4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_vel, host_vel, memSizef4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_acc, host_acc, memSizef4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_angvel, host_angvel, memSizef4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_angacc, host_angacc, memSizef4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_force, host_force, memSizef4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_torque, host_torque, memSizef4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_x, host_x, memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_vel, host_vel, memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_acc, host_acc, memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_angvel, host_angvel, memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_angacc, host_angacc, memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_force, host_force, memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_torque, host_torque, memSizeF4, cudaMemcpyHostToDevice);
   //cudaMemcpy(dev_bonds, host_bonds, sizeof(uint4) * p->np, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_radius, p->radius, memSizef, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_es_dot, p->es_dot, memSizef, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_es, p->es, memSizef, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_p, p->p, memSizef, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_radius, p->radius, memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_es_dot, p->es_dot, memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_es, p->es, memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_p, p->p, memSizeF, cudaMemcpyHostToDevice);
 
   // Wall data (wall mass and number in constant memory)
-  cudaMemcpy(dev_w_nx, host_w_nx, sizeof(float)*params->nw*4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_w_mvfd, host_w_mvfd, sizeof(float)*params->nw*4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_w_nx, host_w_nx, sizeof(Float)*params->nw*4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_w_mvfd, host_w_mvfd, sizeof(Float)*params->nw*4, cudaMemcpyHostToDevice);
   
   // Initialize contacts lists to p.np
   unsigned int* npu = new unsigned int[p->np*NC];
@@ -1750,12 +294,12 @@ __host__ void gpuMain(float4* host_x,
 
   // Create array of 0.0 values on the host and transfer these to the distance 
   // modifier and shear displacement arrays
-  float4* zerosf4 = new float4[p->np*NC];
+  Float4* zerosF4 = new Float4[p->np*NC];
   for (unsigned int i=0; i<(p->np*NC); ++i)
-    zerosf4[i] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-  cudaMemcpy(dev_distmod, zerosf4, sizeof(float4)*p->np*NC, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_delta_t, zerosf4, sizeof(float4)*p->np*NC, cudaMemcpyHostToDevice);
-  delete[] zerosf4;
+    zerosF4[i] = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+  cudaMemcpy(dev_distmod, zerosF4, sizeof(Float4)*p->np*NC, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_delta_t, zerosF4, sizeof(Float4)*p->np*NC, cudaMemcpyHostToDevice);
+  delete[] zerosF4;
 
   checkForCudaErrors("Post memcopy");
   cout << "Done\n";
@@ -1783,7 +327,7 @@ __host__ void gpuMain(float4* host_x,
   // Shared memory per block
   unsigned int smemSize = sizeof(unsigned int)*(threadsPerBlock+1);
 
-  cudaMalloc((void**)&dev_w_force_partial, sizeof(float)*dimGrid.x);
+  cudaMalloc((void**)&dev_w_force_partial, sizeof(Float)*dimGrid.x);
 
   // Report to stdout
   cout << "\n  Device memory allocation and transfer complete.\n"
@@ -1821,9 +365,7 @@ __host__ void gpuMain(float4* host_x,
   cout << "\n  Entering the main calculation time loop...\n\n"
        << "  IMPORTANT: Do not close this terminal, doing so will \n"
        << "             terminate this SPHERE process. Follow the \n"
-       << "             progress in MATLAB using:\n"
-       << "                >> status('" << inputbin << "')\n"
-       << "             or in this directory by executing:\n"
+       << "             progress by executing:\n"
        << "                $ ./sphere_status " << inputbin << "\n\n";
 
   // Enable cuPrintf()
@@ -1834,6 +376,23 @@ __host__ void gpuMain(float4* host_x,
   cudaEventCreate(&dev_tic);
   cudaEventCreate(&dev_toc);
   cudaEventRecord(dev_tic, 0);
+
+  // If profiling is enabled, initialize timers for each kernel
+  cudaEvent_t kernel_tic, kernel_toc;
+  float kernel_elapsed;
+  double t_calcParticleCellID = 0.0;
+  double t_thrustsort = 0.0;
+  double t_reorderArrays = 0.0;
+  double t_topology = 0.0;
+  double t_interact = 0.0;
+  double t_integrate = 0.0;
+  double t_summation = 0.0;
+  double t_integrateWalls = 0.0;
+
+  if (PROFILING == 1) {
+    cudaEventCreate(&kernel_tic);
+    cudaEventCreate(&kernel_toc);
+  }
 
   cout << "  Current simulation time: " << time->current << " s.";
 
@@ -1855,20 +414,28 @@ __host__ void gpuMain(float4* host_x,
     // For each particle: 
     // Compute hash key (cell index) from position 
     // in the fine, uniform and homogenous grid.
+    if (PROFILING == 1)
+      startTimer(&kernel_tic);
     calcParticleCellID<<<dimGrid, dimBlock>>>(dev_gridParticleCellID, 
 					      dev_gridParticleIndex, 
 					      dev_x);
 
     // Synchronization point
     cudaThreadSynchronize();
+    if (PROFILING == 1)
+      stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_calcParticleCellID);
     checkForCudaErrors("Post calcParticleCellID");
 
 
     // Sort particle (key, particle ID) pairs by hash key with Thrust radix sort
+    if (PROFILING == 1)
+      startTimer(&kernel_tic);
     thrust::sort_by_key(thrust::device_ptr<uint>(dev_gridParticleCellID),
 			thrust::device_ptr<uint>(dev_gridParticleCellID + p->np),
 			thrust::device_ptr<uint>(dev_gridParticleIndex));
     cudaThreadSynchronize(); // Needed? Does thrust synchronize threads implicitly?
+    if (PROFILING == 1)
+      stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_thrustsort);
     checkForCudaErrors("Post calcParticleCellID");
 
 
@@ -1882,6 +449,8 @@ __host__ void gpuMain(float4* host_x,
 
     // Use sorted order to reorder particle arrays (position, velocities, radii) to ensure
     // coherent memory access. Save ordered configurations in new arrays (*_sorted).
+    if (PROFILING == 1)
+      startTimer(&kernel_tic);
     reorderArrays<<<dimGrid, dimBlock, smemSize>>>(dev_cellStart, 
 						   dev_cellEnd,
 						   dev_gridParticleCellID, 
@@ -1897,6 +466,8 @@ __host__ void gpuMain(float4* host_x,
 
     // Synchronization point
     cudaThreadSynchronize();
+    if (PROFILING == 1)
+      stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_reorderArrays);
     checkForCudaErrors("Post reorderArrays", iter);
 
     // The contact search in topology() is only necessary for determining
@@ -1904,6 +475,8 @@ __host__ void gpuMain(float4* host_x,
     // shear force model
     if (params->shearmodel == 2) {
       // For each particle: Search contacts in neighbor cells
+      if (PROFILING == 1)
+	startTimer(&kernel_tic);
       topology<<<dimGrid, dimBlock>>>(dev_cellStart, 
 	  			      dev_cellEnd,
 				      dev_gridParticleIndex,
@@ -1918,11 +491,15 @@ __host__ void gpuMain(float4* host_x,
 
       // Synchronization point
       cudaThreadSynchronize();
+      if (PROFILING == 1)
+	stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_topology);
       checkForCudaErrors("Post topology: One or more particles moved outside the grid.\nThis could possibly be caused by a numerical instability.\nIs the computational time step too large?", iter);
     }
 
 
     // For each particle: Process collisions and compute resulting forces.
+    if (PROFILING == 1)
+      startTimer(&kernel_tic);
     interact<<<dimGrid, dimBlock>>>(dev_gridParticleIndex,
 				    dev_cellStart,
 				    dev_cellEnd,
@@ -1944,23 +521,37 @@ __host__ void gpuMain(float4* host_x,
 
     // Synchronization point
     cudaThreadSynchronize();
+    if (PROFILING == 1)
+      stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_interact);
     checkForCudaErrors("Post interact - often caused if particles move outside the grid", iter);
 
     // Update particle kinematics
+    if (PROFILING == 1)
+      startTimer(&kernel_tic);
     integrate<<<dimGrid, dimBlock>>>(dev_x_sorted, dev_vel_sorted, 
 				     dev_angvel_sorted, dev_radius_sorted,
 				     dev_x, dev_vel, dev_angvel,
 				     dev_force, dev_torque, 
 				     dev_gridParticleIndex);
 
+    cudaThreadSynchronize();
+    if (PROFILING == 1)
+      stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_integrate);
+
     // Summation of forces on wall
+    if (PROFILING == 1)
+      startTimer(&kernel_tic);
     summation<<<dimGrid, dimBlock>>>(dev_w_force, dev_w_force_partial);
 
     // Synchronization point
     cudaThreadSynchronize();
+    if (PROFILING == 1)
+      stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_summation);
     checkForCudaErrors("Post integrate & wall force summation");
 
     // Update wall kinematics
+    if (PROFILING == 1)
+      startTimer(&kernel_tic);
     integrateWalls<<< 1, params->nw>>>(dev_w_nx, 
 				       dev_w_mvfd,
 				       dev_w_force_partial,
@@ -1968,6 +559,8 @@ __host__ void gpuMain(float4* host_x,
 
     // Synchronization point
     cudaThreadSynchronize();
+    if (PROFILING == 1)
+      stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_integrateWalls);
     checkForCudaErrors("Post integrateWalls");
 
 
@@ -1976,7 +569,8 @@ __host__ void gpuMain(float4* host_x,
     filetimeclock    += time->dt;
 
     // Report time to console
-    cout << "\r  Current simulation time: " << time->current << " s.        ";
+    cout << "\r  Current simulation time: " 
+         << time->current << " s.        ";// << std::flush;
 
 
     // Produce output binary if the time interval 
@@ -1990,22 +584,22 @@ __host__ void gpuMain(float4* host_x,
       //// Copy device data to host memory
 
       // Particle data
-      cudaMemcpy(host_x, dev_x, memSizef4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_vel, dev_vel, memSizef4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_acc, dev_acc, memSizef4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_angvel, dev_angvel, memSizef4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_force, dev_force, memSizef4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_torque, dev_torque, memSizef4, cudaMemcpyDeviceToHost);
+      cudaMemcpy(host_x, dev_x, memSizeF4, cudaMemcpyDeviceToHost);
+      cudaMemcpy(host_vel, dev_vel, memSizeF4, cudaMemcpyDeviceToHost);
+      cudaMemcpy(host_acc, dev_acc, memSizeF4, cudaMemcpyDeviceToHost);
+      cudaMemcpy(host_angvel, dev_angvel, memSizeF4, cudaMemcpyDeviceToHost);
+      cudaMemcpy(host_force, dev_force, memSizeF4, cudaMemcpyDeviceToHost);
+      cudaMemcpy(host_torque, dev_torque, memSizeF4, cudaMemcpyDeviceToHost);
       //cudaMemcpy(host_bonds, dev_bonds, sizeof(uint4) * p->np, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p->es_dot, dev_es_dot, memSizef, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p->es, dev_es, memSizef, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p->p, dev_p, memSizef, cudaMemcpyDeviceToHost);
+      cudaMemcpy(p->es_dot, dev_es_dot, memSizeF, cudaMemcpyDeviceToHost);
+      cudaMemcpy(p->es, dev_es, memSizeF, cudaMemcpyDeviceToHost);
+      cudaMemcpy(p->p, dev_p, memSizeF, cudaMemcpyDeviceToHost);
 
       // Wall data
       cudaMemcpy(host_w_nx, dev_w_nx, 
-	  	 sizeof(float)*params->nw*4, cudaMemcpyDeviceToHost);
+	  	 sizeof(Float)*params->nw*4, cudaMemcpyDeviceToHost);
       cudaMemcpy(host_w_mvfd, dev_w_mvfd, 
-	  	 sizeof(float)*params->nw*4, cudaMemcpyDeviceToHost);
+	  	 sizeof(Float)*params->nw*4, cudaMemcpyDeviceToHost);
 
       // Pause the CPU thread until all CUDA calls previously issued are completed
       cudaThreadSynchronize();
@@ -2056,6 +650,23 @@ __host__ void gpuMain(float4* host_x,
 
   cudaEventDestroy(dev_tic);
   cudaEventDestroy(dev_toc);
+
+  cudaEventDestroy(kernel_tic);
+  cudaEventDestroy(kernel_toc);
+
+  // Report time spent on each kernel
+  if (PROFILING == 1) {
+    cout << "\nKernel profiling statistics:\n"
+         << "  - calcParticleCellID:\t" << t_calcParticleCellID/1000.0 << " s\n"
+         << "  - thrustsort:\t\t" << t_thrustsort/1000.0 << " s\n"
+         << "  - reorderArrays:\t" << t_reorderArrays/1000.0 << " s\n"
+         << "  - topology:\t\t" << t_topology/1000.0 << " s\n"
+         << "  - interact:\t\t" << t_interact/1000.0 << " s\n"
+         << "  - integrate:\t\t" << t_integrate/1000.0 << " s\n"
+         << "  - summation:\t\t" << t_summation/1000.0 << " s\n"
+         << "  - integrateWalls:\t" << t_integrateWalls/1000.0 << " s\n";
+  }
+
 
   // Free memory allocated to cudaPrintfInit
   //cudaPrintfEnd();

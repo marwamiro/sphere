@@ -1,6 +1,11 @@
+# Cuda paths
 CUDA_INSTALL_PATH=/usr/local/cuda
 CUDA_BIN=$(CUDA_INSTALL_PATH)/bin
 
+# Define the editor and optional arguments
+EDITOR=vim -p
+
+# Define compilers and linker
 CC=g++
 NVCC=$(CUDA_BIN)/nvcc
 LINKER=$(CC)
@@ -26,7 +31,7 @@ CCFILES=main.cpp file_io.cpp
 CUFILES=device.cu utility.cu
 CCOBJECTS=$(CCFILES:.cpp=.o)
 CUOBJECTS=$(CUFILES:.cu=.o)
-	OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
+OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
 
 # Detect OS
 OSUPPER=$(shell uname -s 2>/dev/null | tr [:lower:] [:upper:])
@@ -53,7 +58,10 @@ LDFLAGS+=-L$(CUDA_INSTALL_PATH)/lib
 LDFLAGS+=-L$(SDKPATH)/../../shared/lib -L$(SDKPATH)/../lib 
 LDFLAGS+=-lcutil_x86_64 -lcuda -lcudart
 
-all: $(CCFILES) $(CUFILES) $(EXECUTABLE)
+all: $(CCFILES) $(CUFILES) $(EXECUTABLE) raytracer
+
+raytracer: 
+	$(MAKE) -C ../raytracer/
 
 $(EXECUTABLE): $(OBJECTS)
 	$(LINKER) $(OBJECTS) $(LDFLAGS) -o $@
@@ -61,20 +69,20 @@ $(EXECUTABLE): $(OBJECTS)
 utility.o: utility.cu
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
 
-file_io.o: file_io.cpp
+file_io.o: file_io.cpp datatypes.h
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
-device.o: device.cu
+device.o: device.cu datatypes.h *.cuh
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
 
-main.o: main.cpp
+main.o: main.cpp datatypes.h
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
 ../sphere_status: sphere_status.cpp
 	$(CC) $(CCFLAGS) sphere_status.cpp -o ../sphere_status
 
 edit:
-	vim -p Makefile $(CCFILES) $(CUFILES) *.h *.cuh 
+	$(EDITOR) Makefile $(CCFILES) $(CUFILES) *.h *.cuh 
 
 backup:
 	tar cvfz ../../sphere_backup/$(BACKUPNAME) ../../sphere
@@ -83,4 +91,10 @@ backup:
 clean:
 	$(RM) $(OBJECTS)
 	$(RM) ../sphere_*
+	$(MAKE) -C ../raytracer clean
+
+clear:
+	# Remove all output data and images
+	$(RM) -rf ../img_out/*.{ppm,png}
+	$(RM) -rf ../output/*.{dat,bin}
 

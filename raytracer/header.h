@@ -4,6 +4,8 @@
 #ifndef HEADER_H_
 #define HEADER_H_
 
+// Type declaration
+typedef unsigned int Inttype;
 
 //// Structure declarations ////
 
@@ -20,14 +22,5 @@ struct rgb {
   unsigned char b;
   unsigned char alpha;
 };
-
-
-
-//// Prototype functions ////
-
-// io.cpp
-int image_to_ppm(rgb* rgb_img, const char* filename,
-    		 const unsigned int width, const unsigned int height);
-
 
 #endif

@@ -4,25 +4,60 @@
 #ifndef DATATYPES_H_
 #define DATATYPES_H_
 
-/////////////////////////////////
-// STATIC VARIABLE DECLARATION //
-/////////////////////////////////
-
-
+#include <math.h>
 #include "vector_functions.h"
+//#include "vector_arithmetic.h"
 
-//// Symbolic constants
 
-const float PI = 3.14159265358979f;
+// Enable profiling of kernel runtimes?
+// 0: No
+// 1: Yes
+#define PROFILING 1
+
+
+//////////////////////
+// TYPE DEFINITIONS //
+//////////////////////
+
+// REMEMBER: When changing the precision below,
+// change values in typedefs.h accordingly.
+
+// Uncomment all five lines below for single precision
+/*
+typedef Float Float;
+typedef Float3 Float3;
+typedef Float4 Float4;
+#define MAKE_FLOAT3(x, y, z) make_Float3(x, y, z)
+#define MAKE_FLOAT4(x, y, z, w) make_Float4(x, y, z, w)
+*/
+
+
+// Uncomment all five lines below for double precision
+///*
+typedef double Float;
+typedef double2 Float2;
+typedef double3 Float3;
+typedef double4 Float4;
+#define MAKE_FLOAT3(x, y, z) make_double3(x, y, z)
+#define MAKE_FLOAT4(x, y, z, w) make_double4(x, y, z, w)
+//*/
+
+
+////////////////////////
+// SYMBOLIC CONSTANTS //
+////////////////////////
+
+const Float PI = 3.14159265358979;
 
 // Number of dimensions (1 and 2 NOT functional)
 const unsigned int ND = 3;
 
 // Define source code version
-const float VERS = 0.25;
+const Float VERS = 0.25;
 
 // Max. number of contacts per particle
-const char NC = 16;
+//const char NC = 16;
+const char NC = 32;
 
 
 ///////////////////////////
@@ -31,39 +66,39 @@ const char NC = 16;
 
 // Structure containing variable particle parameters
 struct Particles {
-  float *radius;
-  float *k_n;
-  float *k_s;
-  float *k_r;
-  float *gamma_n;
-  float *gamma_s;
-  float *gamma_r;
-  float *mu_s;
-  float *mu_d;
-  float *mu_r;
-  float *rho;
-  float *es_dot;
-  float *es;
-  float *p;
-  float *m;
-  float *I;
+  Float *radius;
+  Float *k_n;
+  Float *k_s;
+  Float *k_r;
+  Float *gamma_n;
+  Float *gamma_s;
+  Float *gamma_r;
+  Float *mu_s;
+  Float *mu_d;
+  Float *mu_r;
+  Float *rho;
+  Float *es_dot;
+  Float *es;
+  Float *p;
+  Float *m;
+  Float *I;
   unsigned int np;
 };
 
 // Structure containing grid parameters
 struct Grid {
   unsigned int nd;
-  float *origo;
-  float *L;
+  Float *origo;
+  Float *L;
   unsigned int *num;
 };
 
 // Structure containing time parameters
 struct Time {
-  float dt;
+  Float dt;
   double current;
   double total;
-  float file_dt;
+  Float file_dt;
   unsigned int step_count;
 };
 
@@ -71,23 +106,26 @@ struct Time {
 struct Params {
   //bool global;
   int global;
-  float *g;
+  Float *g;
   unsigned int np;
   unsigned int nw;
-  float dt; 
-  float k_n;
-  float k_s;
-  float k_r;
-  float gamma_n;
-  float gamma_s;
-  float gamma_r;
-  float mu_s; 
-  float mu_d;
-  float mu_r;
-  float rho;
-  float kappa;
-  float db;
-  float V_b;
+  Float dt; 
+  Float k_n;
+  Float k_s;
+  Float k_r;
+  Float gamma_n;
+  Float gamma_s;
+  Float gamma_r;
+  Float gamma_wn;
+  Float gamma_ws;
+  Float gamma_wr;
+  Float mu_s; 
+  Float mu_d;
+  Float mu_r;
+  Float rho;
+  Float kappa;
+  Float db;
+  Float V_b;
   int periodic;
   unsigned int shearmodel;
 };
@@ -97,29 +135,29 @@ struct Params {
 // PROTOTYPE FUNCTIONS //
 /////////////////////////
 int fwritebin(char *target, Particles *p, 
-    	      float4 *host_x, float4 *host_vel, 
-	      float4 *host_angvel, float4 *host_force, 
-	      float4 *host_torque, uint4 *host_bonds,
+    	      Float4 *host_x, Float4 *host_vel, 
+	      Float4 *host_angvel, Float4 *host_force, 
+	      Float4 *host_torque, uint4 *host_bonds,
 	      Grid *grid, Time *time, Params *params,
-	      float4 *host_w_nx, float4 *host_w_mvfd);
+	      Float4 *host_w_nx, Float4 *host_w_mvfd);
 
 // device.cu
 //extern "C"
 void initializeGPU(void);
 
 //extern "C"
-void gpuMain(float4* host_x,
-    	     float4* host_vel,
-	     float4* host_acc,
-	     float4* host_angvel,
-	     float4* host_angacc,
-	     float4* host_force,
-	     float4* host_torque,
+void gpuMain(Float4* host_x,
+    	     Float4* host_vel,
+	     Float4* host_acc,
+	     Float4* host_angvel,
+	     Float4* host_angacc,
+	     Float4* host_force,
+	     Float4* host_torque,
 	     uint4*  host_bonds,
 	     Particles* p, Grid* grid,
 	     Time* time, Params* params,
-	     float4* host_w_nx,
-	     float4* host_w_mvfd,
+	     Float4* host_w_nx,
+	     Float4* host_w_mvfd,
 	     const char* cwd,
 	     const char* inputbin);
 
