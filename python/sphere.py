@@ -22,61 +22,64 @@ class Spherebin:
     self.np = numpy.ones(1, dtype=numpy.uint32) * np
 
     # Time parameters
-    self.time_dt         = numpy.zeros(1, dtype=numpy.float32)
-    self.time_current    = numpy.zeros(1, dtype=numpy.float32)
+    self.time_dt         = numpy.zeros(1, dtype=numpy.float64)
+    self.time_current    = numpy.zeros(1, dtype=numpy.float64)
     self.time_total      = numpy.zeros(1, dtype=numpy.float64)
-    self.time_file_dt    = numpy.zeros(1, dtype=numpy.float32)
+    self.time_file_dt    = numpy.zeros(1, dtype=numpy.float64)
     self.time_step_count = numpy.zeros(1, dtype=numpy.uint32)
 
     # World dimensions and grid data
-    self.origo   = numpy.zeros(self.nd, dtype=numpy.float32)
-    self.L       = numpy.zeros(self.nd, dtype=numpy.float32)
+    self.origo   = numpy.zeros(self.nd, dtype=numpy.float64)
+    self.L       = numpy.zeros(self.nd, dtype=numpy.float64)
     self.num     = numpy.zeros(self.nd, dtype=numpy.uint32)
 
     # Particle data
-    self.x       = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
-    self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
-    self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
-    self.force   = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
-    self.torque  = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
-    self.fixvel  = numpy.zeros(self.np, dtype=numpy.float32)
-    self.xsum    = numpy.zeros(self.np, dtype=numpy.float32)
-    self.radius  = numpy.zeros(self.np, dtype=numpy.float32)
-    self.rho     = numpy.zeros(self.np, dtype=numpy.float32)
-    self.k_n     = numpy.zeros(self.np, dtype=numpy.float32)
-    self.k_s     = numpy.zeros(self.np, dtype=numpy.float32)
-    self.k_r	 = numpy.zeros(self.np, dtype=numpy.float32)
-    self.gamma_n = numpy.zeros(self.np, dtype=numpy.float32)
-    self.gamma_s = numpy.zeros(self.np, dtype=numpy.float32)
-    self.gamma_r = numpy.zeros(self.np, dtype=numpy.float32)
-    self.mu_s    = numpy.zeros(self.np, dtype=numpy.float32)
-    self.mu_d    = numpy.zeros(self.np, dtype=numpy.float32)
-    self.mu_r    = numpy.zeros(self.np, dtype=numpy.float32)
-    self.es_dot  = numpy.zeros(self.np, dtype=numpy.float32)
-    self.es	 = numpy.zeros(self.np, dtype=numpy.float32)
-    self.p	 = numpy.zeros(self.np, dtype=numpy.float32)
+    self.x       = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+    self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+    self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+    self.force   = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+    self.torque  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+    self.fixvel  = numpy.zeros(self.np, dtype=numpy.float64)
+    self.xsum    = numpy.zeros(self.np, dtype=numpy.float64)
+    self.radius  = numpy.zeros(self.np, dtype=numpy.float64)
+    self.rho     = numpy.zeros(self.np, dtype=numpy.float64)
+    self.k_n     = numpy.zeros(self.np, dtype=numpy.float64)
+    self.k_s     = numpy.zeros(self.np, dtype=numpy.float64)
+    self.k_r	 = numpy.zeros(self.np, dtype=numpy.float64)
+    self.gamma_n = numpy.zeros(self.np, dtype=numpy.float64)
+    self.gamma_s = numpy.zeros(self.np, dtype=numpy.float64)
+    self.gamma_r = numpy.zeros(self.np, dtype=numpy.float64)
+    self.mu_s    = numpy.zeros(self.np, dtype=numpy.float64)
+    self.mu_d    = numpy.zeros(self.np, dtype=numpy.float64)
+    self.mu_r    = numpy.zeros(self.np, dtype=numpy.float64)
+    self.es_dot  = numpy.zeros(self.np, dtype=numpy.float64)
+    self.es	 = numpy.zeros(self.np, dtype=numpy.float64)
+    self.p	 = numpy.zeros(self.np, dtype=numpy.float64)
 
     self.bonds   = numpy.ones(self.np*4, dtype=numpy.uint32).reshape(self.np,4) * self.np
 
     # Constant, single-value physical parameters
     self.globalparams = numpy.zeros(1, dtype=numpy.int32)
-    self.g            = numpy.zeros(self.nd, dtype=numpy.float32)
-    self.kappa        = numpy.zeros(1, dtype=numpy.float32)
-    self.db           = numpy.zeros(1, dtype=numpy.float32)
-    self.V_b          = numpy.zeros(1, dtype=numpy.float32)
+    self.g            = numpy.zeros(self.nd, dtype=numpy.float64)
+    self.kappa        = numpy.zeros(1, dtype=numpy.float64)
+    self.db           = numpy.zeros(1, dtype=numpy.float64)
+    self.V_b          = numpy.zeros(1, dtype=numpy.float64)
     self.shearmodel   = numpy.zeros(1, dtype=numpy.uint32)
 
     # Wall data
     self.nw 	 = numpy.ones(1, dtype=numpy.uint32) * nw
-    self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float32).reshape(self.nw,self.nd)
-    self.w_x     = numpy.zeros(self.nw, dtype=numpy.float32)
-    self.w_m     = numpy.zeros(self.nw, dtype=numpy.float32)
-    self.w_vel   = numpy.zeros(self.nw, dtype=numpy.float32)
-    self.w_force = numpy.zeros(self.nw, dtype=numpy.float32)
-    self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float32)
+    self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
+    self.w_x     = numpy.zeros(self.nw, dtype=numpy.float64)
+    self.w_m     = numpy.zeros(self.nw, dtype=numpy.float64)
+    self.w_vel   = numpy.zeros(self.nw, dtype=numpy.float64)
+    self.w_force = numpy.zeros(self.nw, dtype=numpy.float64)
+    self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
     
     # x- and y-boundary behavior
     self.periodic = numpy.zeros(1, dtype=numpy.uint32)
+    self.gamma_wn = numpy.zeros(1, dtype=numpy.float64)
+    self.gamma_ws = numpy.zeros(1, dtype=numpy.float64)
+    self.gamma_wr = numpy.zeros(1, dtype=numpy.float64)
 
 
   # Read binary data
@@ -94,99 +97,102 @@ class Spherebin:
       self.np = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
        
       # Read the time variables
-      self.time_dt 	   = numpy.fromfile(fh, dtype=numpy.float32, count=1)
+      self.time_dt 	   = numpy.fromfile(fh, dtype=numpy.float64, count=1)
       self.time_current    = numpy.fromfile(fh, dtype=numpy.float64, count=1)
       self.time_total 	   = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-      self.time_file_dt    = numpy.fromfile(fh, dtype=numpy.float32, count=1)
+      self.time_file_dt    = numpy.fromfile(fh, dtype=numpy.float64, count=1)
       self.time_step_count = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
 
       # Allocate array memory for particles
-      self.x       = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
-      self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
-      self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
-      self.force   = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
-      self.torque  = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
-      self.fixvel  = numpy.zeros(self.np, dtype=numpy.float32)
-      self.xsum    = numpy.zeros(self.np, dtype=numpy.float32)
-      self.radius  = numpy.zeros(self.np, dtype=numpy.float32)
-      self.rho     = numpy.zeros(self.np, dtype=numpy.float32)
-      self.k_n     = numpy.zeros(self.np, dtype=numpy.float32)
-      self.k_s     = numpy.zeros(self.np, dtype=numpy.float32)
-      self.k_r	   = numpy.zeros(self.np, dtype=numpy.float32)
-      self.gamma_n = numpy.zeros(self.np, dtype=numpy.float32)
-      self.gamma_s = numpy.zeros(self.np, dtype=numpy.float32)
-      self.gamma_r = numpy.zeros(self.np, dtype=numpy.float32)
-      self.mu_s    = numpy.zeros(self.np, dtype=numpy.float32)
-      self.mu_d    = numpy.zeros(self.np, dtype=numpy.float32)
-      self.mu_r    = numpy.zeros(self.np, dtype=numpy.float32)
-      self.es_dot  = numpy.zeros(self.np, dtype=numpy.float32)
-      self.es	   = numpy.zeros(self.np, dtype=numpy.float32)
-      self.p	   = numpy.zeros(self.np, dtype=numpy.float32)
-      self.bonds   = numpy.zeros(self.np, dtype=numpy.float32)
+      self.x       = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+      self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+      self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+      self.force   = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+      self.torque  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+      self.fixvel  = numpy.zeros(self.np, dtype=numpy.float64)
+      self.xsum    = numpy.zeros(self.np, dtype=numpy.float64)
+      self.radius  = numpy.zeros(self.np, dtype=numpy.float64)
+      self.rho     = numpy.zeros(self.np, dtype=numpy.float64)
+      self.k_n     = numpy.zeros(self.np, dtype=numpy.float64)
+      self.k_s     = numpy.zeros(self.np, dtype=numpy.float64)
+      self.k_r	   = numpy.zeros(self.np, dtype=numpy.float64)
+      self.gamma_n = numpy.zeros(self.np, dtype=numpy.float64)
+      self.gamma_s = numpy.zeros(self.np, dtype=numpy.float64)
+      self.gamma_r = numpy.zeros(self.np, dtype=numpy.float64)
+      self.mu_s    = numpy.zeros(self.np, dtype=numpy.float64)
+      self.mu_d    = numpy.zeros(self.np, dtype=numpy.float64)
+      self.mu_r    = numpy.zeros(self.np, dtype=numpy.float64)
+      self.es_dot  = numpy.zeros(self.np, dtype=numpy.float64)
+      self.es	   = numpy.zeros(self.np, dtype=numpy.float64)
+      self.p	   = numpy.zeros(self.np, dtype=numpy.float64)
+      self.bonds   = numpy.zeros(self.np, dtype=numpy.float64)
 
       # Read remaining data from binary
-      self.origo   = numpy.fromfile(fh, dtype=numpy.float32, count=self.nd)
-      self.L       = numpy.fromfile(fh, dtype=numpy.float32, count=self.nd)
+      self.origo   = numpy.fromfile(fh, dtype=numpy.float64, count=self.nd)
+      self.L       = numpy.fromfile(fh, dtype=numpy.float64, count=self.nd)
       self.num     = numpy.fromfile(fh, dtype=numpy.uint32, count=self.nd)
   
       # Per-particle vectors
       for j in range(self.np):
         for i in range(self.nd):
-  	  self.x[j,i]      = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-	  self.vel[j,i]    = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-	  self.angvel[j,i] = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-	  self.force[j,i]  = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-	  self.torque[j,i] = numpy.fromfile(fh, dtype=numpy.float32, count=1)
+  	  self.x[j,i]      = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+	  self.vel[j,i]    = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+	  self.angvel[j,i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+	  self.force[j,i]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+	  self.torque[j,i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
  
       # Per-particle single-value parameters
       for j in range(self.np):
-	self.fixvel[j]  = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-	self.xsum[j]    = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.radius[j]  = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.rho[j]     = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.k_n[j]     = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.k_s[j]     = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-	self.k_r[j]     = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-	self.gamma_n[j] = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-	self.gamma_s[j] = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-	self.gamma_r[j] = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.mu_s[j]    = numpy.fromfile(fh, dtype=numpy.float32, count=1) 
-        self.mu_d[j]    = numpy.fromfile(fh, dtype=numpy.float32, count=1) 
-        self.mu_r[j]    = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.es_dot[j]  = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.es[j]      = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.p[j]       = numpy.fromfile(fh, dtype=numpy.float32, count=1)
+	self.fixvel[j]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+	self.xsum[j]    = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.radius[j]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.rho[j]     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.k_n[j]     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.k_s[j]     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+	self.k_r[j]     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+	self.gamma_n[j] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+	self.gamma_s[j] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+	self.gamma_r[j] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.mu_s[j]    = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
+        self.mu_d[j]    = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
+        self.mu_r[j]    = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.es_dot[j]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.es[j]      = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.p[j]       = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
       # Constant, single-value physical parameters
       self.globalparams = numpy.fromfile(fh, dtype=numpy.int32, count=1)
-      self.g            = numpy.fromfile(fh, dtype=numpy.float32, count=self.nd)
-      self.kappa        = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-      self.db           = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-      self.V_b          = numpy.fromfile(fh, dtype=numpy.float32, count=1)
+      self.g            = numpy.fromfile(fh, dtype=numpy.float64, count=self.nd)
+      self.kappa        = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+      self.db           = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+      self.V_b          = numpy.fromfile(fh, dtype=numpy.float64, count=1)
       self.shearmodel   = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
 
       # Wall data
       self.nw 	   = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
 
-      self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float32).reshape(self.nw,self.nd)
-      self.w_x     = numpy.zeros(self.nw, dtype=numpy.float32)
-      self.w_m     = numpy.zeros(self.nw, dtype=numpy.float32)
-      self.w_vel   = numpy.zeros(self.nw, dtype=numpy.float32)
-      self.w_force = numpy.zeros(self.nw, dtype=numpy.float32)
-      self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float32)
+      self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
+      self.w_x     = numpy.zeros(self.nw, dtype=numpy.float64)
+      self.w_m     = numpy.zeros(self.nw, dtype=numpy.float64)
+      self.w_vel   = numpy.zeros(self.nw, dtype=numpy.float64)
+      self.w_force = numpy.zeros(self.nw, dtype=numpy.float64)
+      self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
 
       for j in range(self.nw):
         for i in range(self.nd):
-  	  self.w_n[j,i] = numpy.fromfile(fh, dtype=numpy.float32, count=1)
+  	  self.w_n[j,i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
-        self.w_x[j]     = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.w_m[j]     = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.w_vel[j]   = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.w_force[j] = numpy.fromfile(fh, dtype=numpy.float32, count=1)
-        self.w_devs[j]  = numpy.fromfile(fh, dtype=numpy.float32, count=1)
+        self.w_x[j]     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.w_m[j]     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.w_vel[j]   = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.w_force[j] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.w_devs[j]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
     
       # x- and y-boundary behavior
       self.periodic = numpy.fromfile(fh, dtype=numpy.int32, count=1)
+      self.gamma_wn = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+      self.gamma_ws = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+      self.gamma_wr = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
       # Read interparticle bond list
       self.bonds = numpy.zeros(self.np*4, dtype=numpy.uint32).reshape(self.np,4)
@@ -214,66 +220,69 @@ class Spherebin:
       fh.write(self.np.astype(numpy.uint32))
        
       # Write the time variables
-      fh.write(self.time_dt.astype(numpy.float32))
+      fh.write(self.time_dt.astype(numpy.float64))
       fh.write(self.time_current.astype(numpy.float64))
       fh.write(self.time_total.astype(numpy.float64))
-      fh.write(self.time_file_dt.astype(numpy.float32))
+      fh.write(self.time_file_dt.astype(numpy.float64))
       fh.write(self.time_step_count.astype(numpy.uint32))
 
       # Read remaining data from binary
-      fh.write(self.origo.astype(numpy.float32))
-      fh.write(self.L.astype(numpy.float32))
+      fh.write(self.origo.astype(numpy.float64))
+      fh.write(self.L.astype(numpy.float64))
       fh.write(self.num.astype(numpy.uint32))
   
       # Per-particle vectors
       for j in range(self.np):
         for i in range(self.nd):
-	  fh.write(self.x[j,i].astype(numpy.float32))
-	  fh.write(self.vel[j,i].astype(numpy.float32))
-	  fh.write(self.angvel[j,i].astype(numpy.float32))
-	  fh.write(self.force[j,i].astype(numpy.float32))
-	  fh.write(self.torque[j,i].astype(numpy.float32))
+	  fh.write(self.x[j,i].astype(numpy.float64))
+	  fh.write(self.vel[j,i].astype(numpy.float64))
+	  fh.write(self.angvel[j,i].astype(numpy.float64))
+	  fh.write(self.force[j,i].astype(numpy.float64))
+	  fh.write(self.torque[j,i].astype(numpy.float64))
  
       # Per-particle single-value parameters
       for j in range(self.np):
-	fh.write(self.fixvel[j].astype(numpy.float32))
-	fh.write(self.xsum[j].astype(numpy.float32))
-        fh.write(self.radius[j].astype(numpy.float32))
-        fh.write(self.rho[j].astype(numpy.float32))
-        fh.write(self.k_n[j].astype(numpy.float32))
-        fh.write(self.k_s[j].astype(numpy.float32))
-	fh.write(self.k_r[j].astype(numpy.float32))
-	fh.write(self.gamma_n[j].astype(numpy.float32))
-	fh.write(self.gamma_s[j].astype(numpy.float32))
-	fh.write(self.gamma_r[j].astype(numpy.float32))
-        fh.write(self.mu_s[j].astype(numpy.float32))
-        fh.write(self.mu_d[j].astype(numpy.float32))
-        fh.write(self.mu_r[j].astype(numpy.float32))
-        fh.write(self.es_dot[j].astype(numpy.float32))
-        fh.write(self.es[j].astype(numpy.float32))
-        fh.write(self.p[j].astype(numpy.float32))
+	fh.write(self.fixvel[j].astype(numpy.float64))
+	fh.write(self.xsum[j].astype(numpy.float64))
+        fh.write(self.radius[j].astype(numpy.float64))
+        fh.write(self.rho[j].astype(numpy.float64))
+        fh.write(self.k_n[j].astype(numpy.float64))
+        fh.write(self.k_s[j].astype(numpy.float64))
+	fh.write(self.k_r[j].astype(numpy.float64))
+	fh.write(self.gamma_n[j].astype(numpy.float64))
+	fh.write(self.gamma_s[j].astype(numpy.float64))
+	fh.write(self.gamma_r[j].astype(numpy.float64))
+        fh.write(self.mu_s[j].astype(numpy.float64))
+        fh.write(self.mu_d[j].astype(numpy.float64))
+        fh.write(self.mu_r[j].astype(numpy.float64))
+        fh.write(self.es_dot[j].astype(numpy.float64))
+        fh.write(self.es[j].astype(numpy.float64))
+        fh.write(self.p[j].astype(numpy.float64))
 
       # Constant, single-value physical parameters
       fh.write(self.globalparams.astype(numpy.int32))
-      fh.write(self.g.astype(numpy.float32))
-      fh.write(self.kappa.astype(numpy.float32))
-      fh.write(self.db.astype(numpy.float32))
-      fh.write(self.V_b.astype(numpy.float32))
+      fh.write(self.g.astype(numpy.float64))
+      fh.write(self.kappa.astype(numpy.float64))
+      fh.write(self.db.astype(numpy.float64))
+      fh.write(self.V_b.astype(numpy.float64))
       fh.write(self.shearmodel.astype(numpy.uint32))
 
       fh.write(self.nw.astype(numpy.uint32))
       for j in range(self.nw):
         for i in range(self.nd):
-  	  fh.write(self.w_n[j,i].astype(numpy.float32))
+  	  fh.write(self.w_n[j,i].astype(numpy.float64))
 
-        fh.write(self.w_x[j].astype(numpy.float32))
-        fh.write(self.w_m[j].astype(numpy.float32))
-        fh.write(self.w_vel[j].astype(numpy.float32))
-        fh.write(self.w_force[j].astype(numpy.float32))
-        fh.write(self.w_devs[j].astype(numpy.float32))
+        fh.write(self.w_x[j].astype(numpy.float64))
+        fh.write(self.w_m[j].astype(numpy.float64))
+        fh.write(self.w_vel[j].astype(numpy.float64))
+        fh.write(self.w_force[j].astype(numpy.float64))
+        fh.write(self.w_devs[j].astype(numpy.float64))
     
       # x- and y-boundary behavior
       fh.write(self.periodic.astype(numpy.uint32))
+      fh.write(self.gamma_wn.astype(numpy.float64))
+      fh.write(self.gamma_ws.astype(numpy.float64))
+      fh.write(self.gamma_wr.astype(numpy.float64))
 
       # Read interparticle bond list
       for j in range(self.np):
@@ -559,32 +568,37 @@ class Spherebin:
     self.w_devs[0] = deviatoric_stress
 
     # Zero kinematics
-    self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
-    self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float32).reshape(self.np,self.nd)
+    self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+    self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
 
-    #fixheight = 2*cellsize
-    fixheight = cellsize
+    fixheight = 2*cellsize
+    #fixheight = cellsize
  
     # Fix horizontal velocity to 0.0 of lowermost particles
     I = numpy.nonzero(self.x[:,2] < (z_min + fixheight)) # Find indices of lowermost 10%
-    self.fixvel[I] = 1;
-    self.angvel[I,0] = 0.0;
-    self.angvel[I,1] = 0.0;
-    self.angvel[I,2] = 0.0;
-    self.vel[I,0] = 0.0; # x-dim
-    self.vel[I,1] = 0.0; # y-dim
+    self.fixvel[I] = 1
+    self.angvel[I,0] = 0.0
+    self.angvel[I,1] = 0.0
+    self.angvel[I,2] = 0.0
+    self.vel[I,0] = 0.0 # x-dim
+    self.vel[I,1] = 0.0 # y-dim
 
     # Fix horizontal velocity to specific value of uppermost particles
     I = numpy.nonzero(self.x[:,2] > (z_max - fixheight)) # Find indices of lowermost 10%
-    self.fixvel[I] = 1;
-    self.angvel[I,0] = 0.0;
-    self.angvel[I,1] = 0.0;
-    self.angvel[I,2] = 0.0;
+    self.fixvel[I] = 1
+    self.angvel[I,0] = 0.0
+    self.angvel[I,1] = 0.0
+    self.angvel[I,2] = 0.0
     self.vel[I,0] = (z_max-z_min)*shear_strain_rate
-    self.vel[I,1] = 0.0; # y-dim
+    self.vel[I,1] = 0.0 # y-dim
 
     # Zero x-axis displacement
-    self.xsum = numpy.zeros(self.np, dtype=numpy.float32)
+    self.xsum = numpy.zeros(self.np, dtype=numpy.float64)
+
+    # Set wall viscosities to zero
+    self.gamma_wn[0] = 0.0
+    self.gamma_ws[0] = 0.0
+    self.gamma_wr[0] = 0.0
 
 
  
@@ -600,7 +614,7 @@ class Spherebin:
     r_min = numpy.amin(self.radius)
 
     # Computational time step (O'Sullivan et al, 2003)
-    self.time_dt[0] = 0.17 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / self.k_n[0])
+    self.time_dt[0] = 0.17 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amin([self.k_n[:], self.k_s[:]]) )
     
     # Time at start
     self.time_current[0] = current
@@ -611,57 +625,66 @@ class Spherebin:
   def defaultParams(self, ang_s = 20,
       			  ang_d = 15,
       			  ang_r = 0,
-			  rho = 3600,
+			  rho = 2660,
 			  k_n = 1e9,
-			  k_s = 6.6e8,
+			  k_s = 1e9,
 			  k_r = 4e6,
 			  gamma_n = 1e3,
 			  gamma_s = 1e3,
 			  gamma_r = 2e3,
+			  gamma_wn = 1e3,
+			  gamma_ws = 1e3,
+			  gamma_wr = 2e3,
 			  capillaryCohesion = 0):
     """ Initialize particle parameters to default values.
         Radii must be set prior to calling this function.
     """
     # Particle material density, kg/m^3
-    self.rho = numpy.ones(self.np, dtype=numpy.float32) * rho
+    self.rho = numpy.ones(self.np, dtype=numpy.float64) * rho
 
     
     ### Dry granular material parameters
 
     # Contact normal elastic stiffness, N/m
-    self.k_n = numpy.ones(self.np, dtype=numpy.float32) * k_n
+    self.k_n = numpy.ones(self.np, dtype=numpy.float64) * k_n
 
     # Contact shear elastic stiffness (for shearmodel = 2), N/m
-    self.k_s = numpy.ones(self.np, dtype=numpy.float32) * k_s
+    self.k_s = numpy.ones(self.np, dtype=numpy.float64) * k_s
 
     # Contact rolling elastic stiffness (for shearmodel = 2), N/m
-    self.k_r = numpy.ones(self.np, dtype=numpy.float32) * k_r
+    self.k_r = numpy.ones(self.np, dtype=numpy.float64) * k_r
 
     # Contact normal viscosity. Critical damping: 2*sqrt(m*k_n).
     # Normal force component elastic if nu = 0.0.
-    #self.gamma_n = numpy.ones(self.np, dtype=numpy.float32) \
+    #self.gamma_n = numpy.ones(self.np, dtype=numpy.float64) \
     #	      * nu_frac * 2.0 * math.sqrt(4.0/3.0 * math.pi * numpy.amin(self.radius)**3 \
     #	      * self.rho[0] * self.k_n[0])
-    self.gamma_n = numpy.ones(self.np, dtype=numpy.float32) * gamma_n
+    self.gamma_n = numpy.ones(self.np, dtype=numpy.float64) * gamma_n
 		      
     # Contact shear viscosity, Ns/m
-    self.gamma_s = numpy.ones(self.np, dtype=numpy.float32) * gamma_s
+    self.gamma_s = numpy.ones(self.np, dtype=numpy.float64) * gamma_s
 
     # Contact rolling viscosity, Ns/m?
-    self.gamma_r = numpy.ones(self.np, dtype=numpy.float32) * gamma_r
+    self.gamma_r = numpy.ones(self.np, dtype=numpy.float64) * gamma_r
 
     # Contact static shear friction coefficient
-    self.mu_s = numpy.ones(self.np, dtype=numpy.float32) * numpy.tan(numpy.radians(ang_s))
+    self.mu_s = numpy.ones(self.np, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_s))
 
     # Contact dynamic shear friction coefficient
-    self.mu_d = numpy.ones(self.np, dtype=numpy.float32) * numpy.tan(numpy.radians(ang_d))
+    self.mu_d = numpy.ones(self.np, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_d))
 
     # Contact rolling friction coefficient
-    self.mu_r = numpy.ones(self.np, dtype=numpy.float32) * numpy.tan(numpy.radians(ang_r))
+    self.mu_r = numpy.ones(self.np, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_r))
 
     # Global parameters
     # if 1 = all particles have the same values for the physical parameters
     self.globalparams[0] = 1
+
+    # Wall viscosities
+    self.gamma_wn[0] = gamma_wn # normal
+    self.gamma_ws[0] = gamma_ws # sliding
+    self.gamma_wr[0] = gamma_wr # rolling
+
 
     ### Parameters related to capillary bonds
 
@@ -713,16 +736,17 @@ def render(binary,
 	   resolution = numpy.array([800, 800]),
 	   workhorse = 'GPU',
 	   method = 'pressure',
-	   max_val = 4e3):
+	   max_val = 4e3,
+	   rt_bin = '../raytracer/rt'):
   """ Render target binary using the sphere raytracer.
   """
 
   # Use raytracer to render the scene into a temporary PPM file
   if workhorse == 'GPU':
-    subprocess.call("../raytracer/rt GPU {0} {1} {2} {3}.ppm {4} {5}" \
+    subprocess.call(rt_bin + " GPU {0} {1} {2} {3}.ppm {4} {5}" \
 	.format(binary, resolution[0], resolution[1], out, method, max_val), shell=True)
   if workhorse == 'CPU':
-    subprocess.call("../raytracer/rt CPU {0} {1} {2} {3}.ppm" \
+    subprocess.call(rt_bin + " CPU {0} {1} {2} {3}.ppm" \
 	.format(binary, resolution[0], resolution[1], out), shell=True)
 
   # Use ImageMagick's convert command to change the graphics format
@@ -731,6 +755,7 @@ def render(binary,
 
   # Delete temporary PPM file
   subprocess.call("rm {0}.ppm".format(out), shell=True)
+  
   
 def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
   """ Visualize output from the target project,
@@ -825,10 +850,10 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
 
       # Allocate arrays on first run
       if (i == 0):
-	wforce = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float32).reshape((lastfile+1), sb.nw[0])
-	wvel   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float32).reshape((lastfile+1), sb.nw[0])
-	wpos   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float32).reshape((lastfile+1), sb.nw[0])
-	wdevs  = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float32).reshape((lastfile+1), sb.nw[0])
+	wforce = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+	wvel   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+	wpos   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+	wdevs  = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
 
       wforce[i] = sb.w_force[0]
       wvel[i]   = sb.w_vel[0]
@@ -870,10 +895,10 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
 
       # First iteration: Allocate arrays and find constant values
       if (i == 0):
-	xdisp    = numpy.zeros(lastfile+1, dtype=numpy.float32)  # Shear displacement
-	sigma    = numpy.zeros(lastfile+1, dtype=numpy.float32)  # Normal stress
-	tau      = numpy.zeros(lastfile+1, dtype=numpy.float32)  # Shear stress
-	dilation = numpy.zeros(lastfile+1, dtype=numpy.float32)  # Upper wall position
+	xdisp    = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear displacement
+	sigma    = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Normal stress
+	tau      = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear stress
+	dilation = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Upper wall position
 
 	fixvel = numpy.nonzero(sb.fixvel > 0.0)
 	#fixvel_upper = numpy.nonzero(sb.vel[fixvel,0] > 0.0)
