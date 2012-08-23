@@ -32,13 +32,11 @@ Obtaining SPHERE
 The best way to keep up to date with subsequent updates, bugfixes
 and development, is to use the GIT version control system.
 To obtain a local copy, execute:
-  ``git clone git://github.com/anders-dc/sphere.git``
+  ``git clone https://github.com/anders-dc/sphere.git``
 
 Build instructions
 ==================
   ``cd src/``
   ``make``
 The compiler will generate a command-line executable in the root 
-folder. The SPHERE raytracer must be built seperately:
-  ``cd raytracer/``
-  ``make``
+folder, and build the raytracing module separately.
