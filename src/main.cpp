@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
 {
   // Namespace declarations
   using std::cout;
+  using std::cerr;
 
   // LOCAL VARIABLE DECLARATIONS
   if(!argv[1] || argc != 2) {
@@ -88,14 +89,14 @@ int main(int argc, char *argv[])
   if ((fp = fopen(file,"rb")) == NULL) {
     cout << "Could not read input binary file " << cwd << "/input/" 
          << inputbin << ".bin. Bye.\n";
-    return 1; // Return unsuccessful exit status
+    exit(1); // Return unsuccessful exit status
   }
 
   // Read the number of dimensions and particles
   if (fread(&grid.nd, sizeof(grid.nd), 1, fp) != 1)
-    return 1; // Return unsuccessful exit status
+    exit(1); // Return unsuccessful exit status
   if (fread(&p.np, sizeof(p.np), 1, fp) != 1)
-    return 1; // Return unsuccessful exit status
+    exit(1); // Return unsuccessful exit status
   cout << "  - Number of dimensions: grid.nd         = " << grid.nd << "\n"
        << "  - Number of particles:  p.np            = " << p.np << "\n";
 
@@ -104,20 +105,32 @@ int main(int argc, char *argv[])
          << "The dataset is " << grid.nd 
 	 << "D, this SPHERE binary is " << ND << "D.\n"
 	 << "This execution is terminating.\n";
-    return 1; // Return unsuccessful exit status
+    exit(1); // Return unsuccessful exit status
   }
+
+  // Report precision choice
+  cout << "  - Compiled for ";
+  if (sizeof(Float) == sizeof(float))
+    cout << "single";
+  else if (sizeof(Float) == sizeof(double))
+    cout << "double";
+  else {
+    cerr << "Error! Chosen precision not available. Check datatypes.h\n";
+    exit(1);
+  }
+  cout << " precision\n";
 
   // Read time parameters
   if (fread(&time.dt, sizeof(time.dt), 1, fp) != 1)
-    return 1; // Return unsuccessful exit status
+    exit(1); // Return unsuccessful exit status
   if (fread(&time.current, sizeof(time.current), 1, fp) != 1)
-    return 1; 
+    exit(1); 
   if (fread(&time.total, sizeof(time.total), 1, fp) != 1)
-    return 1; 
+    exit(1); 
   if (fread(&time.file_dt, sizeof(time.file_dt), 1, fp) != 1)
-    return 1; 
+    exit(1); 
   if (fread(&time.step_count, sizeof(time.step_count), 1, fp) != 1)
-    return 1; 
+    exit(1); 
 
   // Copy timestep length to constant memory structure
   //time.dt *= 10; // For debugging: Increase timestep one magnitude
@@ -182,108 +195,108 @@ int main(int argc, char *argv[])
   // Read remaining data from input binary
   for (i=0; i<ND; ++i) {
     if (fread(&grid.origo[i], sizeof(grid.origo[i]), 1, fp) != 1)
-      return 1; // Return unsuccessful exit status
+      exit(1); // Return unsuccessful exit status
   }
 
   for (i=0; i<ND; ++i) {
     if (fread(&grid.L[i], sizeof(grid.L[i]), 1, fp) != 1)
-      return 1; // Return unsuccessful exit status
+      exit(1); // Return unsuccessful exit status
   }
 
   for (i=0; i<ND; ++i) {
     if (fread(&grid.num[i], sizeof(grid.num[i]), 1, fp) != 1)
-      return 1; // Return unsuccessful exit status
+      exit(1); // Return unsuccessful exit status
   }
 
   for (j=0; j<p.np; ++j) {
     if (fread(&host_x[j].x, sizeof(Float), 1, fp) != 1)
-      return 1; // Return unsuccessful exit status
+      exit(1); // Return unsuccessful exit status
     if (fread(&host_vel[j].x, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_angvel[j].x, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_force[j].x, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_torque[j].x, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
 
     if (fread(&host_x[j].y, sizeof(Float), 1, fp) != 1)
-      return 1; // Return unsuccessful exit status
+      exit(1); // Return unsuccessful exit status
     if (fread(&host_vel[j].y, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_angvel[j].y, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_force[j].y, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_torque[j].y, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
 
     if (fread(&host_x[j].z, sizeof(Float), 1, fp) != 1)
-      return 1; // Return unsuccessful exit status
+      exit(1); // Return unsuccessful exit status
     if (fread(&host_vel[j].z, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_angvel[j].z, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_force[j].z, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_torque[j].z, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
   }
 
   for (j=0; j<p.np; ++j) {
     if (fread(&host_vel[j].w, sizeof(Float), 1, fp) != 1) // Fixvel
-      return 1; // Return unsuccessful exit status
+      exit(1); // Return unsuccessful exit status
     if (fread(&host_x[j].w, sizeof(Float), 1, fp) != 1) // xsum
-      return 1;
+      exit(1);
     if (fread(&p.radius[j], sizeof(p.radius[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.rho[j], sizeof(p.rho[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.k_n[j], sizeof(p.k_n[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.k_s[j], sizeof(p.k_s[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.k_r[j], sizeof(p.k_r[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.gamma_n[j], sizeof(p.gamma_n[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.gamma_s[j], sizeof(p.gamma_s[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.gamma_r[j], sizeof(p.gamma_r[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.mu_s[j], sizeof(p.mu_s[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.mu_d[j], sizeof(p.mu_d[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.mu_r[j], sizeof(p.mu_r[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.es_dot[j], sizeof(p.es_dot[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.es[j], sizeof(p.es[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&p.p[j], sizeof(p.p[j]), 1, fp) != 1)
-      return 1;
+      exit(1);
   }
 
   if (fread(&params.global, sizeof(params.global), 1, fp) != 1)
-    return 1; // Return unsuccessful exit status
+    exit(1); // Return unsuccessful exit status
   for (i=0; i<ND; ++i) {
     if (fread(&params.g[i], sizeof(params.g[i]), 1, fp) != 1)
-      return 1;
+      exit(1);
   }
   if (fread(&params.kappa, sizeof(params.kappa), 1, fp) != 1)
-    return 1;
+    exit(1);
   if (fread(&params.db, sizeof(params.db), 1, fp) != 1)
-    return 1; 
+    exit(1); 
   if (fread(&params.V_b, sizeof(params.V_b), 1, fp) != 1)
-    return 1; 
+    exit(1); 
   if (fread(&params.shearmodel, sizeof(params.shearmodel), 1, fp) != 1)
-    return 1;
+    exit(1);
 
 
   // Number of dynamic walls
   if (fread(&params.nw, sizeof(params.nw), 1, fp) != 1)
-    return 1; 
+    exit(1); 
 
   // Allocate host memory for walls
   // Wall normal (x,y,z), w: wall position on axis parallel to wall normal
@@ -295,33 +308,33 @@ int main(int argc, char *argv[])
   for (j=0; j<params.nw; ++j) {
     // Wall normal, x-dimension
     if (fread(&host_w_nx[j].x, sizeof(Float), 1, fp) != 1) // Read in single precision
-      return 1;
+      exit(1);
     // Wall normal, y-dimension
     if (fread(&host_w_nx[j].y, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
     // Wall normal, z-dimension
     if (fread(&host_w_nx[j].z, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
 
     // Wall position along axis parallel to wall normal
     if (fread(&host_w_nx[j].w, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
 
     // Wall mass
     if (fread(&host_w_mvfd[j].x, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
 
     // Wall velocity along axis parallel to wall normal
     if (fread(&host_w_mvfd[j].y, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
 
     // Wall force along axis parallel to wall normal
     if (fread(&host_w_mvfd[j].z, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
 
     // Wall deviatoric stress
     if (fread(&host_w_mvfd[j].w, sizeof(Float), 1, fp) != 1)
-      return 1;
+      exit(1);
   }
   // x- and y boundary behavior.
   // 0: walls, 1: periodic boundaries, 2: x boundary periodic, y frictional walls
@@ -332,22 +345,22 @@ int main(int argc, char *argv[])
 
   // Wall viscosities
   if (fread(&params.gamma_wn, sizeof(params.gamma_wn), 1, fp) != 1)
-    return 1;
+    exit(1);
   if (fread(&params.gamma_ws, sizeof(params.gamma_ws), 1, fp) != 1)
-    return 1;
+    exit(1);
   if (fread(&params.gamma_wr, sizeof(params.gamma_wr), 1, fp) != 1)
-    return 1;
+    exit(1);
 
 
   for (i=0; i<p.np; ++i) {
     if (fread(&host_bonds[i].x, sizeof(unsigned int), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_bonds[i].y, sizeof(unsigned int), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_bonds[i].z, sizeof(unsigned int), 1, fp) != 1)
-      return 1;
+      exit(1);
     if (fread(&host_bonds[i].w, sizeof(unsigned int), 1, fp) != 1)
-      return 1;
+      exit(1);
   }
 
   fclose(fp);
@@ -384,10 +397,10 @@ int main(int argc, char *argv[])
 	 << grid.num[2] << " (z) = " 
 	 << grid.num[0]*grid.num[1]*grid.num[2] << " cells\n";
   } else {
-    cout << "\nError; the number of dimensions must be 1, 2 or 3, and was\n"
+    cerr << "\nError; the number of dimensions must be 1, 2 or 3, and was\n"
 	 << "defined as " << grid.nd << ". This SPHERE binary was compiled for " 
 	 << ND << "D. Bye!\n";
-    return 1; // Return unsuccessful exit status
+    exit(1); // Return unsuccessful exit status
   }
 
   // For debugging purposes: Print data to terminal
