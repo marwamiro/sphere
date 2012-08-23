@@ -57,9 +57,9 @@ int main(int argc, char *argv[])
 
   // Read path to current working directory
   char *cwd;
-  cwd = getcwd (0, 0);
-  if (! cwd) {	// Terminate program execution if path is not obtained
-    fprintf (stderr, "getcwd failed: %s\n", strerror (errno));
+  cwd = getcwd(0, 0);
+  if (!cwd) {	// Terminate program execution if path is not obtained
+    cerr << "Error: getcwd failed: " << strerror(errno) << '\n';
     return 1; // Return unsuccessful exit status
   }
 
