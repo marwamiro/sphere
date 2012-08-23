@@ -12,7 +12,7 @@
 // Enable profiling of kernel runtimes?
 // 0: No
 // 1: Yes
-#define PROFILING 1
+#define PROFILING 0
 
 
 //////////////////////
