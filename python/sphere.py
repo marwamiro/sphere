@@ -614,7 +614,8 @@ class Spherebin:
     r_min = numpy.amin(self.radius)
 
     # Computational time step (O'Sullivan et al, 2003)
-    self.time_dt[0] = 0.17 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amin([self.k_n[:], self.k_s[:]]) )
+    #self.time_dt[0] = 0.17 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amin([self.k_n[:], self.k_s[:]]) )
+    self.time_dt[0] = 0.12 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amin([self.k_n[:], self.k_s[:]]) )
     
     # Time at start
     self.time_current[0] = current
