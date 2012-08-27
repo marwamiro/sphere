@@ -110,20 +110,20 @@ __host__ void transferToConstantMemory(Particles* p,
     //   copy the values from the first particle into the designated constant memory. 
     //printf("(params.global == %d) ", params.global);
     params->k_n     = p->k_n[0];
-    params->k_s	    = p->k_s[0];
+    params->k_t	    = p->k_t[0];
     params->k_r	    = p->k_r[0];
     params->gamma_n = p->gamma_n[0];
-    params->gamma_s = p->gamma_s[0];
+    params->gamma_t = p->gamma_t[0];
     params->gamma_r = p->gamma_r[0];
     params->mu_s    = p->mu_s[0];
     params->mu_d    = p->mu_d[0];
     params->mu_r    = p->mu_r[0];
     params->rho     = p->rho[0];
     cudaMemcpyToSymbol("devC_k_n", &params->k_n, sizeof(Float));
-    cudaMemcpyToSymbol("devC_k_s", &params->k_s, sizeof(Float));
+    cudaMemcpyToSymbol("devC_k_t", &params->k_t, sizeof(Float));
     cudaMemcpyToSymbol("devC_k_r", &params->k_r, sizeof(Float));
     cudaMemcpyToSymbol("devC_gamma_n", &params->gamma_n, sizeof(Float));
-    cudaMemcpyToSymbol("devC_gamma_s", &params->gamma_s, sizeof(Float));
+    cudaMemcpyToSymbol("devC_gamma_t", &params->gamma_t, sizeof(Float));
     cudaMemcpyToSymbol("devC_gamma_r", &params->gamma_r, sizeof(Float));
     cudaMemcpyToSymbol("devC_gamma_wn", &params->gamma_wn, sizeof(Float));
     cudaMemcpyToSymbol("devC_gamma_ws", &params->gamma_ws, sizeof(Float));

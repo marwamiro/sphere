@@ -12,10 +12,10 @@ __constant__ unsigned int devC_np;	   // Number of particles
 __constant__ char	  devC_nc;	   // Max. number of contacts a particle can have
 __constant__ unsigned int devC_shearmodel; // Shear force model: 1: viscous, frictional, 2: elastic, frictional
 __constant__ Float        devC_k_n;	   // Material normal stiffness
-__constant__ Float        devC_k_s;	   // Material shear stiffness
+__constant__ Float        devC_k_t;	   // Material tangential stiffness
 __constant__ Float        devC_k_r;	   // Material rolling stiffness
 __constant__ Float        devC_gamma_n;	   // Material normal viscosity
-__constant__ Float        devC_gamma_s;	   // Material shear viscosity
+__constant__ Float        devC_gamma_t;	   // Material tangential viscosity
 __constant__ Float	  devC_gamma_r;	   // Material rolling viscosity
 __constant__ Float        devC_gamma_wn;   // Wall normal viscosity
 __constant__ Float        devC_gamma_ws;   // Wall shear viscosity

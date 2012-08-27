@@ -167,10 +167,10 @@ int main(int argc, char *argv[])
   p.m        = new Float[p.np];      // Particle masses
   p.I        = new Float[p.np];      // Particle moment of inertia
   p.k_n      = new Float[p.np];      // Particle normal stiffnesses
-  p.k_s	     = new Float[p.np];	     // Particle shear stiffnesses
+  p.k_t	     = new Float[p.np];	     // Particle shear stiffnesses
   p.k_r	     = new Float[p.np];	     // Particle rolling stiffnesses
   p.gamma_n  = new Float[p.np];	     // Particle normal viscosity
-  p.gamma_s  = new Float[p.np];      // Particle shear viscosity
+  p.gamma_t  = new Float[p.np];      // Particle shear viscosity
   p.gamma_r  = new Float[p.np];	     // Particle rolling viscosity
   p.mu_s     = new Float[p.np];      // Inter-particle static shear contact friction coefficients
   p.mu_d     = new Float[p.np];	     // Inter-particle dynamic shear contact friction coefficients
@@ -254,13 +254,13 @@ int main(int argc, char *argv[])
       exit(1);
     if (fread(&p.k_n[j], sizeof(p.k_n[j]), 1, fp) != 1)
       exit(1);
-    if (fread(&p.k_s[j], sizeof(p.k_s[j]), 1, fp) != 1)
+    if (fread(&p.k_t[j], sizeof(p.k_t[j]), 1, fp) != 1)
       exit(1);
     if (fread(&p.k_r[j], sizeof(p.k_r[j]), 1, fp) != 1)
       exit(1);
     if (fread(&p.gamma_n[j], sizeof(p.gamma_n[j]), 1, fp) != 1)
       exit(1);
-    if (fread(&p.gamma_s[j], sizeof(p.gamma_s[j]), 1, fp) != 1)
+    if (fread(&p.gamma_t[j], sizeof(p.gamma_t[j]), 1, fp) != 1)
       exit(1);
     if (fread(&p.gamma_r[j], sizeof(p.gamma_r[j]), 1, fp) != 1)
       exit(1);
@@ -445,10 +445,10 @@ int main(int argc, char *argv[])
   // Particle single-value parameters
   delete[] p.radius;
   delete[] p.k_n;
-  delete[] p.k_s;
+  delete[] p.k_t;
   delete[] p.k_r;
   delete[] p.gamma_n;
-  delete[] p.gamma_s;
+  delete[] p.gamma_t;
   delete[] p.gamma_r;
   delete[] p.mu_s;
   delete[] p.mu_d;

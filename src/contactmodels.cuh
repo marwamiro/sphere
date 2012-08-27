@@ -199,7 +199,7 @@ __device__ void contactLinearViscous(Float3* N, Float3* T, Float* es_dot, Float*
   if (vel_t_ab_length > 0.f) {
 
     // Tangential force by viscous model
-    Float f_t_visc  = devC_gamma_s * vel_t_ab_length;
+    Float f_t_visc  = devC_gamma_t * vel_t_ab_length;
 
     // Determine max. friction
     Float f_t_limit;
@@ -340,8 +340,8 @@ __device__ void contactLinear(Float3* N, Float3* T,
   if (delta_t0_length > 0.f || vel_t_ab_length > 0.f) {
 
     // Shear force: Visco-Elastic, limited by Coulomb friction
-    Float3 f_t_elast = -1.0f * devC_k_s * delta_t0;
-    Float3 f_t_visc  = -1.0f * devC_gamma_s * vel_t_ab;
+    Float3 f_t_elast = -1.0f * devC_k_t * delta_t0;
+    Float3 f_t_visc  = -1.0f * devC_gamma_t * vel_t_ab;
 
     Float f_t_limit;
     
@@ -369,12 +369,12 @@ __device__ void contactLinear(Float3* N, Float3* T,
       // In a slip event, the tangential spring is adjusted to a 
       // length which is consistent with Coulomb's equation
       // (Hinrichsen and Wolf, 2004)
-      delta_t = -1.0f/devC_k_s * f_t + devC_gamma_s * vel_t_ab;
+      delta_t = -1.0f/devC_k_t * f_t + devC_gamma_t * vel_t_ab;
 
       // Shear friction heat production rate: 
       // The energy lost from the tangential spring is dissipated as heat
       //*es_dot += -dot(vel_t_ab, f_t);
-      *es_dot += length(delta_t0 - delta_t) * devC_k_s / devC_dt; // Seen in EsyS-Particle
+      *es_dot += length(delta_t0 - delta_t) * devC_k_t / devC_dt; // Seen in EsyS-Particle
 
     } else { // Static case
 

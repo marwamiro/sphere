@@ -68,10 +68,10 @@ const char NC = 32;
 struct Particles {
   Float *radius;
   Float *k_n;
-  Float *k_s;
+  Float *k_t;
   Float *k_r;
   Float *gamma_n;
-  Float *gamma_s;
+  Float *gamma_t;
   Float *gamma_r;
   Float *mu_s;
   Float *mu_d;
@@ -111,10 +111,10 @@ struct Params {
   unsigned int nw;
   Float dt; 
   Float k_n;
-  Float k_s;
+  Float k_t;
   Float k_r;
   Float gamma_n;
-  Float gamma_s;
+  Float gamma_t;
   Float gamma_r;
   Float gamma_wn;
   Float gamma_ws;

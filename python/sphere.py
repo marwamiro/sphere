@@ -44,10 +44,10 @@ class Spherebin:
     self.radius  = numpy.zeros(self.np, dtype=numpy.float64)
     self.rho     = numpy.zeros(self.np, dtype=numpy.float64)
     self.k_n     = numpy.zeros(self.np, dtype=numpy.float64)
-    self.k_s     = numpy.zeros(self.np, dtype=numpy.float64)
+    self.k_t     = numpy.zeros(self.np, dtype=numpy.float64)
     self.k_r	 = numpy.zeros(self.np, dtype=numpy.float64)
     self.gamma_n = numpy.zeros(self.np, dtype=numpy.float64)
-    self.gamma_s = numpy.zeros(self.np, dtype=numpy.float64)
+    self.gamma_t = numpy.zeros(self.np, dtype=numpy.float64)
     self.gamma_r = numpy.zeros(self.np, dtype=numpy.float64)
     self.mu_s    = numpy.zeros(self.np, dtype=numpy.float64)
     self.mu_d    = numpy.zeros(self.np, dtype=numpy.float64)
@@ -114,10 +114,10 @@ class Spherebin:
       self.radius  = numpy.zeros(self.np, dtype=numpy.float64)
       self.rho     = numpy.zeros(self.np, dtype=numpy.float64)
       self.k_n     = numpy.zeros(self.np, dtype=numpy.float64)
-      self.k_s     = numpy.zeros(self.np, dtype=numpy.float64)
+      self.k_t     = numpy.zeros(self.np, dtype=numpy.float64)
       self.k_r	   = numpy.zeros(self.np, dtype=numpy.float64)
       self.gamma_n = numpy.zeros(self.np, dtype=numpy.float64)
-      self.gamma_s = numpy.zeros(self.np, dtype=numpy.float64)
+      self.gamma_t = numpy.zeros(self.np, dtype=numpy.float64)
       self.gamma_r = numpy.zeros(self.np, dtype=numpy.float64)
       self.mu_s    = numpy.zeros(self.np, dtype=numpy.float64)
       self.mu_d    = numpy.zeros(self.np, dtype=numpy.float64)
@@ -148,10 +148,10 @@ class Spherebin:
         self.radius[j]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
         self.rho[j]     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
         self.k_n[j]     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-        self.k_s[j]     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.k_t[j]     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 	self.k_r[j]     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 	self.gamma_n[j] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-	self.gamma_s[j] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+	self.gamma_t[j] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 	self.gamma_r[j] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
         self.mu_s[j]    = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
         self.mu_d[j]    = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
@@ -247,10 +247,10 @@ class Spherebin:
         fh.write(self.radius[j].astype(numpy.float64))
         fh.write(self.rho[j].astype(numpy.float64))
         fh.write(self.k_n[j].astype(numpy.float64))
-        fh.write(self.k_s[j].astype(numpy.float64))
+        fh.write(self.k_t[j].astype(numpy.float64))
 	fh.write(self.k_r[j].astype(numpy.float64))
 	fh.write(self.gamma_n[j].astype(numpy.float64))
-	fh.write(self.gamma_s[j].astype(numpy.float64))
+	fh.write(self.gamma_t[j].astype(numpy.float64))
 	fh.write(self.gamma_r[j].astype(numpy.float64))
         fh.write(self.mu_s[j].astype(numpy.float64))
         fh.write(self.mu_d[j].astype(numpy.float64))
@@ -614,8 +614,8 @@ class Spherebin:
     r_min = numpy.amin(self.radius)
 
     # Computational time step (O'Sullivan et al, 2003)
-    #self.time_dt[0] = 0.17 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amin([self.k_n[:], self.k_s[:]]) )
-    self.time_dt[0] = 0.12 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amin([self.k_n[:], self.k_s[:]]) )
+    #self.time_dt[0] = 0.17 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amax([self.k_n[:], self.k_t[:]]) )
+    self.time_dt[0] = 0.12 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amax([self.k_n[:], self.k_t[:]]) )
     
     # Time at start
     self.time_current[0] = current
@@ -628,10 +628,10 @@ class Spherebin:
       			  ang_r = 0,
 			  rho = 2660,
 			  k_n = 1e9,
-			  k_s = 1e9,
+			  k_t = 1e9,
 			  k_r = 4e6,
 			  gamma_n = 1e3,
-			  gamma_s = 1e3,
+			  gamma_t = 1e3,
 			  gamma_r = 2e3,
 			  gamma_wn = 1e3,
 			  gamma_ws = 1e3,
@@ -650,7 +650,7 @@ class Spherebin:
     self.k_n = numpy.ones(self.np, dtype=numpy.float64) * k_n
 
     # Contact shear elastic stiffness (for shearmodel = 2), N/m
-    self.k_s = numpy.ones(self.np, dtype=numpy.float64) * k_s
+    self.k_t = numpy.ones(self.np, dtype=numpy.float64) * k_t
 
     # Contact rolling elastic stiffness (for shearmodel = 2), N/m
     self.k_r = numpy.ones(self.np, dtype=numpy.float64) * k_r
@@ -663,7 +663,7 @@ class Spherebin:
     self.gamma_n = numpy.ones(self.np, dtype=numpy.float64) * gamma_n
 		      
     # Contact shear viscosity, Ns/m
-    self.gamma_s = numpy.ones(self.np, dtype=numpy.float64) * gamma_s
+    self.gamma_t = numpy.ones(self.np, dtype=numpy.float64) * gamma_t
 
     # Contact rolling viscosity, Ns/m?
     self.gamma_r = numpy.ones(self.np, dtype=numpy.float64) * gamma_r
@@ -692,7 +692,7 @@ class Spherebin:
     # Wettability, 0=perfect
     theta = 0.0;
     if (capillaryCohesion == 1):
-      self.kappa[0] = 2.0 * math.pi * gamma_s * numpy.cos(theta)  # Prefactor
+      self.kappa[0] = 2.0 * math.pi * gamma_t * numpy.cos(theta)  # Prefactor
       self.V_b[0] = 1e-12  # Liquid volume at bond
     else :
       self.kappa[0] = 0.0;  # Zero capillary force

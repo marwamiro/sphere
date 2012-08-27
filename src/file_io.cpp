@@ -96,10 +96,10 @@ int fwritebin(char *target,
       fwrite(&p->radius[j], sizeof(p->radius[j]), 1, fp);
       fwrite(&p->rho[j], sizeof(p->rho[j]), 1, fp);
       fwrite(&p->k_n[j], sizeof(p->k_n[j]), 1, fp);
-      fwrite(&p->k_s[j], sizeof(p->k_s[j]), 1, fp);
+      fwrite(&p->k_t[j], sizeof(p->k_t[j]), 1, fp);
       fwrite(&p->k_r[j], sizeof(p->k_r[j]), 1, fp);
       fwrite(&p->gamma_n[j], sizeof(p->gamma_n[j]), 1, fp);
-      fwrite(&p->gamma_s[j], sizeof(p->gamma_s[j]), 1, fp);
+      fwrite(&p->gamma_t[j], sizeof(p->gamma_t[j]), 1, fp);
       fwrite(&p->gamma_r[j], sizeof(p->gamma_r[j]), 1, fp);
       fwrite(&p->mu_s[j], sizeof(p->mu_s[j]), 1, fp);
       fwrite(&p->mu_d[j], sizeof(p->mu_d[j]), 1, fp);
@@ -235,13 +235,13 @@ int fwritebin(char *target,
       fwrite(&d, sizeof(d), 1, fp);
       d = (double)p->k_n[j];
       fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->k_s[j];
+      d = (double)p->k_t[j];
       fwrite(&d, sizeof(d), 1, fp);
       d = (double)p->k_r[j];
       fwrite(&d, sizeof(d), 1, fp);
       d = (double)p->gamma_n[j];
       fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->gamma_s[j];
+      d = (double)p->gamma_t[j];
       fwrite(&d, sizeof(d), 1, fp);
       d = (double)p->gamma_r[j];
       fwrite(&d, sizeof(d), 1, fp);
