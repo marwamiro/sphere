@@ -5,6 +5,75 @@
 // Functions for identifying contacts and processing boundaries
 
 
+// Calculate the distance modifier between a contact pair. The modifier
+// accounts for periodic boundaries. If the target cell lies outside
+// the grid, it returns -1.
+__device__ int findDistMod(int3 targetCell, Float3* distmod)
+{
+  // Check whether x- and y boundaries are to be treated as periodic
+  // 1: x- and y boundaries periodic
+  // 2: x boundaries periodic
+  if (devC_periodic == 1) {
+
+    // Periodic x-boundary
+    if (targetCell.x < 0) {
+      targetCell.x = devC_num[0] - 1;
+      *distmod += MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
+    }
+    if (targetCell.x == devC_num[0]) {
+      targetCell.x = 0;
+      *distmod -= MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
+    }
+
+    // Periodic y-boundary
+    if (targetCell.y < 0) {
+      targetCell.y = devC_num[1] - 1;
+      *distmod += MAKE_FLOAT3(0.0f, devC_L[1], 0.0f);
+    }
+    if (targetCell.y == devC_num[1]) {
+      targetCell.y = 0;
+      *distmod -= MAKE_FLOAT3(0.0f, devC_L[1], 0.0f);
+    }
+
+
+  // Only x-boundaries are periodic
+  } else if (devC_periodic == 2) {
+
+    // Periodic x-boundary
+    if (targetCell.x < 0) {
+      targetCell.x = devC_num[0] - 1;
+      *distmod += MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
+    }
+    if (targetCell.x == devC_num[0]) {
+      targetCell.x = 0;
+      *distmod -= MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
+    }
+
+    // Hande out-of grid cases on y-axis
+    if (targetCell.y < 0 || targetCell.y == devC_num[1])
+      return -1;
+
+
+  // No periodic boundaries
+  } else {
+
+    // Hande out-of grid cases on x- and y-axes
+    if (targetCell.x < 0 || targetCell.x == devC_num[0])
+      return -1;
+    if (targetCell.y < 0 || targetCell.y == devC_num[1])
+      return -1;
+  }
+
+  // Handle out-of-grid cases on z-axis
+  if (targetCell.z < 0 || targetCell.z == devC_num[2])
+    return -1;
+
+  // Return successfully
+  return 0;
+}
+
+
+
 // Find overlaps between particle no. 'idx' and particles in cell 'gridpos'
 // Kernel executed on device, and callable from device only.
 __device__ void overlapsInCell(int3 targetCell, 
@@ -23,63 +92,11 @@ __device__ void overlapsInCell(int3 targetCell,
 			       //uint4 bonds)
 {
 
-  // Variable containing modifier for interparticle
+  // Get distance modifier for interparticle
   // vector, if it crosses a periodic boundary
   Float3 distmod = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
-
-  // Check whether x- and y boundaries are to be treated as periodic
-  // 1: x- and y boundaries periodic
-  // 2: x boundaries periodic
-  if (devC_periodic == 1) {
-
-    // Periodic x-boundary
-    if (targetCell.x < 0) {
-      targetCell.x = devC_num[0] - 1;
-      distmod += MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
-    }
-    if (targetCell.x == devC_num[0]) {
-      targetCell.x = 0;
-      distmod -= MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
-    }
-
-    // Periodic y-boundary
-    if (targetCell.y < 0) {
-      targetCell.y = devC_num[1] - 1;
-      distmod += MAKE_FLOAT3(0.0f, devC_L[1], 0.0f);
-    }
-    if (targetCell.y == devC_num[1]) {
-      targetCell.y = 0;
-      distmod -= MAKE_FLOAT3(0.0f, devC_L[1], 0.0f);
-    }
-
-  } else if (devC_periodic == 2) {
-
-    // Periodic x-boundary
-    if (targetCell.x < 0) {
-      targetCell.x = devC_num[0] - 1;
-      distmod += MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
-    }
-    if (targetCell.x == devC_num[0]) {
-      targetCell.x = 0;
-      distmod -= MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
-    }
-
-    // Hande out-of grid cases on y-axis
-    if (targetCell.y < 0 || targetCell.y == devC_num[1])
-      return;
-
-  } else {
-
-    // Hande out-of grid cases on x- and y-axes
-    if (targetCell.x < 0 || targetCell.x == devC_num[0])
-      return;
-    if (targetCell.y < 0 || targetCell.y == devC_num[1])
-      return;
-  }
-
-  // Handle out-of-grid cases on z-axis
-  if (targetCell.z < 0 || targetCell.z == devC_num[2])
-    return;
+  if (findDistMod(targetCell, &distmod) == -1)
+    return; // Target cell lies outside the grid
 
 
   //// Check and process particle-particle collisions
@@ -111,13 +128,12 @@ __device__ void overlapsInCell(int3 targetCell,
 
 	// Distance between particle centers (Float4 -> Float3)
 	Float3 x_ab = MAKE_FLOAT3(x_a.x - x_b.x, 
-	    			     x_a.y - x_b.y, 
-				     x_a.z - x_b.z);
+	    			  x_a.y - x_b.y, 
+				  x_a.z - x_b.z);
 
 	// Adjust interparticle vector if periodic boundary/boundaries
 	// are crossed
 	x_ab += distmod;
-
 	Float x_ab_length = length(x_ab);
 
 	// Distance between particle perimeters
@@ -126,12 +142,12 @@ __device__ void overlapsInCell(int3 targetCell,
 	// Check for particle overlap
 	if (delta_ab < 0.0f) {
 		  contactLinearViscous(N, T, es_dot, p, 
-	      		       idx_a, idx_b,
-			       dev_vel_sorted, 
-			       dev_angvel_sorted,
-			       radius_a, radius_b, 
-			       x_ab, x_ab_length,
-			       delta_ab, kappa);
+				       idx_a, idx_b,
+				       dev_vel_sorted, 
+				       dev_angvel_sorted,
+				       radius_a, radius_b, 
+				       x_ab, x_ab_length,
+				       delta_ab, kappa);
 	} else if (delta_ab < devC_db) { 
 	  // Check wether particle distance satisfies the capillary bond distance
 	  capillaryCohesion_exp(N, radius_a, radius_b, delta_ab, 
@@ -170,63 +186,11 @@ __device__ void findContactsInCell(int3 targetCell,
 				   unsigned int* dev_contacts,
 				   Float4* dev_distmod)
 {
-  // Variable containing modifier for interparticle
+  // Get distance modifier for interparticle
   // vector, if it crosses a periodic boundary
   Float3 distmod = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
-
-  // Check whether x- and y boundaries are to be treated as periodic
-  // 1: x- and y boundaries periodic
-  // 2: x boundaries periodic
-  if (devC_periodic == 1) {
-
-    // Periodic x-boundary
-    if (targetCell.x < 0) {
-      targetCell.x = devC_num[0] - 1;
-      distmod += MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
-    }
-    if (targetCell.x == devC_num[0]) {
-      targetCell.x = 0;
-      distmod -= MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
-    }
-
-    // Periodic y-boundary
-    if (targetCell.y < 0) {
-      targetCell.y = devC_num[1] - 1;
-      distmod += MAKE_FLOAT3(0.0f, devC_L[1], 0.0f);
-    }
-    if (targetCell.y == devC_num[1]) {
-      targetCell.y = 0;
-      distmod -= MAKE_FLOAT3(0.0f, devC_L[1], 0.0f);
-    }
-
-  } else if (devC_periodic == 2) {
-
-    // Periodic x-boundary
-    if (targetCell.x < 0) {
-      targetCell.x = devC_num[0] - 1;
-      distmod += MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
-    }
-    if (targetCell.x == devC_num[0]) {
-      targetCell.x = 0;
-      distmod -= MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
-    }
-
-    // Hande out-of grid cases on y-axis
-    if (targetCell.y < 0 || targetCell.y == devC_num[1])
-      return;
-
-  } else {
-
-    // Hande out-of grid cases on x- and y-axes
-    if (targetCell.x < 0 || targetCell.x == devC_num[0])
-      return;
-    if (targetCell.y < 0 || targetCell.y == devC_num[1])
-      return;
-  }
-
-  // Handle out-of-grid cases on z-axis
-  if (targetCell.z < 0 || targetCell.z == devC_num[2])
-    return;
+  if (findDistMod(targetCell, &distmod) == -1)
+    return; // Target cell lies outside the grid
 
 
   //// Check and process particle-particle collisions
@@ -439,9 +403,9 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
       Float delta_n, x_ab_length, radius_b;
       Float3 x_ab;
       Float4 x_b, distmod;
-      Float4 vel_a     = dev_vel_sorted[idx_a];
-      Float4 angvel4_a = dev_angvel_sorted[idx_a];
-      Float3 angvel_a  = MAKE_FLOAT3(angvel4_a.x, angvel4_a.y, angvel4_a.z);
+      //Float4 vel_a     = dev_vel_sorted[idx_a];
+      //Float4 angvel4_a = dev_angvel_sorted[idx_a];
+      //Float3 angvel_a  = MAKE_FLOAT3(angvel4_a.x, angvel4_a.y, angvel4_a.z);
 
       // Loop over all possible contacts, and remove contacts
       // that no longer are valid (delta_n > 0.0)
@@ -469,7 +433,15 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	  if (delta_n < 0.0f) {
 	    //cuPrintf("\nProcessing contact, idx_a_orig = %u, idx_b_orig = %u, contact = %d, delta_n = %f\n",
 	    //  idx_a_orig, idx_b_orig, i, delta_n);
-	    contactLinear(&N, &T, &es_dot, &p, 
+	    contactLinearViscous(&N, &T, &es_dot, &p, 
+	      		       idx_a_orig, idx_b_orig,
+			       dev_vel, 
+			       dev_angvel,
+			       radius_a, radius_b, 
+			       x_ab, x_ab_length,
+			       delta_n, devC_kappa);
+	    dev_delta_t[mempos] = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	    /*contactLinear(&N, &T, &es_dot, &p, 
 			  idx_a_orig,
 			  idx_b_orig,
 			  vel_a,
@@ -479,7 +451,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 			  radius_a, radius_b, 
 			  x_ab, x_ab_length,
 			  delta_n, dev_delta_t, 
-			  mempos);
+			  mempos);*/
 	  } else {
 	    __syncthreads();
 	    // Remove this contact (there is no particle with index=np)
