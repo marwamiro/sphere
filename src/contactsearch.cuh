@@ -420,8 +420,8 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 
 	// Inter-particle vector, corrected for periodic boundaries
 	x_ab = MAKE_FLOAT3(x_a.x - x_b.x + distmod.x,
-	    		      x_a.y - x_b.y + distmod.y,
-			      x_a.z - x_b.z + distmod.z);
+	    		   x_a.y - x_b.y + distmod.y,
+			   x_a.z - x_b.z + distmod.z);
 
 	x_ab_length = length(x_ab);
 	delta_n = x_ab_length - (radius_a + radius_b);
@@ -457,7 +457,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	    // Remove this contact (there is no particle with index=np)
 	    dev_contacts[mempos] = devC_np; 
 	    // Zero sum of shear displacement in this position
-	    dev_delta_t[mempos]  = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	    dev_delta_t[mempos] = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	  }
 	} else {
 	  __syncthreads();
@@ -465,6 +465,9 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	}
       } // Contact loop end
 
+
+    // Find contacts and process collisions immidiately for
+    // shearmodel 1 (visco-frictional).
     } else if (devC_shearmodel == 1) {
 
       int3 gridPos;
