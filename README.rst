@@ -16,7 +16,7 @@ Requirements
 ============
 The build requirements are:
  - A Nvidia CUDA-supported version of Linux or Mac OS X
- - The GNU Compiler Collection (GNU)
+ - The GNU Compiler Collection (GCC)
  - The Nvidia CUDA toolkit and SDK
 The runtime requirements are:
  - A Nvidia CUDA-enabled GPU and device driver
