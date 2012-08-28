@@ -27,10 +27,11 @@ done
 echo "# Converting PPM files to JPEG using ImageMagick in parallel"
 for F in ../img_out/*.ppm
 do
-  (BASE=`basename $F`; convert $F $F.jpg > /dev/null &)
+  (BASE=`basename $F`; convert $F $F.jpg > /dev/null)
+  rm $F # Delete ppm file
 done
 
-sleep 5
-echo "# Removing temporary PPM files"
-rm ../img_out/*.ppm
+#sleep 5
+#echo "# Removing temporary PPM files"
+#rm ../img_out/*.ppm
 
