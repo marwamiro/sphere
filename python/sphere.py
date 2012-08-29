@@ -735,8 +735,8 @@ class Spherebin:
     """
 
     # Find the bulk volume
-    V_t = (self.L[0] - self.origo[0])
-    	 *(self.L[1] - self.origo[1])
+    V_t = (self.L[0] - self.origo[0]) \
+    	 *(self.L[1] - self.origo[1]) \
 	 *(self.w_x[0] - self.origo[2])
 
     # Find the volume of solids
