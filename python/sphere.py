@@ -730,6 +730,21 @@ class Spherebin:
     elif method == 'shearrate':
       return numpy.sum(self.es_dot)
 
+  def voidRatio(self):
+    """ Return the current void ratio
+    """
+
+    # Find the bulk volume
+    V_t = (self.L[0] - self.origo[0])
+    	 *(self.L[1] - self.origo[1])
+	 *(self.w_x[0] - self.origo[2])
+
+    # Find the volume of solids
+    V_s = numpy.sum(4.0/3.0 * math.pi * self.radius**3)
+
+    # Return the void ratio
+    e = (V_t - V_s)/V_s
+    return e
 
 def render(binary,
            out = '~/img_out/rt-out',
