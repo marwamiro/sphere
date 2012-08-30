@@ -158,26 +158,27 @@ int main(int argc, char *argv[])
 
   // Allocate host arrays
   cout << "\n  Allocating host memory:                         ";
-  grid.origo = new Float[ND];        // Coordinate system origo
-  grid.L     = new Float[ND];        // Model world dimensions
-  grid.num   = new unsigned int[ND]; // Number of cells in each dimension
-  params.g   = new Float[ND];	     // Gravitational acceleration vector
-  p.radius   = new Float[p.np];      // Particle radii
-  p.rho      = new Float[p.np];      // Particle densities
-  p.m        = new Float[p.np];      // Particle masses
-  p.I        = new Float[p.np];      // Particle moment of inertia
-  p.k_n      = new Float[p.np];      // Particle normal stiffnesses
-  p.k_t	     = new Float[p.np];	     // Particle shear stiffnesses
-  p.k_r	     = new Float[p.np];	     // Particle rolling stiffnesses
-  p.gamma_n  = new Float[p.np];	     // Particle normal viscosity
-  p.gamma_t  = new Float[p.np];      // Particle shear viscosity
-  p.gamma_r  = new Float[p.np];	     // Particle rolling viscosity
-  p.mu_s     = new Float[p.np];      // Inter-particle static shear contact friction coefficients
-  p.mu_d     = new Float[p.np];	     // Inter-particle dynamic shear contact friction coefficients
-  p.mu_r     = new Float[p.np];	     // Inter-particle rolling contact friction coefficients
-  p.es_dot   = new Float[p.np];	     // Rate of shear energy dissipation
-  p.es       = new Float[p.np];	     // Total shear energy dissipation
-  p.p	     = new Float[p.np];	     // Pressure excerted onto particle
+  grid.origo   = new Float[ND];        // Coordinate system origo
+  grid.L       = new Float[ND];        // Model world dimensions
+  grid.num     = new unsigned int[ND]; // Number of cells in each dimension
+  params.g     = new Float[ND];	       // Gravitational acceleration vector
+  p.radius     = new Float[p.np];      // Particle radii
+  p.rho        = new Float[p.np];      // Particle densities
+  p.m          = new Float[p.np];      // Particle masses
+  p.I          = new Float[p.np];      // Particle moment of inertia
+  p.k_n        = new Float[p.np];      // Particle normal stiffnesses
+  p.k_t	       = new Float[p.np];      // Particle shear stiffnesses
+  p.k_r	       = new Float[p.np];      // Particle rolling stiffnesses
+  p.gamma_n    = new Float[p.np];      // Particle normal viscosity
+  p.gamma_t    = new Float[p.np];      // Particle shear viscosity
+  p.gamma_r    = new Float[p.np];      // Particle rolling viscosity
+  p.mu_s       = new Float[p.np];      // Inter-particle static shear contact friction coefficients
+  p.mu_d       = new Float[p.np];      // Inter-particle dynamic shear contact friction coefficients
+  p.mu_r       = new Float[p.np];      // Inter-particle rolling contact friction coefficients
+  p.es_dot     = new Float[p.np];      // Rate of shear energy dissipation
+  p.es         = new Float[p.np];      // Total shear energy dissipation
+  p.p	       = new Float[p.np];      // Pressure excerted onto particle
+  params.wmode = new int[MAXWALLS];    // Wall BC's, 0: devs, 1: vel
 
   // Allocate Float4 host arrays
   Float4 *host_x      = new Float4[p.np];  // Center coordinates for each particle (x)
@@ -187,6 +188,7 @@ int main(int argc, char *argv[])
   Float4 *host_angacc = new Float4[p.np];  // Particle angular acceleration vector (dotomega)
   Float4 *host_force  = new Float4[p.np];  // Particle summed force
   Float4 *host_torque = new Float4[p.np];  // Particle summed torque
+
 
   uint4  *host_bonds  = new uint4[p.np];   // Bonds from particle [i] to two particles
   cout << "Done\n";
@@ -298,6 +300,12 @@ int main(int argc, char *argv[])
   if (fread(&params.nw, sizeof(params.nw), 1, fp) != 1)
     exit(1); 
 
+  if (params.nw > MAXWALLS) {
+    cerr << "Error; MAXWALLS (" << MAXWALLS << ") in datatypes.h "
+         << "is smaller than the number of walls specified in the "
+	 << "input file (" << params.nw << ").\n";
+  }
+
   // Allocate host memory for walls
   // Wall normal (x,y,z), w: wall position on axis parallel to wall normal
   // Wall mass (x), velocity (y), force (z), and deviatoric stress (w)
@@ -306,8 +314,12 @@ int main(int argc, char *argv[])
 
   // Read wall data
   for (j=0; j<params.nw; ++j) {
+    // Wall condition mode: 0: devs, 1: vel
+    if (fread(&params.wmode[j], sizeof(params.wmode[j]), 1, fp) != 1)
+      exit(1);
+
     // Wall normal, x-dimension
-    if (fread(&host_w_nx[j].x, sizeof(Float), 1, fp) != 1) // Read in single precision
+    if (fread(&host_w_nx[j].x, sizeof(Float), 1, fp) != 1)
       exit(1);
     // Wall normal, y-dimension
     if (fread(&host_w_nx[j].y, sizeof(Float), 1, fp) != 1)
@@ -381,6 +393,15 @@ int main(int argc, char *argv[])
   else 
     cout << "  - x- and y boundaries: Frictional walls\n";
 
+  cout << "  - Top BC: ";
+  if (host_wmode[0] == 0)
+    cout << "Deviatoric stress\n";
+  else if (host_wmode[0] == 1)
+    cout << "Velocity\n";
+  else {
+    cerr << "Top boundary condition not recognized!\n";
+    exit(1);
+  }
 
   if (grid.nd == 1) {
     cout << "  - Grid: " 
@@ -424,6 +445,7 @@ int main(int argc, char *argv[])
 	  &time, &params,
 	  host_w_nx,
 	  host_w_mvfd,
+	  host_wmode,
 	  cwd, inputbin);
 
 
@@ -443,6 +465,10 @@ int main(int argc, char *argv[])
   delete[] host_bonds;
 
   // Particle single-value parameters
+  delete[] grid.origo;
+  delete[] grid.L;
+  delete[] grid.num;
+  delete[] params.g;
   delete[] p.radius;
   delete[] p.k_n;
   delete[] p.k_t;
@@ -457,8 +483,9 @@ int main(int argc, char *argv[])
   delete[] p.es_dot;
   delete[] p.es;
   delete[] p.p;
+  delete[] params.nw;
 
-  // Wall vectors
+  // Wall arrays
   delete[] host_w_nx;
   delete[] host_w_mvfd;
 
