@@ -68,6 +68,7 @@ class Spherebin:
 
     # Wall data
     self.nw 	 = numpy.ones(1, dtype=numpy.uint32) * nw
+    self.wmode   = numpy.zeros(self.nw, dtype=numpy.int32)
     self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
     self.w_x     = numpy.zeros(self.nw, dtype=numpy.float64)
     self.w_m     = numpy.zeros(self.nw, dtype=numpy.float64)
@@ -170,7 +171,7 @@ class Spherebin:
 
       # Wall data
       self.nw 	   = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
-
+      self.wmode   = numpy.zeros(self.nw, dtype=numpy.int32)
       self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
       self.w_x     = numpy.zeros(self.nw, dtype=numpy.float64)
       self.w_m     = numpy.zeros(self.nw, dtype=numpy.float64)
@@ -179,6 +180,7 @@ class Spherebin:
       self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
 
       for j in range(self.nw):
+	self.wmode[j] = numpy.fromfile(fh, dtype=numpy.int32, count=1)
         for i in range(self.nd):
   	  self.w_n[j,i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
@@ -269,6 +271,7 @@ class Spherebin:
 
       fh.write(self.nw.astype(numpy.uint32))
       for j in range(self.nw):
+	fh.write(self.wmode[j].astype(numpy.int32))
         for i in range(self.nd):
   	  fh.write(self.w_n[j,i].astype(numpy.float64))
 
@@ -375,6 +378,7 @@ class Spherebin:
     self.shearmodel[0] = shearmodel
 
     # Initialize upper wall
+    self.wmode[0] = 0	# 0: devs, 1: vel
     self.w_n[0,2] = -1.0
     self.w_x[0] = self.L[2]
     self.w_m[0] = self.rho[0] * self.np * math.pi * r_max**3
@@ -448,6 +452,7 @@ class Spherebin:
       self.num[1] += 1
 
     # Initialize upper wall
+    self.wmode[0] = 0
     self.w_n[0,2] = -1.0
     self.w_x[0] = self.L[2]
     self.w_m[0] = self.rho[0] * self.np * math.pi * r_max**3
@@ -513,6 +518,7 @@ class Spherebin:
     self.L = self.num * cellsize
 
     # Initialize upper wall
+    self.wmode[0] = 0
     self.w_n[0,2] = -1.0
     self.w_x[0] = self.L[2]
     self.w_m[0] = self.rho[0] * self.np * math.pi * r_max**3
@@ -537,6 +543,7 @@ class Spherebin:
     self.L[2] = (z_max-z_min)*z_adjust
 
     # Initialize upper wall
+    self.wmode[0] = 0
     self.w_n[0,2] = -1.0
     self.w_x[0] = self.L[2]
     self.w_m[0] = self.rho[0] * self.np * math.pi * (cellsize/2.0)**3
