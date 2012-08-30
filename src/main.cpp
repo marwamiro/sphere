@@ -394,9 +394,9 @@ int main(int argc, char *argv[])
     cout << "  - x- and y boundaries: Frictional walls\n";
 
   cout << "  - Top BC: ";
-  if (host_wmode[0] == 0)
+  if (params.wmode[0] == 0)
     cout << "Deviatoric stress\n";
-  else if (host_wmode[0] == 1)
+  else if (params.wmode[0] == 1)
     cout << "Velocity\n";
   else {
     cerr << "Top boundary condition not recognized!\n";
@@ -445,7 +445,6 @@ int main(int argc, char *argv[])
 	  &time, &params,
 	  host_w_nx,
 	  host_w_mvfd,
-	  host_wmode,
 	  cwd, inputbin);
 
 
@@ -483,7 +482,6 @@ int main(int argc, char *argv[])
   delete[] p.es_dot;
   delete[] p.es;
   delete[] p.p;
-  delete[] params.nw;
 
   // Wall arrays
   delete[] host_w_nx;
