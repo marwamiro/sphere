@@ -527,7 +527,7 @@ class Spherebin:
     self.w_devs[0] = 0.0
     self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
 
-  # Adjust grid and upper wall for consolidation
+  # Adjust grid and upper wall for consolidation under deviatoric stress
   def consolidate(self, deviatoric_stress = 10e3, 
       			periodic = 1):
     """ Setup consolidation experiment. Specify the upper wall 
@@ -550,6 +550,30 @@ class Spherebin:
     self.w_vel[0] = 0.0
     self.w_force[0] = 0.0
     self.w_devs[0] = deviatoric_stress
+    self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
+
+  # Adjust grid and upper wall for consolidation under fixed upper wall velocity
+  def uniaxialStrainRate(self, wvel = -0.001,
+      			periodic = 1):
+    """ Setup consolidation experiment. Specify the upper wall 
+        deviatoric stress in Pascal, default value is 10 kPa.
+    """
+
+    # Compute new grid, scaled to fit max. and min. particle positions
+    z_min = numpy.min(self.x[:,2] - self.radius)
+    z_max = numpy.max(self.x[:,2] + self.radius)
+    cellsize = self.L[0] / self.num[0]
+    z_adjust = 1.1	# Overheightening of grid. 1.0 = no overheightening
+    self.num[2] = numpy.ceil((z_max-z_min)*z_adjust/cellsize)
+    self.L[2] = (z_max-z_min)*z_adjust
+
+    # Initialize upper wall
+    self.wmode[0] = 1
+    self.w_n[0,2] = -1.0
+    self.w_x[0] = self.L[2]
+    self.w_m[0] = self.rho[0] * self.np * math.pi * (cellsize/2.0)**3
+    self.w_vel[0] = wvel
+    self.w_force[0] = 0.0
     self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
 
 
