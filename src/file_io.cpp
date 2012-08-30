@@ -122,6 +122,7 @@ int fwritebin(char *target,
     // Walls
     fwrite(&params->nw, sizeof(params->nw), 1, fp); // No. of walls
     for (j=0; j<params->nw; ++j) {
+      fwrite(params->wmode[j], sizeof(params->wmode), 1, fp);
       // Wall normal
       fwrite(&host_w_nx[j].x, sizeof(Float), 1, fp);
       fwrite(&host_w_nx[j].y, sizeof(Float), 1, fp);
