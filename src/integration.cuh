@@ -173,6 +173,8 @@ __global__ void integrateWalls(Float4* dev_w_nx,
     // write-after-read, or write-after-write hazards. 
     Float4 w_nx   = dev_w_nx[idx];
     Float4 w_mvfd = dev_w_mvfd[idx];
+    int wmode = devC_wmode[idx];  // Wall BC, 0: devs, 1: vel
+    Float acc;
 
     // Find the final sum of forces on wall
     w_mvfd.z = 0.0f;
@@ -182,17 +184,25 @@ __global__ void integrateWalls(Float4* dev_w_nx,
 
     Float dt = devC_dt;
 
-    // Normal load = Deviatoric stress times wall surface area,
-    // directed downwards.
-    Float N = -w_mvfd.w*devC_L[0]*devC_L[1];
+    // If wall BC is controlled by deviatoric stress:
+    if (wmode == 0) {
 
-    // Calculate resulting acceleration of wall
-    // (Wall mass is stored in w component of position Float4)
-    Float acc = (w_mvfd.z+N)/w_mvfd.x;
+      // Normal load = Deviatoric stress times wall surface area,
+      // directed downwards.
+      Float N = -w_mvfd.w*devC_L[0]*devC_L[1];
 
-    // Update linear velocity
-    w_mvfd.y += acc * dt;
+      // Calculate resulting acceleration of wall
+      // (Wall mass is stored in w component of position Float4)
+      acc = (w_mvfd.z+N)/w_mvfd.x;
 
+      // Update linear velocity
+      w_mvfd.y += acc * dt;
+    
+    // Wall BC is controlled by velocity
+    } else if (wmode == 1) { 
+      acc = 0.0f;
+    }
+     
     // Update position. Second-order scheme based on Taylor expansion 
     // (greater accuracy than the first-order Euler's scheme)
     w_nx.w += w_mvfd.y * dt + (acc * dt*dt)/2.0f;
