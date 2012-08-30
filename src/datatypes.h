@@ -47,6 +47,10 @@ typedef double4 Float4;
 // SYMBOLIC CONSTANTS //
 ////////////////////////
 
+// Define the max. number of walls
+#define MAXWALLS 6
+
+
 const Float PI = 3.14159265358979;
 
 // Number of dimensions (1 and 2 NOT functional)
@@ -109,6 +113,7 @@ struct Params {
   Float *g;
   unsigned int np;
   unsigned int nw;
+  int* wmode;
   Float dt; 
   Float k_n;
   Float k_t;
