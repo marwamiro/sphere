@@ -66,7 +66,7 @@ __device__ void bondLinear(Float3* N, Float3* T, Float* es_dot, Float* p,
 
     if (length(vel_t_ab) > 0.f) {
       // Shear force component: Viscous
-      f_t = -1.0f * devC_gamma_s * vel_t_ab;
+      f_t = -1.0f * devC_gamma_t * vel_t_ab;
 
       // Shear friction production rate [W]
       //*es_dot += -dot(vel_t_ab, f_t);

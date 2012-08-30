@@ -193,12 +193,12 @@ __global__ void integrateWalls(Float4* dev_w_nx,
 
       // Calculate resulting acceleration of wall
       // (Wall mass is stored in w component of position Float4)
-      acc = (w_mvfd.z+N)/w_mvfd.x;
+      acc = (w_mvfd.z + N)/w_mvfd.x;
 
       // Update linear velocity
       w_mvfd.y += acc * dt;
     
-    // Wall BC is controlled by velocity
+    // Wall BC is controlled by velocity, which should not change
     } else if (wmode == 1) { 
       acc = 0.0f;
     }

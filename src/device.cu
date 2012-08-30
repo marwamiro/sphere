@@ -136,6 +136,7 @@ __host__ void transferToConstantMemory(Particles* p,
     cudaMemcpyToSymbol("devC_db", &params->db, sizeof(Float));
     cudaMemcpyToSymbol("devC_V_b", &params->V_b, sizeof(Float));
     cudaMemcpyToSymbol("devC_shearmodel", &params->shearmodel, sizeof(unsigned int));
+    cudaMemcpyToSymbol("devC_wmode", &params->wmode, sizeof(int)*MAXWALLS);
   } else {
     //printf("(params.global == %d) ", params.global);
     // Copy params structure with individual physical values from host to global memory
