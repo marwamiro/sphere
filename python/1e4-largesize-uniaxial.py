@@ -93,7 +93,7 @@ for devs in stresses:
   cons.consolidate(deviatoric_stress = devs, periodic = init.periodic)
 
   # Zero time variables and set new total time
-  cons.initTemporal(total = 3.0, file_dt = 0.03)
+  cons.initTemporal(total = 3.0, file_dt = 0.05)
 
   # Write output binary for sphere
   cons.writebin("../input/" + cid + ".bin")
@@ -105,7 +105,7 @@ for devs in stresses:
   visualize(cid, "energy", savefig=True, outformat='png')
   visualize(cid, "walls", savefig=True, outformat='png')
 
-  # Find void ratio
+  # Find void ratio at the end of the compressional period
   lastfile = status(cid, verbose = False)
   cons.readbin(cid)
   voidratio[i] = voidRatio()
@@ -130,7 +130,7 @@ try:
   fh = open(sid + "-uniaxial.txt", "w")
   for i in range(length(stresses)):
     fh.write("{0}\t{1}\n".format(stresses[i], voidratio[i]))
-  finally:
-    if fh is not None:
-      fh.close()
+finally:
+  if fh is not None:
+    fh.close()
 
