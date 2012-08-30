@@ -30,4 +30,5 @@ __constant__ Float	  devC_V_b;	   // Liquid volume of capillary bond
 __constant__ unsigned int devC_nw;	   // Number of walls
 __constant__ unsigned int devC_w_n;	   // Dimension of orthogonal wall surface normal
 __constant__ int          devC_periodic;   // Behavior of x- and y boundaries: 0: walls, 1: periodic
+__constant__ int	  devC_wmode[MAXWALLS]; // Wall BCs, 0: devs, 1: vel
 #endif
