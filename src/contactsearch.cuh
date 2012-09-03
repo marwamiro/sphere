@@ -80,20 +80,20 @@ __device__ int findDistMod(int3* targetCell, Float3* distmod)
 // Used for shearmodel=1, where contact history is not needed.
 // Kernel executed on device, and callable from device only.
 // Function is called from interact().
-__device__ void overlapsInCell(int3 targetCell, 
-    			       unsigned int idx_a, 
-			       Float4 x_a, Float radius_a,
-			       Float3* N, Float3* T, 
-			       Float* es_dot, Float* p,
-			       Float4* dev_x_sorted, 
-			       Float* dev_radius_sorted,
-			       Float4* dev_vel_sorted, 
-			       Float4* dev_angvel_sorted,
-			       unsigned int* dev_cellStart, 
-			       unsigned int* dev_cellEnd,
-			       Float4* dev_w_nx, 
-			       Float4* dev_w_mvfd)
-			       //uint4 bonds)
+__device__ void findAndProcessContactsInCell(int3 targetCell, 
+    			       		     unsigned int idx_a, 
+					     Float4 x_a, Float radius_a,
+					     Float3* N, Float3* T, 
+					     Float* es_dot, Float* p,
+					     Float4* dev_x_sorted, 
+					     Float* dev_radius_sorted,
+					     Float4* dev_vel_sorted, 
+					     Float4* dev_angvel_sorted,
+					     unsigned int* dev_cellStart, 
+					     unsigned int* dev_cellEnd,
+					     Float4* dev_w_nx, 
+					     Float4* dev_w_mvfd)
+//uint4 bonds)
 {
 
   // Get distance modifier for interparticle
@@ -500,12 +500,12 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	for (int y_dim=-1; y_dim<2; ++y_dim) { // y-axis
 	  for (int x_dim=-1; x_dim<2; ++x_dim) { // x-axis
 	    targetPos = gridPos + make_int3(x_dim, y_dim, z_dim);
-	    overlapsInCell(targetPos, idx_a, x_a, radius_a,
-			   &F, &T, &es_dot, &p,
-			   dev_x_sorted, dev_radius_sorted, 
-			   dev_vel_sorted, dev_angvel_sorted,
-			   dev_cellStart, dev_cellEnd,
-			   dev_w_nx, dev_w_mvfd);
+	    findAndProcessContactsInCell(targetPos, idx_a, x_a, radius_a,
+					 &F, &T, &es_dot, &p,
+					 dev_x_sorted, dev_radius_sorted, 
+					 dev_vel_sorted, dev_angvel_sorted,
+					 dev_cellStart, dev_cellEnd,
+					 dev_w_nx, dev_w_mvfd);
 	  }
 	}
       }

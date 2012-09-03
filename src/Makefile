@@ -20,7 +20,8 @@ NVCCFLAGS=--use_fast_math -O3 -m64 -gencode=arch=compute_20,code=\"sm_20,compute
 # Profile code?
 #NVCCFLAGS+=-pg
 
-# Debugable code?
+# Debugable code? Beware that enabling this option will 
+# considerably slow down the execution.
 #CCFLAGS+=-g
 #NVCCFLAGS+=-g -G
 
