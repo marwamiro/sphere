@@ -8,6 +8,7 @@
 // Calculate the distance modifier between a contact pair. The modifier
 // accounts for periodic boundaries. If the target cell lies outside
 // the grid, it returns -1.
+// Function is called from overlapsInCell() and findContactsInCell().
 __device__ int findDistMod(int3* targetCell, Float3* distmod)
 {
   // Check whether x- and y boundaries are to be treated as periodic
@@ -74,8 +75,11 @@ __device__ int findDistMod(int3* targetCell, Float3* distmod)
 
 
 
-// Find overlaps between particle no. 'idx' and particles in cell 'gridpos'
+// Find overlaps between particle no. 'idx' and particles in cell 'gridpos'.
+// Contacts are processed as soon as they are identified.
+// Used for shearmodel=1, where contact history is not needed.
 // Kernel executed on device, and callable from device only.
+// Function is called from interact().
 __device__ void overlapsInCell(int3 targetCell, 
     			       unsigned int idx_a, 
 			       Float4 x_a, Float radius_a,
@@ -171,9 +175,12 @@ __device__ void overlapsInCell(int3 targetCell,
   } // Check wether cell is empty end
 } // End of overlapsInCell(...)
 
+
 // Find overlaps between particle no. 'idx' and particles in cell 'gridpos'
-// Write the indexes of the overlaps in array contacts[]
+// Write the indexes of the overlaps in array contacts[].
+// Used for shearmodel=2, where bookkeeping of contact history is necessary.
 // Kernel executed on device, and callable from device only.
+// Function is called from topology().
 __device__ void findContactsInCell(int3 targetCell, 
     			           unsigned int idx_a, 
 				   Float4 x_a, Float radius_a,
@@ -296,6 +303,7 @@ __device__ void findContactsInCell(int3 targetCell,
 // For a single particle:
 // Search for neighbors to particle 'idx' inside the 27 closest cells, 
 // and save the contact pairs in global memory.
+// Function is called from mainGPU loop.
 __global__ void topology(unsigned int* dev_cellStart, 
     			 unsigned int* dev_cellEnd, // Input: Particles in cell 
 			 unsigned int* dev_gridParticleIndex, // Input: Unsorted-sorted key
@@ -341,10 +349,16 @@ __global__ void topology(unsigned int* dev_cellStart,
 
 
 // For a single particle:
-// Search for neighbors to particle 'idx' inside the 27 closest cells, 
-// and compute the resulting normal- and shear force on it.
-// Collide with top- and bottom walls, save resulting force on upper wall.
+// If shearmodel=1:
+//   Search for neighbors to particle 'idx' inside the 27 closest cells, 
+//   and compute the resulting force and torque on it.
+// If shearmodel=2:
+//   Process contacts saved in dev_contacts by topology(), and compute
+//   the resulting force and torque on it.
+// For all shearmodels:
+//   Collide with top- and bottom walls, save resulting force on upper wall.
 // Kernel is executed on device, and is callable from host only.
+// Function is called from mainGPU loop.
 __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted-sorted key
 			 unsigned int* dev_cellStart,
 			 unsigned int* dev_cellEnd,
