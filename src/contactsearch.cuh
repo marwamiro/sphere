@@ -408,7 +408,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     Float p = 0.0f;
 
     // Allocate memory for temporal force/torque vector values
-    Float3 N = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
+    Float3 F = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
     Float3 T = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
 
     // Apply linear elastic, frictional contact model to registered contacts
@@ -447,7 +447,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	  if (delta_n < 0.0f) {
 	    //cuPrintf("\nProcessing contact, idx_a_orig = %u, idx_b_orig = %u, contact = %d, delta_n = %f\n",
 	    //  idx_a_orig, idx_b_orig, i, delta_n);
-	    /*contactLinearViscous(&N, &T, &es_dot, &p, 
+	    /*contactLinearViscous(&F, &T, &es_dot, &p, 
 	      		       idx_a_orig, idx_b_orig,
 			       dev_vel, 
 			       dev_angvel,
@@ -455,7 +455,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 			       x_ab, x_ab_length,
 			       delta_n, devC_kappa);
 	    dev_delta_t[mempos] = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);*/
-	    contactLinear(&N, &T, &es_dot, &p, 
+	    contactLinear(&F, &T, &es_dot, &p, 
 			  idx_a_orig,
 			  idx_b_orig,
 			  vel_a,
@@ -501,7 +501,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	  for (int x_dim=-1; x_dim<2; ++x_dim) { // x-axis
 	    targetPos = gridPos + make_int3(x_dim, y_dim, z_dim);
 	    overlapsInCell(targetPos, idx_a, x_a, radius_a,
-			   &N, &T, &es_dot, &p,
+			   &F, &T, &es_dot, &p,
 			   dev_x_sorted, dev_radius_sorted, 
 			   dev_vel_sorted, dev_angvel_sorted,
 			   dev_cellStart, dev_cellEnd,
@@ -521,7 +521,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     delta_w = w_up_nx.w - (x_a.z + radius_a);
     w_n = MAKE_FLOAT3(0.0f, 0.0f, -1.0f);
     if (delta_w < 0.0f) {
-      w_force = contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
+      w_force = contactLinear_wall(&F, &T, &es_dot, &p, idx_a, radius_a,
 	  			   dev_vel_sorted, dev_angvel_sorted,
 				   w_n, delta_w, w_up_mvfd.y);
     }
@@ -530,7 +530,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     delta_w = x_a.z - radius_a - origo.z;
     w_n = MAKE_FLOAT3(0.0f, 0.0f, 1.0f);
     if (delta_w < 0.0f) {
-      (void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
+      (void)contactLinear_wall(&F, &T, &es_dot, &p, idx_a, radius_a,
 	  		       dev_vel_sorted, dev_angvel_sorted,
 	  		       w_n, delta_w, 0.0f);
     }
@@ -542,7 +542,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
       delta_w = x_a.x - radius_a - origo.x;
       w_n = MAKE_FLOAT3(1.0f, 0.0f, 0.0f);
       if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
+	(void)contactLinear_wall(&F, &T, &es_dot, &p, idx_a, radius_a,
 	    			 dev_vel_sorted, dev_angvel_sorted,
 				 w_n, delta_w, 0.0f);
       }
@@ -551,7 +551,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
       delta_w = L.x - (x_a.x + radius_a);
       w_n = MAKE_FLOAT3(-1.0f, 0.0f, 0.0f);
       if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
+	(void)contactLinear_wall(&F, &T, &es_dot, &p, idx_a, radius_a,
 	    			 dev_vel_sorted, dev_angvel_sorted,
 				 w_n, delta_w, 0.0f);
       }
@@ -560,7 +560,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
       delta_w = x_a.y - radius_a - origo.y;
       w_n = MAKE_FLOAT3(0.0f, 1.0f, 0.0f);
       if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
+	(void)contactLinear_wall(&F, &T, &es_dot, &p, idx_a, radius_a,
 	    			 dev_vel_sorted, dev_angvel_sorted,
 				 w_n, delta_w, 0.0f);
       }
@@ -569,7 +569,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
       delta_w = L.y - (x_a.y + radius_a);
       w_n = MAKE_FLOAT3(0.0f, -1.0f, 0.0f);
       if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
+	(void)contactLinear_wall(&F, &T, &es_dot, &p, idx_a, radius_a,
 	    			 dev_vel_sorted, dev_angvel_sorted,
 				 w_n, delta_w, 0.0f);
       }
@@ -580,7 +580,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
       delta_w = x_a.y - radius_a - origo.y;
       w_n = MAKE_FLOAT3(0.0f, 1.0f, 0.0f);
       if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
+	(void)contactLinear_wall(&F, &T, &es_dot, &p, idx_a, radius_a,
 	    			 dev_vel_sorted, dev_angvel_sorted,
 				 w_n, delta_w, 0.0f);
       }
@@ -589,7 +589,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
       delta_w = L.y - (x_a.y + radius_a);
       w_n = MAKE_FLOAT3(0.0f, -1.0f, 0.0f);
       if (delta_w < 0.0f) {
-	(void)contactLinear_wall(&N, &T, &es_dot, &p, idx_a, radius_a,
+	(void)contactLinear_wall(&F, &T, &es_dot, &p, idx_a, radius_a,
 	    			 dev_vel_sorted, dev_angvel_sorted,
 				 w_n, delta_w, 0.0f);
       }
@@ -601,7 +601,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 
     // Write force to unsorted position
     unsigned int orig_idx = dev_gridParticleIndex[idx_a];
-    dev_force[orig_idx]   = MAKE_FLOAT4(N.x, N.y, N.z, 0.0f);
+    dev_force[orig_idx]   = MAKE_FLOAT4(F.x, F.y, F.z, 0.0f);
     dev_torque[orig_idx]  = MAKE_FLOAT4(T.x, T.y, T.z, 0.0f);
     dev_es_dot[orig_idx]  = es_dot;
     dev_es[orig_idx]     += es_dot * devC_dt;
