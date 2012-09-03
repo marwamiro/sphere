@@ -83,7 +83,7 @@ __device__ int findDistMod(int3* targetCell, Float3* distmod)
 __device__ void findAndProcessContactsInCell(int3 targetCell, 
     			       		     unsigned int idx_a, 
 					     Float4 x_a, Float radius_a,
-					     Float3* N, Float3* T, 
+					     Float3* F, Float3* T, 
 					     Float* es_dot, Float* p,
 					     Float4* dev_x_sorted, 
 					     Float* dev_radius_sorted,
@@ -145,7 +145,7 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
 
 	// Check for particle overlap
 	if (delta_ab < 0.0f) {
-		  contactLinearViscous(N, T, es_dot, p, 
+		  contactLinearViscous(F, T, es_dot, p, 
 				       idx_a, idx_b,
 				       dev_vel_sorted, 
 				       dev_angvel_sorted,
@@ -154,14 +154,14 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
 				       delta_ab, kappa);
 	} else if (delta_ab < devC_db) { 
 	  // Check wether particle distance satisfies the capillary bond distance
-	  capillaryCohesion_exp(N, radius_a, radius_b, delta_ab, 
+	  capillaryCohesion_exp(F, radius_a, radius_b, delta_ab, 
 	      			x_ab, x_ab_length, kappa);
 	}
 
 	// Check wether particles are bonded together
 	/*if (bonds.x == idx_b || bonds.y == idx_b ||
 	    bonds.z == idx_b || bonds.w == idx_b) {
-	  bondLinear(N, T, es_dot, p, 
+	  bondLinear(F, T, es_dot, p, 
 	      	     idx_a, idx_b,
 	   	     dev_x_sorted, dev_vel_sorted,
 		     dev_angvel_sorted,
@@ -285,7 +285,7 @@ __device__ void findContactsInCell(int3 targetCell,
 	// Check wether particles are bonded together
 	/*if (bonds.x == idx_b || bonds.y == idx_b ||
 	    bonds.z == idx_b || bonds.w == idx_b) {
-	  bondLinear(N, T, es_dot, p, 
+	  bondLinear(F, T, es_dot, p, 
 	      	     idx_a, idx_b,
 	   	     dev_x_sorted, dev_vel_sorted,
 		     dev_angvel_sorted,
