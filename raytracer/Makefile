@@ -1,20 +1,27 @@
 NVCC=nvcc
 CC=g++
-LINK=g++
+LD=g++
 
-CFLAGS=-c -Wall -O3 -fopenmp
+CCFLAGS=-c -Wall -O3 -fopenmp
 LDFLAGS=-fopenmp
 
-CSOURCES=main.cpp io.cpp rt_kernel_cpu.cpp
-NVCCSOURCES=rt_kernel.cu
+# Verbose compile?
+#NVCCFLAGS+=--verbose
 
-COBJECTS=$(CSOURCES:.cpp=.o)
-CPUOBJECTS=$(CPUSOURCES:.cpp=.o)
-NVCCOBJECTS=$(NVCCSOURCES:.cu=.o)
-OBJECTS=$(COBJECTS) $(NVCCOBJECTS)
+# Profile code?
+#NVCCFLAGS+=-pg
+
+# Debugable code?
+#CCFLAGS+=-g
+#NVCCFLAGS+=-g -G
+
+CCFILES=main.cpp o-ppm.cpp rt-kernel-cpu.cpp
+CUFILES=rt-kernel.cu
+CCOBJECTS=$(CCFILES:.cpp=.o)
+CUOBJECTS=$(CUFILES:.cu=.o)
+OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
 
 EXECUTABLE=rt
-
 
 # NVCC debug compilation
 NVCCFLAGS+=-use_fast_math -gencode arch=compute_20,code=sm_20
@@ -66,15 +73,20 @@ INCLUDES += -I$(CUDA_SDK)/common/inc
 #LIBS += -L$(CUDA_SDK)/lib #-lcutil_$(LIB_ARCH)
 LIBS += -L$(CUDA_SDK)/lib -lcutil_$(LIB_ARCH)
 
-
 $(EXECUTABLE): $(OBJECTS)
-	$(LINK) $(CXX_ARCH_FLAGS) $(LDFLAGS) $(LIBS) $^ -o $(EXECUTABLE)
+	$(LD) $(CXX_ARCH_FLAGS) $(LDFLAGS) $(LIBS) $(OBJECTS) -o $(EXECUTABLE)
 
-$(NVCCOBJECTS): $(NVCCSOURCES)
-	$(NVCC) $(NVCCFLAGS) -c $(INCLUDES) $< -o $@
+main.o: main.cpp
+	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
-.cpp.o: $(COBJECTS) 
-	$(CC) $(CFLAGS) $(CXX_ARCH_FLAGS) -c $(INCLUDES) $< -o $@
+o-ppm.o: o-ppm.cpp
+	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
+
+rt-kernel-cpu.o: rt-kernel-cpu.cpp
+	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
+
+rt-kernel.o: rt-kernel.cu
+	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
 	rm -f doc/*.{log,aux,bbl,blg,out,gz}
@@ -82,9 +94,5 @@ clean:
 	rm -f $(EXECUTABLE)
 
 edit:
-	vim -p Makefile $(CSOURCES) $(NVCCSOURCES) header.h rt_kernel.h rt_kernel_cpu.h 
+	vim -p Makefile $(CCFILES) $(CUFILES) *.h
 
-run:
-	./rt GPU np5000.bin 800 800 out.ppm
-	convert out.ppm out.png
-	#open out.png
