@@ -11,9 +11,7 @@ __device__ int calcCellID(Float3 x)
   i_z = floor((x.z - devC_origo[2]) / (devC_L[2]/devC_num[2]));
 
   // Integral coordinates are converted to 1D coordinate:
-  return __umul24(__umul24(i_z, devC_num[1]),
-      		  devC_num[0]) 
-    	 + __umul24(i_y, devC_num[0]) + i_x;
+  return (i_z * devC_num[1]) * devC_num[0] + i_y * devC_num[0] + i_x;
 
 } // End of calcCellID(...)
 
@@ -25,7 +23,7 @@ __global__ void calcParticleCellID(unsigned int* dev_gridParticleCellID,
 				   Float4* dev_x) 
 {
   //unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
-  unsigned int idx = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
+  unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (idx < devC_np) { // Condition prevents block size error
 
@@ -65,7 +63,6 @@ __global__ void reorderArrays(unsigned int* dev_cellStart, unsigned int* dev_cel
 
   // Thread index in grid
   unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; 
-  //unsigned int idx = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
 
   // CellID hash value of particle idx
   unsigned int cellID;

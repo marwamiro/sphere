@@ -106,11 +106,8 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
   //// Check and process particle-particle collisions
 
   // Calculate linear cell ID
-  unsigned int cellID = targetCell.x  
-    			+ __umul24(targetCell.y, devC_num[0]) 
-			+ __umul24(__umul24(devC_num[0], 
-			      		    devC_num[1]), 
-			 	   targetCell.z); 
+  unsigned int cellID = targetCell.x + targetCell.y * devC_num[0]
+			+ (devC_num[0] * devC_num[1]) * targetCell.z; 
 
   // Lowest particle index in cell
   unsigned int startIdx = dev_cellStart[cellID];
@@ -203,11 +200,8 @@ __device__ void findContactsInCell(int3 targetCell,
   //// Check and process particle-particle collisions
 
   // Calculate linear cell ID
-  unsigned int cellID = targetCell.x  
-    			+ __umul24(targetCell.y, devC_num[0]) 
-			+ __umul24(__umul24(devC_num[0], 
-			      		    devC_num[1]), 
-			 	   targetCell.z); 
+  unsigned int cellID = targetCell.x + targetCell.y * devC_num[0]
+			+ (devC_num[0] * devC_num[1]) * targetCell.z; 
 
   // Lowest particle index in cell
   unsigned int startIdx = dev_cellStart[cellID];
@@ -312,7 +306,7 @@ __global__ void topology(unsigned int* dev_cellStart,
 			 Float4* dev_distmod)
 {
   // Thread index equals index of particle A
-  unsigned int idx_a = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
+  unsigned int idx_a = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx_a < devC_np) {
     // Fetch particle data in global read
     Float4 x_a      = dev_x_sorted[idx_a];
@@ -375,7 +369,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 			 Float4* dev_delta_t)
 {
   // Thread index equals index of particle A
-  unsigned int idx_a = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
+  unsigned int idx_a = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (idx_a < devC_np) {
 
