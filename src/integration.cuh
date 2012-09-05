@@ -185,7 +185,7 @@ __global__ void integrateWalls(Float4* dev_w_nx,
     Float dt = devC_dt;
 
     // If wall BC is controlled by deviatoric stress:
-    if (wmode == 0) {
+    //if (wmode == 0) {
 
       // Normal load = Deviatoric stress times wall surface area,
       // directed downwards.
@@ -199,9 +199,9 @@ __global__ void integrateWalls(Float4* dev_w_nx,
       w_mvfd.y += acc * dt;
     
     // Wall BC is controlled by velocity, which should not change
-    } else if (wmode == 1) { 
-      acc = 0.0f;
-    }
+    //} else if (wmode == 1) { 
+    //  acc = 0.0f;
+    //}
      
     // Update position. Second-order scheme based on Taylor expansion 
     // (greater accuracy than the first-order Euler's scheme)
