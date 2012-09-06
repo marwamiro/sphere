@@ -781,7 +781,7 @@ class Spherebin:
   def porosity(self, lower_corner, 
       		     upper_corner, 
 		     grid = numpy.array([10,10,10], int), 
-		     precisionfactor = 10):
+		     precisionfactor = 10, verbose = False):
     """ Calculate the porosity inside each grid cell.
 	Specify the lower and upper corners of the volume to evaluate.
         A good starting point for the grid vector is self.num.
@@ -811,6 +811,9 @@ class Spherebin:
     # Volume of fine grid vells
     Vc_fine = csl_fine[0] * csl_fine[1] * csl_fine[2]
 
+    if (verbose == True):
+      print("Iterating over fine grid cells")
+
     # Iterate over fine grid cells
     for ix in range(grid[0]*precisionfactor):
       for iy in range(grid[1]*precisionfactor):
@@ -835,6 +838,9 @@ class Spherebin:
 
 	  fine_grid[ix,iy,iz] = False
 
+    if (verbose == True):
+      print("Interpolating fine grid to normal grid")
+
     # Interpolate fine grid to coarse grid by looping
     # over the fine grid, and subtracting the fine cell volume
     # if it is marked as inside a particle
@@ -848,7 +854,6 @@ class Spherebin:
 
 
     return porosity_grid
-
 
 
 def render(binary,
