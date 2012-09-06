@@ -1065,6 +1065,12 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
   else:
     plt.show()
 
+def exec(project):
+  """ Execute sphere with target project
+  """
+  subprocess.call("cd ..; ./sphere_*_X86_64 " + project, shell=True)
+  
+  
 
 def status(project):
   """ Check the status.dat file for the target project,
