@@ -37,6 +37,8 @@ int fwritebin(char *target,
   // If double precision: Values can be written directly
   if (sizeof(Float) == sizeof(double)) {
 
+    printf("double precision; good.\n");
+
     // World dimensions
     fwrite(&grid->nd, sizeof(grid->nd), 1, fp);
 
@@ -122,7 +124,7 @@ int fwritebin(char *target,
     // Walls
     fwrite(&params->nw, sizeof(params->nw), 1, fp); // No. of walls
     for (j=0; j<params->nw; ++j) {
-      fwrite(&params->wmode[j], sizeof(params->wmode), 1, fp);
+      fwrite(&params->wmode[j], sizeof(params->wmode[j]), 1, fp);
       // Wall normal
       fwrite(&host_w_nx[j].x, sizeof(Float), 1, fp);
       fwrite(&host_w_nx[j].y, sizeof(Float), 1, fp);

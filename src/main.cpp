@@ -424,15 +424,7 @@ int main(int argc, char *argv[])
     exit(1); // Return unsuccessful exit status
   }
 
-  // For debugging purposes: Print data to terminal
-  //printf("\nhost_x data, pre-copy:\n");
-  //for(i=0; i<p.np; ++i) {
-  //  printf("%f \t %f \t %f \n", host_x[i].x, host_x[i].y, host_x[i].z);
-  //}
-
-
   cout << "\nEntering the CUDA environment...\n";
-
   gpuMain(host_x,
 	  host_vel,
 	  host_acc,
