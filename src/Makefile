@@ -96,6 +96,6 @@ clean:
 
 clear:
 	# Remove all output data and images
-	$(RM) -rf ../img_out/*.{ppm,png}
-	$(RM) -rf ../output/*.{dat,bin}
+	$(RM) -f ../img_out/*.{ppm,png}
+	$(RM) -f ../output/*.{dat,bin}
 
