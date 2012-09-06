@@ -1065,7 +1065,7 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
   else:
     plt.show()
 
-def exec(project):
+def run(project):
   """ Execute sphere with target project
   """
   subprocess.call("cd ..; ./sphere_*_X86_64 " + project, shell=True)
