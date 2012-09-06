@@ -37,8 +37,6 @@ int fwritebin(char *target,
   // If double precision: Values can be written directly
   if (sizeof(Float) == sizeof(double)) {
 
-    printf("double precision; good.\n");
-
     // World dimensions
     fwrite(&grid->nd, sizeof(grid->nd), 1, fp);
 
