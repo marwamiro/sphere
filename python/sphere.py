@@ -780,7 +780,7 @@ class Spherebin:
 
   def porosity(self, lower_corner, 
       		     upper_corner, 
-		     grid = numpy.array([10,10,10]), 
+		     grid = numpy.array([10,10,10], int), 
 		     precisionfactor = 10):
     """ Calculate the porosity inside each grid cell.
 	Specify the lower and upper corners of the volume to evaluate.
@@ -804,19 +804,17 @@ class Spherebin:
 			     grid[2]*precisionfactor), bool)
 
     # Side length of fine grid cells
-    csl_fine = numpy.array([(upper_corner[0]-lower_corner[0]) / fine_grid[0], \
-			    (upper_corner[1]-lower_corner[1]) / fine_grid[1], \
-			    (upper_corner[2]-lower_corner[2]) / fine_grid[2] ])
+    csl_fine = numpy.array([(upper_corner[0]-lower_corner[0]) / (grid[0]*precisionfactor), \
+			    (upper_corner[1]-lower_corner[1]) / (grid[1]*precisionfactor), \
+			    (upper_corner[2]-lower_corner[2]) / (grid[2]*precisionfactor) ])
       
     # Volume of fine grid vells
     Vc_fine = csl_fine[0] * csl_fine[1] * csl_fine[2]
 
-
-
     # Iterate over fine grid cells
-    for ix in range(fine_grid[0]):
-      for iy in range(fine_grid[1]):
-	for iz in range(fine_grid[2]):
+    for ix in range(grid[0]*precisionfactor):
+      for iy in range(grid[1]*precisionfactor):
+	for iz in range(grid[2]*precisionfactor):
 
 	  # Coordinates of cell centre
 	  cpos = numpy.array([ix*csl_fine[0] + 0.5*csl_fine[0], \
