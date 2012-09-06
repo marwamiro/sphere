@@ -173,7 +173,7 @@ __global__ void integrateWalls(Float4* dev_w_nx,
     // write-after-read, or write-after-write hazards. 
     Float4 w_nx   = dev_w_nx[idx];
     Float4 w_mvfd = dev_w_mvfd[idx];
-    int wmode = devC_wmode[idx];  // Wall BC, 0: devs, 1: vel
+    //int wmode = devC_wmode[idx];  // Wall BC, 0: devs, 1: vel
     Float acc;
 
     // Find the final sum of forces on wall
