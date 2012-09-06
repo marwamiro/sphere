@@ -777,6 +777,82 @@ class Spherebin:
     e = (V_t - V_s)/V_s
     return e
 
+
+  def porosity(self, lower_corner, 
+      		     upper_corner, 
+		     grid = numpy.array([10,10,10]), 
+		     precisionfactor = 10):
+    """ Calculate the porosity inside each grid cell.
+	Specify the lower and upper corners of the volume to evaluate.
+        A good starting point for the grid vector is self.num.
+	The precision factor determines how much precise the grid porosity is.
+	A larger value will result in better precision, but more computations O(n^3).
+    """
+
+    # Cell size length
+    csl = numpy.array([(upper_corner[0]-lower_corner[0]) / grid[0], \
+	  	       (upper_corner[1]-lower_corner[1]) / grid[1], \
+		       (upper_corner[2]-lower_corner[2]) / grid[2] ])
+
+    # Create 3d vector of porosity values
+    porosity_grid = numpy.ones((grid[0], grid[1], grid[2]), float) * csl[0]*csl[1]*csl[2]
+
+    # Fine grid, to be interpolated to porosity_grid. The fine cells are
+    # assumed to be either completely solid- (True), or void space (False).
+    fine_grid = numpy.zeros((grid[0]*precisionfactor, \
+			     grid[1]*precisionfactor, \
+			     grid[2]*precisionfactor), bool)
+
+    # Side length of fine grid cells
+    csl_fine = numpy.array([(upper_corner[0]-lower_corner[0]) / fine_grid[0], \
+			    (upper_corner[1]-lower_corner[1]) / fine_grid[1], \
+			    (upper_corner[2]-lower_corner[2]) / fine_grid[2] ])
+      
+    # Volume of fine grid vells
+    Vc_fine = csl_fine[0] * csl_fine[1] * csl_fine[2]
+
+
+
+    # Iterate over fine grid cells
+    for ix in range(fine_grid[0]):
+      for iy in range(fine_grid[1]):
+	for iz in range(fine_grid[2]):
+
+	  # Coordinates of cell centre
+	  cpos = numpy.array([ix*csl_fine[0] + 0.5*csl_fine[0], \
+	  		      iy*csl_fine[1] + 0.5*csl_fine[1], \
+			      iz*csl_fine[2] + 0.5*csl_fine[2] ])
+
+
+	  # Find out if the cell centre lies within a particle
+	  for i in range(self.np):
+	    p = self.x[i,:] 	# Particle position
+	    r = self.radius[i]	# Particle radius
+
+	    delta = numpy.linalg.norm(cpos - p) - r
+
+	    if (delta < 0.0): # Cell lies within a particle
+	      fine_grid[ix,iy,iz] = True
+	      break # No need to check more particles
+
+	  fine_grid[ix,iy,iz] = False
+
+    # Interpolate fine grid to coarse grid by looping
+    # over the fine grid, and subtracting the fine cell volume
+    # if it is marked as inside a particle
+    for ix in range(fine_grid[0]):
+      for iy in range(fine_grid[1]):
+	for iz in range(fine_grid[2]):
+	  if (fine_grid[ix,iy,iz] == True):
+	    porosity_grid[floor(ix/precisionfactor), \
+			  floor(iy/precisionfactor), \
+			  floor(iz/precisionfactor) ] -= Vc_fine
+
+
+    return porosity_grid
+
+
+
 def render(binary,
            out = '~/img_out/rt-out',
 	   graphicsformat = 'jpg',
