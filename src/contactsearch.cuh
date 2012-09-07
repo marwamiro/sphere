@@ -411,9 +411,9 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
       Float delta_n, x_ab_length, radius_b;
       Float3 x_ab;
       Float4 x_b, distmod;
-      Float4 vel_a     = dev_vel_sorted[idx_a];
-      Float4 angvel4_a = dev_angvel_sorted[idx_a];
-      Float3 angvel_a  = MAKE_FLOAT3(angvel4_a.x, angvel4_a.y, angvel4_a.z);
+      //Float4 vel_a     = dev_vel_sorted[idx_a];
+      //Float4 angvel4_a = dev_angvel_sorted[idx_a];
+      //Float3 angvel_a  = MAKE_FLOAT3(angvel4_a.x, angvel4_a.y, angvel4_a.z);
 
       // Loop over all possible contacts, and remove contacts
       // that no longer are valid (delta_n > 0.0)
@@ -439,14 +439,14 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 
 	  // Process collision if the particles are overlapping
 	  if (delta_n < 0.0f) {
-	    /*contactLinearViscous(&F, &T, &es_dot, &p, 
+	    contactLinearViscous(&F, &T, &es_dot, &p, 
 	      		       idx_a_orig, idx_b_orig,
 			       dev_vel, 
 			       dev_angvel,
 			       radius_a, radius_b, 
 			       x_ab, x_ab_length,
-			       delta_n, devC_kappa);*/
-	    contactLinear(&F, &T, &es_dot, &p, 
+			       delta_n, devC_kappa);
+	    /*contactLinear(&F, &T, &es_dot, &p, 
 			  idx_a_orig,
 			  idx_b_orig,
 			  vel_a,
@@ -456,7 +456,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 			  radius_a, radius_b, 
 			  x_ab, x_ab_length,
 			  delta_n, dev_delta_t, 
-			  mempos);
+			  mempos);*/
 	  } else {
 	    __syncthreads();
 	    // Remove this contact (there is no particle with index=np)
