@@ -1,5 +1,9 @@
 INTERPRETER=pdflatex
 SOURCE=sphere-doc.tex
+PDF=$(SOURCE:.tex=.pdf)
 
-pdf:
-	$(INTERPRETER) $(SOURCE) $(SOURCE:.tex=.pdf)
+$(PDF):	$(SOURCE)
+	$(INTERPRETER) $< $@
+
+clean:
+	$(RM) $(PDF)
