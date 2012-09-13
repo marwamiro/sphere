@@ -6,4 +6,4 @@ $(PDF):	$(SOURCE)
 	$(INTERPRETER) $< $@
 
 clean:
-	$(RM) $(PDF)
+	$(RM) *.{out,toc,log,aux}
