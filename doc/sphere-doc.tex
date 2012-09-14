@@ -88,9 +88,9 @@
 \begin{document}
 \title{Users guide to \texttt{SPHERE}:\\ GPU based discrete element method software}
 \author{Anders Damsgaard Christensen\\
-	\url{anders.damsgaard@geo.au.dk}\\
+	\url{adc@geo.au.dk}\\
 	\url{http://cs.au.dk/~adc/}}
-	\date{Last revision: \today \\[5mm] Version \textbf{0.1} \\ 
+	\date{Last revision: \today \\[5mm] Version \textbf{0.2} \\ 
 	%\begin{center} \includegraphics[scale=0.12]{FigCover} \end{center}
 	}
 \maketitle
@@ -98,11 +98,13 @@
 \thispagestyle{empty}
 
 \begin{abstract}
-\noindent This document is the official documentation for the \texttt{SPHERE} discrete element modelling software. It presents the theory behind the discrete element method (DEM), the structure of the software \texttt{C} source code, and the {\sc Matlab} configuration methods for handling input- and output data. 
+\noindent This document is the official documentation for the \texttt{SPHERE} discrete element modelling software. It presents the theory behind the discrete element method (DEM), the structure of the software source code, and the Python API for handling simulation setup and data analysis.
 
-\texttt{SPHERE} is developed by Anders Damsgaard Christensen under supervision of David Lundbek Egholm and Jan A. Piotrowski, all of the department of Geology, University of Aarhus, Denmark. This document is a work in progress, and is still in an early, unfinished state. This document is typeset with \LaTeXe, with a wide margin (\LaTeX{} standard) to make space for handwritten notes.
+\texttt{SPHERE} is developed by Anders Damsgaard Christensen under supervision of David Lunbek Egholm and Jan A. Piotrowski, all of the department of Geology, University of Aarhus, Denmark. This document is a work in progress, and is still in an early, unfinished state. This document is typeset with \LaTeXe, with a wide margin (\LaTeX{} standard) to make space for handwritten notes.
 \end{abstract}
 \vfill
+
+\marginpar{Todo: Change cover image}
 
 \begin{figure}[htb]
  \begin{center}
@@ -119,6 +121,7 @@
 \textbf{Date} & \textbf{Doc. version} & \textbf{\texttt{SPHERE} version} & \textbf{Description} \\
 \hline
 2010-12-06  & 0.1 & Beta 0.03  & Initial draft \\
+2012-09-13  & 0.2 & Beta 0.25  & Updated for Python API and major source code changes\\
 %   &  &  \\
 %   &  &  \\
 \hline
@@ -134,7 +137,7 @@
 \newpage
 
 \section{Introduction}
-The \texttt{SPHERE}-software is used for three-dimensional discrete element method (DEM) particle simulations. The source code is written in \texttt{C}, and compiled by the user. The main computations are performed on the graphics processing unit (GPU) using NVIDIA's general purpose parallel computing architecture, CUDA. 
+The \texttt{SPHERE}-software is used for three-dimensional discrete element method (DEM) particle simulations. The source code is written in \texttt{C++} and \texttt{CUDA C}, and compiled by the user. The main computations are performed on the graphics processing unit (GPU) using NVIDIA's general purpose parallel computing architecture, CUDA. 
 
 The ultimate aim of the \texttt{SPHERE} software is to simulate soft-bedded subglacial conditions, while retaining the flexibility to perform simulations of granular material in other environments. The requirements to the host computer are:
 \begin{itemize}
@@ -143,89 +146,102 @@ The ultimate aim of the \texttt{SPHERE} software is to simulate soft-bedded subg
   \item A CUDA-enabled GPU with compute capability 1.1 or greater\footnote{See \url{http://www.nvidia.com/object/cuda_gpus.html} for an official list of NVIDIA CUDA GPUs.}.
   \item The CUDA Developer Drivers and the CUDA Toolkit\footnote{Obtainable free of charge from \url{http://developer.nvidia.com/object/cuda_3_2_downloads.html}}.
 \end{itemize}
-For simulation setup and data handling, a {\sc Matlab} installation of a recent version is essential. There is however no requirement of {\sc Matlab} on the computer running the \texttt{SPHERE} calculations, i.e. model setup and data analysis can be performed on a separate device. Command examples in this document starting with the symbol '\verb"$"' are executed in the terminal of the operational system, and '\verb">>"' means execution in {\sc Matlab}. All numerical values in this document, the source code, and the configuration files are typeset with strict respect to the SI unit system.
+For simulation setup and data handling, a Python distribution of a recent version is essential. Required Python modules include Numpy\footnote{\url{http://numpy.scipy.org}}. There is however no requirement of Python on the computer running the \texttt{SPHERE} calculations, i.e. model setup and data analysis can be performed on a separate device. Command examples in this document starting with the symbol '\verb"$"' are executed in the shell of the operational system, and '\verb">>>"' means execution in Python. All numerical values in this document, the source code, and the configuration files are typeset with strict respect to the SI unit system.
 
 \section{Discrete element method theory}
 \label{sec:DEMtheory}
-The discrete element method (or distinct element method) was initially formulated by \citet{Cundall:1979}. It simulates the physical behavior and interaction of discrete, unbreakable particles, with their own mass and inertia, under the influence of e.g. gravity and boundary conditions such as moving walls. By discretizing time into small time steps ($\Delta t \approx 10^{-8} \si{\second}$) eulerian integration of Newton's second law of motion is used to predict the new position and kinematic values for each particle from the previous sums of forces. This lagrangian approach is ideal for simulating discontinuous materials, such as granularities. The complexity of the computations is kept low by representing the particles as spheres, which keeps contact-searching algorithms simple.
+The discrete element method (or distinct element method) was initially formulated by \citet{Cundall:1979}. It simulates the physical behavior and interaction of discrete, unbreakable particles, with their own mass and inertia, under the influence of e.g. gravity and boundary conditions such as moving walls. By discretizing time into small time steps ($\Delta t \approx 10^{-8} \si{\second}$), explicit integration of Newton's second law of motion is used to predict the new position and kinematic values for each particle from the previous sums of forces. This Lagrangian approach is ideal for simulating discontinuous materials, such as granularities. The complexity of the computations is kept low by representing the particles as spheres, which keeps contact-searching algorithms simple.
 
+\marginpar{Todo: Expand this section; contact models, etc.}
 
 \section{\texttt{SPHERE} source code structure}
 \label{sec:spheresrcstructure}
-The source code is located in the \texttt{sphere/src/} folder, and named \texttt{sphere.cu}. After compiling the \texttt{SPHERE} binary (see sub-section \ref{subsec:compilation}), the procedure of a creating and handling a simulation is typically arranged in the following order:
+The source code is located in the \texttt{sphere/src/} folder. After compiling the \texttt{SPHERE} binary (see sub-section \ref{subsec:compilation}), the procedure of a creating and handling a simulation is typically arranged in the following order:
 \begin{enumerate}
-	\item Setup of particle assemblage, physical properties and conditions in {\sc Matlab}, described in section \ref{sec:ModelSetup}, page \pageref{sec:ModelSetup}.
-	\item Execution of \texttt{SPHERE} software, which simulates the particle behavior as a function of time, as a result of the conditions initially specified in {\sc Matlab}. Described in section \ref{sec:Simulation}, page \pageref{sec:Simulation}.
-	\item Inspection, analysis, interpretation and visualization of \texttt{SPHERE} output in {\sc Matlab}. Described in section \ref{sec:DataAnalysis}, page \pageref{sec:DataAnalysis}.
+	\item Setup of particle assemblage, physical properties and conditions using the Python API, described in section \ref{sec:ModelSetup}, page \pageref{sec:ModelSetup}.
+	\item Execution of \texttt{SPHERE} software, which simulates the particle behavior as a function of time, as a result of the conditions initially specified in the input file. Described in section \ref{sec:Simulation}, page \pageref{sec:Simulation}.
+	\item Inspection, analysis, interpretation and visualization of \texttt{SPHERE} output in Python. Described in section \ref{sec:DataAnalysis}, page \pageref{sec:DataAnalysis}.
 \end{enumerate}
 
 \subsection{The \texttt{SPHERE} algorithm}
 \label{subsec:spherealgo}
-The \texttt{SPHERE}-binary is launched from the system terminal by passing the simulation ID as an input parameter, e.g.: \texttt{./sphere simulation\_test\_04}. The sequence of events in the program is the following:
+The \texttt{SPHERE}-binary is launched from the system terminal by passing the simulation ID as an input parameter; \texttt{./sphere\_<architecture> <simulation\_ID>}. The sequence of events in the program is the following:
 \begin{enumerate}
   
-  \item System check, including search for NVIDIA CUDA compatible devices.
+  \item System check, including search for NVIDIA CUDA compatible devices (\texttt{main.cpp}).
   
-  \item Initial data import from binary {\sc Matlab} file.
+  \item Initial data import from binary input file (\texttt{main.cpp}).
   
-  \item Allocation of memory for all host variables (particles, grid, etc.).
+  \item Allocation of memory for all host variables (particles, grid, walls, etc.) (\texttt{main.cpp}).
   
-  \item Continued import from binary {\sc Matlab} file.
+  \item Continued import from binary input file (\texttt{main.cpp}).
+
+  \item Control handed to GPU-specific function \texttt{gpuMain(\ldots)} (\texttt{device.cu}).
   
-  \item Memory allocation of device memory.
+  \item Memory allocation of device memory (\texttt{device.cu}).
   
-  \item Transfer of data from host to device variables.
+  \item Transfer of data from host to device variables (\texttt{device.cu}).
   
-  \item Initialization of CUDPP radix sort configuration.
+  \item Initialization of Thrust\footnote{\url{https://code.google.com/p/thrust/}} radix sort configuration (\texttt{device.cu}).
   
-  \item OpenGL initialization.
+  \item Calculation of GPU workload configuration (thread and block layout) (\texttt{device.cu}).
+
+  \item Status and data written to \verb"<simulation_ID>.status.dat" and \verb"<simulation_ID>.output0.bin", both located in \texttt{output/} folder (\texttt{device.cu}).
   
-  \item Status and data written to \verb"<simulation_ID>.status.dat" and \verb"<simulation_ID>.output0.bin", both located in \texttt{output/} folder.
-  
-  \item Main loop (while \texttt{time.current <= time.total}):
+  \item Main loop (while \texttt{time.current <= time.total}) (functions called in \texttt{device.cu}, function definitions in seperate files). Each kernel call is wrapped in profiling- and error exception handling functions:
   
   \begin{enumerate}
   
     \item \label{loopstart}CUDA thread synchronization point.
   
-    \item \texttt{calcHash<<<,>>>(\ldots)}: Particle-grid hash value calculation.
+    \item \texttt{calcParticleCellID<<<,>>>(\ldots)}: Particle-grid hash value calculation (\texttt{sorting.cuh}).
   
     \item CUDA thread synchronization point.
   
-    \item \texttt{cudppSort(\ldots):} CUDPP radix sort of particle-grid hash array.
+    \item \texttt{thrust::sort\_by\_key(\ldots)}: Thrust radix sort of particle-grid hash array (\texttt{device.cu}).
   
-    \item \texttt{cudaMemset(\ldots):} Writing zero value (\texttt{0xffffffff}) to empty grid cells.
+    \item \texttt{cudaMemset(\ldots)}: Writing zero value (\texttt{0xffffffff}) to empty grid cells (\texttt{device.cu}).
   
-    \item \texttt{reorderParticles<<<,>>>(\ldots):} Reordering of particle arrays, based on sorted particle-grid-hash values.
+    \item \texttt{reorderArrays<<<,>>>(\ldots)}: Reordering of particle arrays, based on sorted particle-grid-hash values (\texttt{sorting.cuh}).
+  
+    \item CUDA thread synchronization point.
+
+    \item Optional: \texttt{topology<<<,>>>(\ldots)}: If particle contact history is required by the contact model, particle contacts are identified, and stored per particle. Previous, now non-existant contacts are discarded (\texttt{contactsearch.cuh}).
   
     \item CUDA thread synchronization point.
   
-    \item \texttt{cudaBindTexture(\ldots):} Binding of textures (position, linear velocity, angular velocity, particle radii).
-  
-    \item \texttt{interact<<<,>>>(\ldots)}: For each particle: Search of contacts in neighbor cells, processing of optional collisions and updating of resulting forces ($F_{\mathrm{res}}$). Values are read from textures, but written to read/write device memory arrays.
+    \item \texttt{interact<<<,>>>(\ldots)}: For each particle: Search of contacts in neighbor cells, processing of optional collisions and updating of resulting forces and torques. Values are written to read/write device memory arrays (\texttt{contactsearch.cuh}).
   
     \item CUDA thread synchronization point.
     
-    \item \texttt{integrate<<<,>>>(\ldots)}: Updating of spatial degrees of freedom by eulerian integration.
+    \item \texttt{integrate<<<,>>>(\ldots)}: Updating of spatial degrees of freedom by a second-order Taylor series expansion integration (\texttt{integration.cuh}).
+
+    \item CUDA thread synchronization point. 
+
+    \item \texttt{summation<<<,>>>(\ldots)}: Particle contributions to the net force on the walls are summated (\texttt{integration.cuh}).
+
+    \item CUDA thread synchronization point.
+
+    \item \texttt{integrateWalls<<<,>>>(\ldots)}: Updating of spatial degrees of freedom of walls (\texttt{integration.cuh}).
   
-    \item \texttt{cudaUnbindTexture(\ldots):} Unbinding of textures.
-  
-    \item Update of timers and loop-related counters (e.g. \texttt{time.current})
+    \item Update of timers and loop-related counters (e.g. \texttt{time.current}), (\texttt{device.cu}).
   
     \item If file output interval is reached:
   
       \begin{enumerate}
-        \item Optional write of data to output binary (\verb"<simulation_ID>.output#.bin").
-        \item Update of \verb"<simulation_ID>.status#.bin".
+	\item Optional write of data to output binary (\verb"<simulation_ID>.output#.bin"), (\texttt{file\_io.cpp}).
+	\item Update of \verb"<simulation_ID>.status#.bin" (\texttt{device.cu}).
       \end{enumerate}
   
       \item Return to point \ref{loopstart}, unless \texttt{time.current >= time.total}, in which case the program continues to point \ref{loopend}.
   
   \end{enumerate}
   
-  \item \label{loopend}Liberation of device and host memory.
+\item \label{loopend}Liberation of device memory (\texttt{device.cu}).
+
+\item Control returned to \texttt{main(\ldots)}, liberation of host memory (\texttt{main.cpp}).
   
-  \item End of program.
+  \item End of program, return status equal to zero (0) if no problems where encountered.
 
 \end{enumerate}
 
@@ -233,13 +249,17 @@ The \texttt{SPHERE}-binary is launched from the system terminal by passing the s
 The length of the computational time steps (\texttt{time.dt}) is calculated via equation \ref{eq:dt}, where length of the time intervals is defined by:
 \begin{equation}
 \label{eq:dt}
-	\Delta t = 0.5 \times \mathrm{min} \left( \sqrt{\frac{\rho R^2}{K}} \right)
+\Delta t = 0.17 \min \left( m/\max(k_n,k_t) \right)
 \end{equation}
-where $\rho$ is the particle material density, $R$ is particle radius, and $K$ is bulk modulus. This equation ensures that the strain signal (traveling at the speed of sound) is resolved twice while traveling through the smallest particle.
+where $m$ is the particle mass, and $k$ are the elastic stiffnesses. This equation ensures that the elastic wave (traveling at the speed of sound) is resolved a number of times while traveling through the smallest particle.
 
 \subsubsection{Host and device memory types}
 \label{subsubsec:memorytypes}
-A full, listed description of the \texttt{SPHERE} source code variables can be found in appendix \ref{apx:SourceCodeVariables}, page \pageref{apx:SourceCodeVariables}. There are four types of memory types employed in the \texttt{SPHERE} source code, with different characteristics and physical placement in the system (figure \ref{fig:memory}). Three-dimensional variables (e.g. spatial vectors in $E^3$) are stored as \texttt{float4} arrays, since \texttt{float4} read and writes can be coalesced, while \texttt{float3}'s cannot. This alone yields a $\sim$20$\times$ performance boost, even though it involves 25\% more (unused) data.
+A full, listed description of the \texttt{SPHERE} source code variables can be found in appendix \ref{apx:SourceCodeVariables}, page \pageref{apx:SourceCodeVariables}. There are three types of memory types employed in the \texttt{SPHERE} source code, with different characteristics and physical placement in the system (figure \ref{fig:memory}). 
+
+The floating point precision operating internally in \texttt{SPHERE} is defined in \texttt{datatypes.h}, and can be either single (\texttt{float}), or double (\texttt{double}). Depending on the GPU, the calculations are performed about double as fast in single precision, in relation to double precision. In dense granular configuraions, the double precision however results in greatly improved numerical stability, and is thus set as the default floating point precision. The floating point precision is stored as the type definitions \texttt{Float}, \texttt{Float3} and \texttt{Float4}. The floating point values in the in- and output datafiles are \emph{always} written in double precision, and, if necessary, automatically converted by \texttt{SPHERE}.
+
+Three-dimensional variables (e.g. spatial vectors in $E^3$) are in global memory stored as \texttt{Float4} arrays, since these read and writes can be coalesced, while e.g. \texttt{float3}'s cannot. This alone yields a $\sim$20$\times$ performance boost, even though it involves 25\% more (unused) data.
 
 \begin{figure}[htbp]
 \label{fig:memory}
@@ -348,49 +368,33 @@ A full, listed description of the \texttt{SPHERE} source code variables can be f
 \paragraph{Host memory} is the main random-access computer memory (RAM), i.e. read and write memory accessible by CPU processes, but inaccessible by CUDA kernels executed on the device. 
 
 
-\paragraph{Device memory} is the main, global device memory. It resides off-chip on the GPU, in the form of up to 2GB DRAM.
+\paragraph{Device memory} is the main, global device memory. It resides off-chip on the GPU, often in the form of 1--6 GB DRAM. The read/write access from the CUDA kernels is relatively slow. The arrays residing in (global) device memory are prefixed by ``\texttt{dev\_}'' in the source code. 
 
+\marginpar{Todo: Expand section on device memory types}
 
-\paragraph{Constant memory}
-
-
-\paragraph{Textures}
-
+\paragraph{Constant memory} values cannot be changed after they are set, and are used for scalars or small vectors. Values are set in the ``\texttt{transferToConstantMemory(\ldots)}'' function, called in the beginning of \texttt{gpuMain(\ldots)} in \texttt{device.cu}. Constant memory variables have a global scope, and are prefixed by ``\texttt{devC\_}'' in the source code.
 
 
 
-
-\subsection{The main loop}
-\label{subsec:mainloop}
-The \texttt{SPHERE} software calculates particle movement and rotation based on the forces applied to it, by application of Newton's law of motion (Newton's second law with constant particle mass: $F_{\mathrm{net}} = m \cdot a_{\mathrm{cm}}$). This is done in a series of algorithmic steps, see list on page \pageref{loopstart}. The steps are explained in the following sections with reference to the \texttt{SPHERE}-source file; \texttt{sphere.cu}. The intent with this document is \emph{not} to give a full theoretical background of the methods, but rather how the software performs the calculations.
-
-
-
-
-
-
-
+%\subsection{The main loop}
+%\label{subsec:mainloop}
+%The \texttt{SPHERE} software calculates particle movement and rotation based on the forces applied to it, by application of Newton's law of motion (Newton's second law with constant particle mass: $F_{\mathrm{net}} = m \cdot a_{\mathrm{cm}}$). This is done in a series of algorithmic steps, see list on page \pageref{loopstart}. The steps are explained in the following sections with reference to the \texttt{SPHERE}-source file; \texttt{sphere.cu}. The intent with this document is \emph{not} to give a full theoretical background of the methods, but rather how the software performs the calculations.
 
 
 \subsection{Performance}
+\marginpar{Todo: insert graph of performance vs. np and performance vs. $\Delta t$}.
 \subsubsection{Particles and computational time}
-With an increasing amount of particles, obviously more calculations have to be performed each time step, which directly translates to an increasing computational time. 
-
-The size of the computational timestep length is fixed at a sufficiently low value, so that the particle response is calculated several times while the speed of sound (the strain signal) travels through even the smallest particle, see equation \ref{eq:dt}. If there is a large variety of particle sizes, the particle with the smallest radius determines \texttt{dt} for all calculations.
-
-\subsubsection{Parallel computing}
-The \texttt{DISC} code is heavily parallized, i.e. it does carries out multiple calculations simultaneously, utilizing the GPU. 
-
-\subsubsection{Compute profiler results}
-
 
 \subsection{Compilation}
 \label{subsec:compilation}
-\texttt{SPHERE} is supplied with a makefile which helps the compilation process. Open a terminal, go to the \texttt{src/} subfolder and type \texttt{make}. The GNU Make will return the parameters passed to the individual CUDA and GNU compilers (\texttt{nvcc} and \texttt{gcc}). The resulting binary file (\texttt{sphere}) is placed in the \texttt{SPHERE} root folder.
+An important note is that the \texttt{C} examples of the NVIDIA CUDA SDK should be compiled before \texttt{SPHERE}. Consult the ``Getting started guide'', supplied by Nvidia for details on this step.
+
+\texttt{SPHERE} is supplied with several Makefiles, which automate the compilation process. To compile all components, open a shell, go to the \texttt{src/} subfolder and type \texttt{make}. The GNU Make will return the parameters passed to the individual CUDA and GNU compilers (\texttt{nvcc} and \texttt{gcc}). The resulting binary file (\texttt{sphere}) is placed in the \texttt{SPHERE} root folder. ``\texttt{src/Makefile}'' will also compile the raytracer.
 
 
 
-\section{Model setup}
+
+\section{Python API: Model setup}
 \label{sec:ModelSetup}
 In {\sc Matlab}, enter the \texttt{mfiles/}-directory as the current folder (example: \texttt{>> cd ~/code/sphere/mfiles/}). For each new experiment setup, it might be a good approach to copy the software root-folder, thus saving past configurations and data.
 
@@ -458,7 +462,7 @@ In {\sc Matlab}, the state of the calculations can be checked with:
 The basics of the DEM algorithm, used in \texttt{SPHERE}, is described in section \ref{sec:Theory}, page \pageref{sec:Theory}. While \texttt{SPHERE} is running, output binary files are placed in the \texttt{output/} folder with the format \texttt{simulation\_name.output\#.bin}. On UNIX systems, the CPU usage of active processes can be monitored with the command '\texttt{top}'. GPU usage is monitored using e.g. the NVIDIA Compute Visual Profiler.
 
 
-\section{Data analysis in {\sc Matlab}}
+\section{Python API: Data analysis}
 \label{sec:DataAnalysis}
 A number of preconfigured visualization methods are featured in \texttt{show.m}. It shows a figure of the particle assemblage, created on base of the data from a specific output-file. This output file is selected with the command \verb"show('file',#)", where the second parameter is the number of the output file (the numbering starts from zero (0)).  Even though the SDEM calculations (\texttt{./start}-script) have not been completed, the latest output file can be visualized in {\sc Matlab}, as long as at least one output-file has been generated:
 \begin{lstlisting}
