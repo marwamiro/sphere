@@ -1064,6 +1064,7 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
     # Write values to textfile
     else: 
       filename = "shear-stresses-{0}.txt".format(project)
+      #print("Writing stress data to " + filename)
       fh = None
       try:
 	fh = open(filename, "w")
