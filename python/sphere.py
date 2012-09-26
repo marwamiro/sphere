@@ -1072,8 +1072,8 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
 	for i in range(lastfile+1):
 	  # format: shear distance [mm], sigma [kPa], tau [kPa], Dilation [%]
 	  fh.write("{0}\t{1}\t{2}\t{3}\n".format(xdisp[i]*1000.0,
-	    					 sigma[i]/100.0,
-						 tau[i]/100.0,
+	    					 sigma[i]/1000.0,
+						 tau[i]/1000.0,
 						 dilation[i]/L*100.0))
       except (EnvironmentError, ValueError) as err:
 	print("{0}: export error: {1}".format(os.path.basename(sys.argv[0]), err))
