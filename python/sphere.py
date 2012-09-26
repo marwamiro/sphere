@@ -891,9 +891,10 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
   lastfile = status(project)
 
   ### Plotting
-  fig = plt.figure(figsize=(15,10),dpi=300)
-  figtitle = "{0}, simulation {1}".format(method, project)
-  fig.text(0.5,0.95,figtitle,horizontalalignment='center',fontproperties=FontProperties(size=18))
+  if (outformat != 'txt'):
+    fig = plt.figure(figsize=(15,10),dpi=300)
+    figtitle = "{0}, simulation {1}".format(method, project)
+    fig.text(0.5,0.95,figtitle,horizontalalignment='center',fontproperties=FontProperties(size=18))
 
 
   if method == 'energy':
@@ -921,50 +922,51 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
     
     t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
-    # Potential energy
-    ax1 = plt.subplot2grid((2,3),(0,0))
-    ax1.set_xlabel('Time [s]')
-    ax1.set_ylabel('Total potential energy [J]')
-    ax1.plot(t, Epot, '+-')
+    if (outformat != 'txt'):
+      # Potential energy
+      ax1 = plt.subplot2grid((2,3),(0,0))
+      ax1.set_xlabel('Time [s]')
+      ax1.set_ylabel('Total potential energy [J]')
+      ax1.plot(t, Epot, '+-')
 
-    # Kinetic energy
-    ax2 = plt.subplot2grid((2,3),(0,1))
-    ax2.set_xlabel('Time [s]')
-    ax2.set_ylabel('Total kinetic energy [J]')
-    ax2.plot(t, Ekin, '+-')
+      # Kinetic energy
+      ax2 = plt.subplot2grid((2,3),(0,1))
+      ax2.set_xlabel('Time [s]')
+      ax2.set_ylabel('Total kinetic energy [J]')
+      ax2.plot(t, Ekin, '+-')
 
-    # Rotational energy
-    ax3 = plt.subplot2grid((2,3),(0,2))
-    ax3.set_xlabel('Time [s]')
-    ax3.set_ylabel('Total rotational energy [J]')
-    ax3.plot(t, Erot, '+-')
+      # Rotational energy
+      ax3 = plt.subplot2grid((2,3),(0,2))
+      ax3.set_xlabel('Time [s]')
+      ax3.set_ylabel('Total rotational energy [J]')
+      ax3.plot(t, Erot, '+-')
 
-    # Shear energy rate
-    ax4 = plt.subplot2grid((2,3),(1,0))
-    ax4.set_xlabel('Time [s]')
-    ax4.set_ylabel('Shear energy rate [W]')
-    ax4.plot(t, Es_dot, '+-')
-    
-    # Shear energy
-    ax5 = plt.subplot2grid((2,3),(1,1))
-    ax5.set_xlabel('Time [s]')
-    ax5.set_ylabel('Total shear energy [J]')
-    ax5.plot(t, Es, '+-')
+      # Shear energy rate
+      ax4 = plt.subplot2grid((2,3),(1,0))
+      ax4.set_xlabel('Time [s]')
+      ax4.set_ylabel('Shear energy rate [W]')
+      ax4.plot(t, Es_dot, '+-')
+      
+      # Shear energy
+      ax5 = plt.subplot2grid((2,3),(1,1))
+      ax5.set_xlabel('Time [s]')
+      ax5.set_ylabel('Total shear energy [J]')
+      ax5.plot(t, Es, '+-')
 
-    # Total energy
-    #ax6 = plt.subplot2grid((2,3),(1,2))
-    #ax6.set_xlabel('Time [s]')
-    #ax6.set_ylabel('Total energy [J]')
-    #ax6.plot(t, Esum, '+-')
+      # Total energy
+      #ax6 = plt.subplot2grid((2,3),(1,2))
+      #ax6.set_xlabel('Time [s]')
+      #ax6.set_ylabel('Total energy [J]')
+      #ax6.plot(t, Esum, '+-')
 
-    # Combined view
-    ax6 = plt.subplot2grid((2,3),(1,2))
-    ax6.set_xlabel('Time [s]')
-    ax6.set_ylabel('Energy [J]')
-    ax6.plot(t, Epot, '+-g')
-    ax6.plot(t, Ekin, '+-b')
-    ax6.plot(t, Erot, '+-r')
-    ax6.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
+      # Combined view
+      ax6 = plt.subplot2grid((2,3),(1,2))
+      ax6.set_xlabel('Time [s]')
+      ax6.set_ylabel('Energy [J]')
+      ax6.plot(t, Epot, '+-g')
+      ax6.plot(t, Ekin, '+-b')
+      ax6.plot(t, Erot, '+-r')
+      ax6.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
 
   elif method == 'walls':
 
@@ -989,25 +991,26 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
     t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
     # Plotting
-    ax1 = plt.subplot2grid((2,2),(0,0))
-    ax1.set_xlabel('Time [s]')
-    ax1.set_ylabel('Position [m]')
-    ax1.plot(t, wpos, '+-')
+    if (outformat != 'txt'):
+      ax1 = plt.subplot2grid((2,2),(0,0))
+      ax1.set_xlabel('Time [s]')
+      ax1.set_ylabel('Position [m]')
+      ax1.plot(t, wpos, '+-')
 
-    ax2 = plt.subplot2grid((2,2),(0,1))
-    ax2.set_xlabel('Time [s]')
-    ax2.set_ylabel('Velocity [m/s]')
-    ax2.plot(t, wvel, '+-')
+      ax2 = plt.subplot2grid((2,2),(0,1))
+      ax2.set_xlabel('Time [s]')
+      ax2.set_ylabel('Velocity [m/s]')
+      ax2.plot(t, wvel, '+-')
 
-    ax3 = plt.subplot2grid((2,2),(1,0))
-    ax3.set_xlabel('Time [s]')
-    ax3.set_ylabel('Force [N]')
-    ax3.plot(t, wforce, '+-')
+      ax3 = plt.subplot2grid((2,2),(1,0))
+      ax3.set_xlabel('Time [s]')
+      ax3.set_ylabel('Force [N]')
+      ax3.plot(t, wforce, '+-')
 
-    ax4 = plt.subplot2grid((2,2),(1,1))
-    ax4.set_xlabel('Time [s]')
-    ax4.set_ylabel('Deviatoric stress [Pa]')
-    ax4.plot(t, wdevs, '+-')
+      ax4 = plt.subplot2grid((2,2),(1,1))
+      ax4.set_xlabel('Time [s]')
+      ax4.set_ylabel('Deviatoric stress [Pa]')
+      ax4.plot(t, wdevs, '+-')
 
 
   elif method == 'shear':
@@ -1044,26 +1047,48 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
       dilation[i] = sb.w_x[0] - w_x0
 
     # Plot stresses
-    ax1 = plt.subplot2grid((2,1),(0,0))
-    ax1.set_xlabel('Shear distance [m]')
-    ax1.set_ylabel('Stress [Pa]')
-    ax1.plot(xdisp, sigma, '+-g')
-    ax1.plot(xdisp, tau, '+-r')
-    #plt.legend('$\sigma`$','$\tau$')
+    if (outformat != 'txt'):
+      ax1 = plt.subplot2grid((2,1),(0,0))
+      ax1.set_xlabel('Shear distance [m]')
+      ax1.set_ylabel('Stress [Pa]')
+      ax1.plot(xdisp, sigma, '+-g')
+      ax1.plot(xdisp, tau, '+-r')
+      #plt.legend('$\sigma`$','$\tau$')
 
-    # Plot dilation
-    ax2 = plt.subplot2grid((2,1),(1,0))
-    ax2.set_xlabel('Shear distance [m]')
-    ax2.set_ylabel('Dilation [m]')
-    ax2.plot(xdisp, dilation, '+-')
+      # Plot dilation
+      ax2 = plt.subplot2grid((2,1),(1,0))
+      ax2.set_xlabel('Shear distance [m]')
+      ax2.set_ylabel('Dilation [m]')
+      ax2.plot(xdisp, dilation, '+-')
+
+    # Write values to textfile
+    else: 
+      filename = "shear-stresses-{0}.txt".format(project)
+      fh = None
+      try:
+	fh = open(filename, "w")
+	L = sb.L[2] - sb.origo[2] # Initial height
+	for i in range(lastfile+1):
+	  # format: shear distance [mm], sigma [kPa], tau [kPa], Dilation [%]
+	  fh.write("{0}\t{1}\t{2}\t{3}\n".format(xdisp[i]*100.0,
+	    					 sigma[i]/100.0,
+						 tau[i]/100.0,
+						 dilation[i]/L*100.0))
+      except (EnvironmentError, ValueError) as err:
+	print("{0}: export error: {1}".format(os.path.basename(sys.argv[0]), err))
+      finally:
+	if fh is not None:
+	  fh.close()
+
 
 
   # Optional save of figure
-  if (savefig == True):
-    fig.savefig("{0}-{1}.{2}".format(project, method, outformat))
-    fig.clf()
-  else:
-    plt.show()
+  if (outformat != 'txt'):
+    if (savefig == True):
+      fig.savefig("{0}-{1}.{2}".format(project, method, outformat))
+      fig.clf()
+    else:
+      plt.show()
 
 def run(project):
   """ Execute sphere with target project
