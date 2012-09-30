@@ -155,7 +155,7 @@ __device__ void contactLinearViscous(Float3* F, Float3* T, Float* es_dot, Float*
   //Float k_n_ab = k_n_a * k_n_b / (k_n_a + k_n_b);
 
   // Calculate rolling radius
-  Float R_bar = (radius_a + radius_b) / 2.0f;
+  //Float R_bar = (radius_a + radius_b) / 2.0f;
 
   // Normal force component: linear-elastic approximation (Augier 2009, eq. 3)
   // with velocity dependant damping
@@ -235,7 +235,8 @@ __device__ void contactLinearViscous(Float3* F, Float3* T, Float* es_dot, Float*
 
   // Add force components from this collision to total force for particle
   *F += f_n + f_t + f_c; 
-  *T += -R_bar * cross(n_ab, f_t) + T_res;
+  //*T += -R_bar * cross(n_ab, f_t) + T_res;
+  *T += -radius_a * cross(n_ab, f_t) + T_res;
 
   // Pressure excerted onto the particle from this contact
   *p += f_n_length / (4.0f * PI * radius_a*radius_a);
@@ -313,7 +314,7 @@ __device__ void contactLinear(Float3* F, Float3* T,
   //Float k_n_ab = k_n_a * k_n_b / (k_n_a + k_n_b);
 
   // Calculate rolling radius
-  Float R_bar = (radius_a + radius_b) / 2.0f;
+  //Float R_bar = (radius_a + radius_b) / 2.0f;
 
   // Normal force component: Elastic
   //f_n = -devC_k_n * delta_ab * n_ab;
@@ -390,14 +391,18 @@ __device__ void contactLinear(Float3* F, Float3* T,
     //T_res = -angvel_ab/angvel_ab_length * devC_mu_r * R_bar * length(f_n);
 
     // New rolling resistance model
-    T_res = -1.0f * fmin(devC_gamma_r * R_bar * angvel_ab_length,
+    /*T_res = -1.0f * fmin(devC_gamma_r * R_bar * angvel_ab_length,
 			 devC_mu_r * R_bar * f_n_length)
+            * angvel_ab/angvel_ab_length;*/
+    T_res = -1.0f * fmin(devC_gamma_r * radius_a * angvel_ab_length,
+			 devC_mu_r * radius_a * f_n_length)
             * angvel_ab/angvel_ab_length;
   }
 
   // Add force components from this collision to total force for particle
   *F += f_n + f_t + f_c; 
-  *T += -R_bar * cross(n_ab, f_t) + T_res;
+  //*T += -R_bar * cross(n_ab, f_t) + T_res;
+  *T += -radius_a * cross(n_ab, f_t) + T_res;
 
   // Pressure excerted onto the particle from this contact
   *p += f_n_length / (4.0f * PI * radius_a*radius_a);
