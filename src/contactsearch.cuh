@@ -196,6 +196,7 @@ __device__ void findContactsInCell(int3 targetCell,
   if (findDistMod(&targetCell, &distmod) == -1)
     return; // Target cell lies outside the grid
 
+  __syncthreads();
 
   //// Check and process particle-particle collisions
 
@@ -208,6 +209,8 @@ __device__ void findContactsInCell(int3 targetCell,
 
   // Make sure cell is not empty
   if (startIdx != 0xffffffff) {
+
+    __syncthreads();
 
     // Highest particle index in cell + 1
     unsigned int endIdx = dev_cellEnd[cellID];
@@ -226,7 +229,7 @@ __device__ void findContactsInCell(int3 targetCell,
 	// Read the original index of particle B
 	unsigned int idx_b_orig = dev_gridParticleIndex[idx_b];
 
-	__syncthreads();
+	//__syncthreads();
 
 	// Distance between particle centers (Float4 -> Float3)
 	Float3 x_ab = MAKE_FLOAT3(x_a.x - x_b.x, 
