@@ -176,7 +176,9 @@ int main(int argc, char *argv[])
   p.mu_d       = new Float[p.np];      // Inter-particle dynamic shear contact friction coefficients
   p.mu_r       = new Float[p.np];      // Inter-particle rolling contact friction coefficients
   p.es_dot     = new Float[p.np];      // Rate of shear energy dissipation
+  p.ev_dot     = new Float[p.np];      // Rate of viscous energy dissipation
   p.es         = new Float[p.np];      // Total shear energy dissipation
+  p.ev         = new Float[p.np];      // Total viscous energy dissipation
   p.p	       = new Float[p.np];      // Pressure excerted onto particle
   params.wmode = new int[MAXWALLS];    // Wall BC's, 0: devs, 1: vel
 
@@ -274,7 +276,11 @@ int main(int argc, char *argv[])
       exit(1);
     if (fread(&p.es_dot[j], sizeof(p.es_dot[j]), 1, fp) != 1)
       exit(1);
+    if (fread(&p.ev_dot[j], sizeof(p.ev_dot[j]), 1, fp) != 1)
+      exit(1);
     if (fread(&p.es[j], sizeof(p.es[j]), 1, fp) != 1)
+      exit(1);
+    if (fread(&p.ev[j], sizeof(p.ev[j]), 1, fp) != 1)
       exit(1);
     if (fread(&p.p[j], sizeof(p.p[j]), 1, fp) != 1)
       exit(1);
@@ -472,7 +478,9 @@ int main(int argc, char *argv[])
   delete[] p.mu_r;
   delete[] p.rho;
   delete[] p.es_dot;
+  delete[] p.ev_dot;
   delete[] p.es;
+  delete[] p.ev;
   delete[] p.p;
 
   // Wall arrays

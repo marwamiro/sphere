@@ -53,7 +53,9 @@ class Spherebin:
     self.mu_d    = numpy.zeros(self.np, dtype=numpy.float64)
     self.mu_r    = numpy.zeros(self.np, dtype=numpy.float64)
     self.es_dot  = numpy.zeros(self.np, dtype=numpy.float64)
+    self.ev_dot  = numpy.zeros(self.np, dtype=numpy.float64)
     self.es	 = numpy.zeros(self.np, dtype=numpy.float64)
+    self.ev	 = numpy.zeros(self.np, dtype=numpy.float64)
     self.p	 = numpy.zeros(self.np, dtype=numpy.float64)
 
     self.bonds   = numpy.ones(self.np*4, dtype=numpy.uint32).reshape(self.np,4) * self.np
@@ -124,7 +126,9 @@ class Spherebin:
       self.mu_d    = numpy.zeros(self.np, dtype=numpy.float64)
       self.mu_r    = numpy.zeros(self.np, dtype=numpy.float64)
       self.es_dot  = numpy.zeros(self.np, dtype=numpy.float64)
+      self.ev_dot  = numpy.zeros(self.np, dtype=numpy.float64)
       self.es	   = numpy.zeros(self.np, dtype=numpy.float64)
+      self.ev	   = numpy.zeros(self.np, dtype=numpy.float64)
       self.p	   = numpy.zeros(self.np, dtype=numpy.float64)
       self.bonds   = numpy.zeros(self.np, dtype=numpy.float64)
 
@@ -158,7 +162,9 @@ class Spherebin:
         self.mu_d[j]    = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
         self.mu_r[j]    = numpy.fromfile(fh, dtype=numpy.float64, count=1)
         self.es_dot[j]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.ev_dot[j]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
         self.es[j]      = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+        self.ev[j]      = numpy.fromfile(fh, dtype=numpy.float64, count=1)
         self.p[j]       = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
       # Constant, single-value physical parameters
@@ -258,7 +264,9 @@ class Spherebin:
         fh.write(self.mu_d[j].astype(numpy.float64))
         fh.write(self.mu_r[j].astype(numpy.float64))
         fh.write(self.es_dot[j].astype(numpy.float64))
+        fh.write(self.ev_dot[j].astype(numpy.float64))
         fh.write(self.es[j].astype(numpy.float64))
+        fh.write(self.ev[j].astype(numpy.float64))
         fh.write(self.p[j].astype(numpy.float64))
 
       # Constant, single-value physical parameters

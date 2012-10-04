@@ -105,7 +105,9 @@ int fwritebin(char *target,
       fwrite(&p->mu_d[j], sizeof(p->mu_d[j]), 1, fp);
       fwrite(&p->mu_r[j], sizeof(p->mu_r[j]), 1, fp);
       fwrite(&p->es_dot[j], sizeof(p->es_dot[j]), 1, fp);
+      fwrite(&p->ev_dot[j], sizeof(p->ev_dot[j]), 1, fp);
       fwrite(&p->es[j], sizeof(p->es[j]), 1, fp);
+      fwrite(&p->ev[j], sizeof(p->ev[j]), 1, fp);
       fwrite(&p->p[j], sizeof(p->p[j]), 1, fp);
     }
 
@@ -254,7 +256,11 @@ int fwritebin(char *target,
       fwrite(&d, sizeof(d), 1, fp);
       d = (double)p->es_dot[j];
       fwrite(&d, sizeof(d), 1, fp);
+      d = (double)p->ev_dot[j];
+      fwrite(&d, sizeof(d), 1, fp);
       d = (double)p->es[j];
+      fwrite(&d, sizeof(d), 1, fp);
+      d = (double)p->ev[j];
       fwrite(&d, sizeof(d), 1, fp);
       d = (double)p->p[j];
       fwrite(&d, sizeof(d), 1, fp);

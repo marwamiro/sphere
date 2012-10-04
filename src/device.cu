@@ -187,7 +187,9 @@ __host__ void gpuMain(Float4* host_x,
   Float4* dev_torque;	// Sum of torques
   Float*  dev_radius;	// Particle radius
   Float*  dev_es_dot;	// Current shear energy producion rate
+  Float*  dev_ev_dot;	// Current viscous energy producion rate
   Float*  dev_es;	// Total shear energy excerted on particle
+  Float*  dev_ev;	// Total viscous energy excerted on particle
   Float*  dev_p;	// Pressure excerted onto particle
   //uint4*  dev_bonds;	// Particle bond pairs
 
@@ -241,7 +243,9 @@ __host__ void gpuMain(Float4* host_x,
   cudaMalloc((void**)&dev_radius, memSizeF);
   cudaMalloc((void**)&dev_radius_sorted, memSizeF);
   cudaMalloc((void**)&dev_es_dot, memSizeF);
+  cudaMalloc((void**)&dev_ev_dot, memSizeF);
   cudaMalloc((void**)&dev_es, memSizeF);
+  cudaMalloc((void**)&dev_ev, memSizeF);
   cudaMalloc((void**)&dev_p, memSizeF);
   //cudaMalloc((void**)&dev_bonds, sizeof(uint4) * p->np);
   //cudaMalloc((void**)&dev_bonds_sorted, sizeof(uint4) * p->np);
@@ -279,7 +283,9 @@ __host__ void gpuMain(Float4* host_x,
   //cudaMemcpy(dev_bonds, host_bonds, sizeof(uint4) * p->np, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_radius, p->radius, memSizeF, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_es_dot, p->es_dot, memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_ev_dot, p->ev_dot, memSizeF, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_es, p->es, memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_ev, p->ev, memSizeF, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_p, p->p, memSizeF, cudaMemcpyHostToDevice);
 
   // Wall data (wall mass and number in constant memory)
@@ -509,7 +515,8 @@ __host__ void gpuMain(Float4* host_x,
 				    dev_vel_sorted, dev_angvel_sorted,
 				    dev_vel, dev_angvel,
 				    dev_force, dev_torque,
-				    dev_es_dot, dev_es, dev_p,
+				    dev_es_dot, dev_ev_dot, 
+				    dev_es, dev_ev, dev_p,
 				    dev_w_nx, dev_w_mvfd, dev_w_force,
 				    //dev_bonds_sorted,
 				    dev_contacts,
@@ -593,7 +600,9 @@ __host__ void gpuMain(Float4* host_x,
       cudaMemcpy(host_torque, dev_torque, memSizeF4, cudaMemcpyDeviceToHost);
       //cudaMemcpy(host_bonds, dev_bonds, sizeof(uint4) * p->np, cudaMemcpyDeviceToHost);
       cudaMemcpy(p->es_dot, dev_es_dot, memSizeF, cudaMemcpyDeviceToHost);
+      cudaMemcpy(p->ev_dot, dev_ev_dot, memSizeF, cudaMemcpyDeviceToHost);
       cudaMemcpy(p->es, dev_es, memSizeF, cudaMemcpyDeviceToHost);
+      cudaMemcpy(p->ev, dev_ev, memSizeF, cudaMemcpyDeviceToHost);
       cudaMemcpy(p->p, dev_p, memSizeF, cudaMemcpyDeviceToHost);
 
       // Wall data
@@ -689,7 +698,9 @@ __host__ void gpuMain(Float4* host_x,
   cudaFree(dev_radius);
   cudaFree(dev_radius_sorted);
   cudaFree(dev_es_dot);
+  cudaFree(dev_ev_dot);
   cudaFree(dev_es);
+  cudaFree(dev_ev);
   cudaFree(dev_p);
   //cudaFree(dev_bonds);
   //cudaFree(dev_bonds_sorted);

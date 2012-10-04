@@ -82,7 +82,9 @@ struct Particles {
   Float *mu_r;
   Float *rho;
   Float *es_dot;
+  Float *ev_dot;
   Float *es;
+  Float *ev;
   Float *p;
   Float *m;
   Float *I;

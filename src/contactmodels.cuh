@@ -7,7 +7,8 @@
 
 // Linear viscoelastic contact model for particle-wall interactions
 // with tangential friction and rolling resistance
-__device__ Float contactLinear_wall(Float3* F, Float3* T, Float* es_dot, Float* p,
+__device__ Float contactLinear_wall(Float3* F, Float3* T, Float* es_dot,
+    				    Float* ev_dot, Float* p,
 				    unsigned int idx_a, Float radius_a,
 				    Float4* dev_vel_sorted, Float4* dev_angvel_sorted,
 				    Float3 n, Float delta, Float wvel)
@@ -103,7 +104,8 @@ __device__ Float contactLinear_wall(Float3* F, Float3* T, Float* es_dot, Float* 
 
 // Linear vicoelastic contact model for particle-particle interactions
 // with tangential friction and rolling resistance
-__device__ void contactLinearViscous(Float3* F, Float3* T, Float* es_dot, Float* p,
+__device__ void contactLinearViscous(Float3* F, Float3* T, 
+    				     Float* es_dot, Float* ev_dot, Float* p,
     			      	     unsigned int idx_a, unsigned int idx_b, 
 				     Float4* dev_vel_sorted, 
 				     Float4* dev_angvel_sorted,
@@ -246,7 +248,7 @@ __device__ void contactLinearViscous(Float3* F, Float3* T, Float* es_dot, Float*
 
 // Linear elastic contact model for particle-particle interactions
 __device__ void contactLinear(Float3* F, Float3* T, 
-    			      Float* es_dot, Float* p,
+    			      Float* es_dot, Float* ev_dot, Float* p,
 			      unsigned int idx_a_orig,
 			      unsigned int idx_b_orig, 
 			      Float4  vel_a, 
