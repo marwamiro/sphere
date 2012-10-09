@@ -324,6 +324,14 @@ __device__ void contactLinear(Float3* F, Float3* T,
   // Normal force component: Elastic - viscous damping
   f_n = (-devC_k_n * delta_ab - devC_gamma_n * vel_n_ab) * n_ab;
 
+  // Store energy dissipated in normal viscous component
+  // watt = gamma_n * vel_n * dx_n / dt
+  // watt = gamma_n * vel_n * vel_n * dt / dt
+  // watt = gamma_n * vel_n * vel_n
+  // N*m/s = N*s/m * m/s * m/s * s / s
+  *ev_dot += devC_gamma_n * vel_n_ab * vel_n_ab;
+
+
   // Make sure the viscous damping doesn't exceed the elastic component,
   // i.e. the damping factor doesn't exceed the critical damping, 2*sqrt(m*k_n)
   if (dot(f_n, n_ab) < 0.0f)
@@ -377,7 +385,8 @@ __device__ void contactLinear(Float3* F, Float3* T,
       // Shear friction heat production rate: 
       // The energy lost from the tangential spring is dissipated as heat
       //*es_dot += -dot(vel_t_ab, f_t);
-      *es_dot += length(delta_t0 - delta_t) * devC_k_t / devC_dt; // Seen in EsyS-Particle
+      //*es_dot += length(delta_t0 - delta_t) * devC_k_t / devC_dt; // Seen in EsyS-Particle
+      *es_dot += length(delta_t0 - delta_t) * f_t / devC_dt; 
 
     } else { // Static case
 
