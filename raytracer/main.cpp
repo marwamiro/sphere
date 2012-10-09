@@ -81,7 +81,9 @@ int main(const int argc, const char* argv[])
     float4* p      = new float4[np];
     float*  fixvel = new float[np];
     float*  es_dot = new float[np];
+    float*  ev_dot = new float[np];
     float*  es     = new float[np];
+    float*  ev     = new float[np];
     float*  pres   = new float[np];
     float*  vel	   = new float[np];
 
@@ -162,7 +164,11 @@ int main(const int argc, const char* argv[])
       (void)fread(&d, sizeof(d), 1, fin);
       es_dot[i] = (float)d;
       (void)fread(&d, sizeof(d), 1, fin);
+      ev_dot[i] = (float)d;
+      (void)fread(&d, sizeof(d), 1, fin);
       es[i] = (float)d;
+      (void)fread(&d, sizeof(d), 1, fin);
+      ev[i] = (float)d;
       (void)fread(&d, sizeof(d), 1, fin);
       pres[i] = (float)d;
     }
@@ -236,7 +242,9 @@ int main(const int argc, const char* argv[])
     delete [] fixvel;
     delete [] pres;
     delete [] es;
+    delete [] ev;
     delete [] es_dot;
+    delete [] ev_dot;
     delete [] vel;
 
   }
