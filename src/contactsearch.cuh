@@ -259,10 +259,12 @@ __device__ void findContactsInCell(int3 targetCell,
 	  for (int i=0; i<devC_nc; ++i) {
 	    __syncthreads();
 	    cidx = dev_contacts[(unsigned int)(idx_a_orig*devC_nc+i)];
-	    if (cidx == idx_b_orig) // Write to position of same contact
-	      cpos = i;
 	    if (cidx == devC_np) // Write to position of now-deleted contact
 	      cpos = i;
+	    else if (cidx == idx_b_orig) { // Write to position of same contact
+	      cpos = i;
+	      break;
+	    }
 	  }
 
 	  __syncthreads();
