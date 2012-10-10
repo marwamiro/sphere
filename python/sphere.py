@@ -770,7 +770,7 @@ class Spherebin:
       return numpy.sum(self.es_dot)
 
     elif method == 'visc_n':
-      return numpy.sum(self.ev):
+      return numpy.sum(self.ev)
 
     elif method == 'visc_n_rate':
       return numpy.sum(self.ev_dot)
