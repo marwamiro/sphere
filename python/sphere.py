@@ -918,7 +918,9 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
     Ekin = numpy.zeros(lastfile+1)
     Erot = numpy.zeros(lastfile+1)
     Es  = numpy.zeros(lastfile+1)
+    Ev  = numpy.zeros(lastfile+1)
     Es_dot = numpy.zeros(lastfile+1)
+    Ev_dot = numpy.zeros(lastfile+1)
     Esum = numpy.zeros(lastfile+1)
 
     # Read energy values from project binaries
