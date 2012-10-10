@@ -942,56 +942,56 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
 
     if (outformat != 'txt'):
       # Potential energy
-      ax1 = plt.subplot2grid((5,5),(0,0))
+      ax1 = plt.subplot2grid((2,5),(0,0))
       ax1.set_xlabel('Time [s]')
       ax1.set_ylabel('Total potential energy [J]')
       ax1.plot(t, Epot, '+-')
 
       # Kinetic energy
-      ax2 = plt.subplot2grid((5,5),(0,1))
+      ax2 = plt.subplot2grid((2,5),(0,1))
       ax2.set_xlabel('Time [s]')
       ax2.set_ylabel('Total kinetic energy [J]')
       ax2.plot(t, Ekin, '+-')
 
       # Rotational energy
-      ax3 = plt.subplot2grid((5,5),(0,2))
+      ax3 = plt.subplot2grid((2,5),(0,2))
       ax3.set_xlabel('Time [s]')
       ax3.set_ylabel('Total rotational energy [J]')
       ax3.plot(t, Erot, '+-')
 
       # Total energy
-      ax4 = plt.subplot2grid((5,5),(0,3))
+      ax4 = plt.subplot2grid((2,5),(0,3))
       ax4.set_xlabel('Time [s]')
       ax4.set_ylabel('Total energy [J]')
       ax4.plot(t, Esum, '+-')
 
       # Shear energy rate
-      ax5 = plt.subplot2grid((5,5),(1,0))
+      ax5 = plt.subplot2grid((2,5),(1,0))
       ax5.set_xlabel('Time [s]')
       ax5.set_ylabel('Frictional dissipation rate [W]')
       ax5.plot(t, Es_dot, '+-')
       
       # Shear energy
-      ax6 = plt.subplot2grid((5,5),(1,1))
+      ax6 = plt.subplot2grid((2,5),(1,1))
       ax6.set_xlabel('Time [s]')
       ax6.set_ylabel('Total frictional dissipation [J]')
       ax6.plot(t, Es, '+-')
 
       # Visc_n energy rate
-      ax7 = plt.subplot2grid((5,5),(1,2))
+      ax7 = plt.subplot2grid((2,5),(1,2))
       ax7.set_xlabel('Time [s]')
       ax7.set_ylabel('Viscous dissipation rate [W]')
       ax7.plot(t, Ev_dot, '+-')
       
-      # Visc_nenergy
-      ax8 = plt.subplot2grid((5,5),(1,3))
+      # Visc_n energy
+      ax8 = plt.subplot2grid((2,5),(1,3))
       ax8.set_xlabel('Time [s]')
       ax8.set_ylabel('Total viscous dissipation [J]')
       ax8.plot(t, Ev, '+-')
 
 
       # Combined view
-      ax9 = plt.subplot2grid((5,5),(1,4))
+      ax9 = plt.subplot2grid((2,5),(1,4))
       ax9.set_xlabel('Time [s]')
       ax9.set_ylabel('Energy [J]')
       ax9.plot(t, Epot, '+-g')
