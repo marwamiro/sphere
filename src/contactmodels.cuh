@@ -328,7 +328,7 @@ __device__ void contactLinear(Float3* F, Float3* T,
   // watt = gamma_n * vel_n * dx_n / dt
   // watt = gamma_n * vel_n * vel_n * dt / dt
   // watt = gamma_n * vel_n * vel_n
-  // N*m/s = N*s/m * m/s * m/s * s / s
+  // watt = N*m/s = N*s/m * m/s * m/s * s / s
   *ev_dot += devC_gamma_n * vel_n_ab * vel_n_ab;
 
 

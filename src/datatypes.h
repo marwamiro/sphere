@@ -60,8 +60,8 @@ const unsigned int ND = 3;
 const Float VERS = 0.25;
 
 // Max. number of contacts per particle
-//const char NC = 16;
-const char NC = 32;
+//#define NC 16
+#define NC 32
 
 
 ///////////////////////////

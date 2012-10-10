@@ -10,7 +10,7 @@ void checkForCudaErrors(const char* checkpoint_description)
 {
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
-    std::cout << "\nCuda error detected, checkpoint: " << checkpoint_description
+    std::cerr << "\nCuda error detected, checkpoint: " << checkpoint_description
       << "\nError string: " << cudaGetErrorString(err) << "\n";
     exit(EXIT_FAILURE);
   }
@@ -20,7 +20,7 @@ void checkForCudaErrors(const char* checkpoint_description, const unsigned int i
 {
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
-    std::cout << "\nCuda error detected, checkpoint: " << checkpoint_description
+    std::cerr << "\nCuda error detected, checkpoint: " << checkpoint_description
       << "\nduring iteration " << iteration
       << "\nError string: " << cudaGetErrorString(err) << "\n";
     exit(EXIT_FAILURE);

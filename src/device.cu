@@ -23,7 +23,7 @@
 //extern "C"
 __host__ void initializeGPU(void)
 {
-  using std::cout;
+  using std::cout; // stdout
 
   // Specify target device
   int cudadevice = 0;
@@ -39,7 +39,7 @@ __host__ void initializeGPU(void)
   cudaGetDeviceCount(&devicecount);
 
   if(devicecount == 0) {
-    cout << "\nERROR: No CUDA-enabled devices availible. Bye.\n";
+    std::cerr << "\nERROR: No CUDA-enabled devices availible. Bye.\n";
     exit(EXIT_FAILURE);
   } else if (devicecount == 1) {
     cout << "\nSystem contains 1 CUDA compatible device.\n";
@@ -144,7 +144,7 @@ __host__ void transferToConstantMemory(Particles* p,
     //HANDLE_ERROR(cudaMalloc((void**)&dev_params, sizeof(Params)));
     //HANDLE_ERROR(cudaMemcpyToSymbol(dev_params, &params, sizeof(Params)));
     //printf("Done\n");
-    cout << "\n\nError: SPHERE is not yet ready for non-global physical variables.\nBye!\n";
+    std::cerr << "\n\nError: SPHERE is not yet ready for non-global physical variables.\nBye!\n";
     exit(EXIT_FAILURE); // Return unsuccessful exit status
   }
   checkForCudaErrors("After transferring to device constant memory");
@@ -365,7 +365,7 @@ __host__ void gpuMain(Float4* host_x,
 		host_bonds,
 		grid, time, params,
 		host_w_nx, host_w_mvfd) != 0)  {
-    cout << "\n Problem during fwritebin \n";
+    std::cerr << "\n Problem during fwritebin \n";
     exit(EXIT_FAILURE);
   }
 
@@ -484,13 +484,16 @@ __host__ void gpuMain(Float4* host_x,
       // For each particle: Search contacts in neighbor cells
       if (PROFILING == 1)
 	startTimer(&kernel_tic);
-      topology<<<dimGrid, dimBlock>>>(dev_cellStart, 
-	  			      dev_cellEnd,
-				      dev_gridParticleIndex,
-				      dev_x_sorted, 
-				      dev_radius_sorted, 
-				      dev_contacts,
-				      dev_distmod);
+      if(topology<<<dimGrid, dimBlock>>>(dev_cellStart, 
+					 dev_cellEnd,
+					 dev_gridParticleIndex,
+					 dev_x_sorted, 
+					 dev_radius_sorted, 
+					 dev_contacts,
+					 dev_distmod) == 1) {
+	std::cerr << "Warning! One or more particles have more contacts than allowed.\n"
+	          << "Raise NC in datatypes.h to accomodate.\n"
+      }
 
       // Empty cuPrintf() buffer to console
       //cudaThreadSynchronize();
