@@ -259,7 +259,9 @@ __device__ void findContactsInCell(int3 targetCell,
 	  for (int i=0; i<devC_nc; ++i) {
 	    __syncthreads();
 	    cidx = dev_contacts[(unsigned int)(idx_a_orig*devC_nc+i)];
-	    if (cidx == idx_b_orig)
+	    if (cidx == idx_b_orig) // Write to position of same contact
+	      cpos = i;
+	    if (cidx == devC_np) // Write to position of now-deleted contact
 	      cpos = i;
 	  }
 
@@ -439,7 +441,6 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	idx_b_orig = dev_contacts[mempos];
 	distmod    = dev_distmod[mempos];
 	x_b        = dev_x[idx_b_orig];
-	//radius_b   = dev_radius[idx_b_orig];
 	radius_b   = distmod.w;
 
 	// Inter-particle vector, corrected for periodic boundaries
