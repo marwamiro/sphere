@@ -179,7 +179,7 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
 // Used for shearmodel=2, where bookkeeping of contact history is necessary.
 // Kernel executed on device, and callable from device only.
 // Function is called from topology().
-__device__ int findContactsInCell(int3 targetCell, 
+__device__ void findContactsInCell(int3 targetCell, 
     			           unsigned int idx_a, 
 				   Float4 x_a, Float radius_a,
 				   Float4* dev_x_sorted, 
@@ -222,6 +222,7 @@ __device__ int findContactsInCell(int3 targetCell,
     // Iterate over cell particles
     for (unsigned int idx_b = startIdx; idx_b<endIdx; ++idx_b) {
       if (idx_b != idx_a) { // Do not collide particle with itself
+
 
 	// Fetch position and radius of particle B.
 	Float4 x_b      = dev_x_sorted[idx_b];
@@ -275,11 +276,12 @@ __device__ int findContactsInCell(int3 targetCell,
 	  
 	  // Increment contact counter
 	  ++*nc;
-
+	  
 	  // Check if the number of contacts of particle A
 	  // exceeds the max. number of contacts per particle
-	  if (*nc >= NC)
-	    return 1;
+	  if (*nc > devC_nc)
+	    return; // I would like to throw an error, but it doesn't seem possible...
+	
 	}
 
 	// Write the inter-particle position vector correction and radius of particle B
@@ -300,9 +302,6 @@ __device__ int findContactsInCell(int3 targetCell,
       } // Do not collide particle with itself end
     } // Iterate over cell particles end
   } // Check wether cell is empty end
-
-  // Return without errors
-  return 0;
 } // End of findContactsInCell(...)
 
 
@@ -310,7 +309,7 @@ __device__ int findContactsInCell(int3 targetCell,
 // Search for neighbors to particle 'idx' inside the 27 closest cells, 
 // and save the contact pairs in global memory.
 // Function is called from mainGPU loop.
-__global__ int topology(unsigned int* dev_cellStart, 
+__global__ void topology(unsigned int* dev_cellStart, 
     			 unsigned int* dev_cellEnd, // Input: Particles in cell 
 			 unsigned int* dev_gridParticleIndex, // Input: Unsorted-sorted key
 			 Float4* dev_x_sorted, Float* dev_radius_sorted, 
@@ -326,7 +325,6 @@ __global__ int topology(unsigned int* dev_cellStart,
 
     // Count the number of contacts in this time step
     int nc = 0;
-    int status = 0;
 
     // Grid position of host and neighbor cells in uniform, cubic grid
     int3 gridPos;
@@ -343,20 +341,15 @@ __global__ int topology(unsigned int* dev_cellStart,
       for (int y_dim=-1; y_dim<2; ++y_dim) { // y-axis
 	for (int x_dim=-1; x_dim<2; ++x_dim) { // x-axis
 	  targetPos = gridPos + make_int3(x_dim, y_dim, z_dim);
-	  if (findContactsInCell(targetPos, idx_a, x_a, radius_a,
+	  findContactsInCell(targetPos, idx_a, x_a, radius_a,
 	       		     dev_x_sorted, dev_radius_sorted,
 			     dev_cellStart, dev_cellEnd,
 			     dev_gridParticleIndex,
-	    		     &nc, dev_contacts, dev_distmod) == 1)
-	    status = 1;
+	    		     &nc, dev_contacts, dev_distmod);
 	}
       }
     }
   }
-
-  // Returns 0 if no particles have more contacts than allowed,
-  // and 1 otherwise
-  return status;
 } // End of topology(...)
 
 

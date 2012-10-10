@@ -484,16 +484,15 @@ __host__ void gpuMain(Float4* host_x,
       // For each particle: Search contacts in neighbor cells
       if (PROFILING == 1)
 	startTimer(&kernel_tic);
-      if(topology<<<dimGrid, dimBlock>>>(dev_cellStart, 
-					 dev_cellEnd,
-					 dev_gridParticleIndex,
-					 dev_x_sorted, 
-					 dev_radius_sorted, 
-					 dev_contacts,
-					 dev_distmod) == 1) {
+      topology<<<dimGrid, dimBlock>>>(dev_cellStart, 
+				      dev_cellEnd,
+				      dev_gridParticleIndex,
+				      dev_x_sorted, 
+				      dev_radius_sorted, 
+				      dev_contacts,
+				      dev_distmod);
 	std::cerr << "Warning! One or more particles have more contacts than allowed.\n"
-	          << "Raise NC in datatypes.h to accomodate.\n"
-      }
+	          << "Raise NC in datatypes.h to accomodate.\n";
 
       // Empty cuPrintf() buffer to console
       //cudaThreadSynchronize();
