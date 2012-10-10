@@ -80,6 +80,7 @@ int main(const int argc, const char* argv[])
     // Single precision arrays used for computations
     float4* p      = new float4[np];
     float*  fixvel = new float[np];
+    float*  xsum   = new float[np];
     float*  es_dot = new float[np];
     float*  ev_dot = new float[np];
     float*  es     = new float[np];
@@ -156,7 +157,8 @@ int main(const int argc, const char* argv[])
     for (unsigned int i=0; i<np; i++) {
       (void)fread(&d, sizeof(d), 1, fin); // fixvel
       fixvel[i] = (float)d;
-      (void)fread(&blankd, sizeof(blankd), 1, fin); // xsum
+      (void)fread(&d, sizeof(d), 1, fin); // xsum
+      xsum[i] = (float)d;
       (void)fread(&d, sizeof(d), 1, fin);  // radius
       p[i].w = (float)d;
       for (int j=0; j<10; j++)
@@ -211,6 +213,8 @@ int main(const int argc, const char* argv[])
 	visualize = 3; // 3: es view
       if(strcmp(argv[6],"vel") == 0)
 	visualize = 4; // 4: velocity view
+      if(strcmp(argv[6],"xsum") == 0)
+	visualize = 5; // 5: xsum view
 
       // Read max. value specified in command args.
       max_val = atof(argv[7]);
@@ -221,7 +225,7 @@ int main(const int argc, const char* argv[])
     if (strcmp(argv[1],"GPU") == 0) {
 
       // Call cuda wrapper
-      if (rt(p, np, img, width, height, origo, L, eye, lookat, imgw, visualize, max_val, fixvel, pres, es_dot, es, vel) != 0) {
+      if (rt(p, np, img, width, height, origo, L, eye, lookat, imgw, visualize, max_val, fixvel, xsum, pres, es_dot, es, vel) != 0) {
 	cout << "\nError in rt()\n";
 	return 1;
       }
@@ -240,6 +244,7 @@ int main(const int argc, const char* argv[])
     // Free dynamically allocated memory
     delete [] p;
     delete [] fixvel;
+    delete [] xsum;
     delete [] pres;
     delete [] es;
     delete [] ev;

@@ -300,7 +300,12 @@ __host__ int rt(float4* p, Inttype np,
                 rgb* img, unsigned int width, unsigned int height,
 		f3 origo, f3 L, f3 eye, f3 lookat, float imgw,
 		int visualize, float max_val,
-		float* fixvel, float* pres, float* es_dot, float* es, float* vel)
+		float* fixvel,
+		float* xsum,
+		float* pres,
+		float* es_dot,
+		float* es,
+		float* vel)
 {
   using std::cout;
 
@@ -344,6 +349,8 @@ __host__ int rt(float4* p, Inttype np,
     cudaMemcpy(_linarr, es, np*sizeof(float), cudaMemcpyHostToDevice);
   if (visualize == 4)
     cudaMemcpy(_linarr, vel, np*sizeof(float), cudaMemcpyHostToDevice);
+  if (visualize == 5)
+    cudaMemcpy(_linarr, xsum, np*sizeof(float), cudaMemcpyHostToDevice);
 
   // Check for errors after memory allocation
   checkForCudaErrors("CUDA error after memory allocation"); 
@@ -392,6 +399,11 @@ __host__ int rt(float4* p, Inttype np,
 	_p, _fixvel, _linarr, max_val, _img);
   } else if (visualize == 4) { // velocity visualization
     cout << "  Velocity color map range: [0, " << max_val << "] m/s\n";
+    rayIntersectSpheresColormap<<< blocksPerGrid, threadsPerBlock >>>(
+	_ray_origo, _ray_direction,
+	_p, _fixvel, _linarr, max_val, _img);
+  } else if (visualize == 5) { // xsum visualization
+    cout << "  XSum color map range: [0, " << max_val << "] m\n";
     rayIntersectSpheresColormap<<< blocksPerGrid, threadsPerBlock >>>(
 	_ray_origo, _ray_direction,
 	_p, _fixvel, _linarr, max_val, _img);

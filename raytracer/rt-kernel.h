@@ -31,5 +31,5 @@ int rt(float4* p, Inttype np,
        rgb* img, unsigned int width, unsigned int height,
        f3 origo, f3 L, f3 eye, f3 lookat, float imgw,
        int visualize, float max_val,
-       float* fixvel, float* pres, float* es_dot, float* es, float* vel);
+       float* fixvel, float* xsum, float* pres, float* es_dot, float* es, float* vel);
 #endif
