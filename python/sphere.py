@@ -769,6 +769,12 @@ class Spherebin:
     elif method == 'shearrate':
       return numpy.sum(self.es_dot)
 
+    elif method == 'visc_n':
+      return numpy.sum(self.ev):
+
+    elif method == 'visc_n_rate':
+      return numpy.sum(self.ev_dot)
+
   def voidRatio(self):
     """ Return the current void ratio
     """
@@ -925,56 +931,71 @@ def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
       Ekin[i] = sb.energy("kin")
       Erot[i] = sb.energy("rot")
       Es[i]   = sb.energy("shear")
+      Ev[i]   = sb.energy("visc_n")
       Es_dot[i] = sb.energy("shearrate")
-      Esum[i] = Epot[i] + Ekin[i] + Erot[i] + Es[i]
+      Ev_dot[i] = sb.energy("visc_n_rate")
+      Esum[i] = Epot[i] + Ekin[i] + Erot[i] + Es[i] + Ev[i]
     
     t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
     if (outformat != 'txt'):
       # Potential energy
-      ax1 = plt.subplot2grid((2,3),(0,0))
+      ax1 = plt.subplot2grid((5,5),(0,0))
       ax1.set_xlabel('Time [s]')
       ax1.set_ylabel('Total potential energy [J]')
       ax1.plot(t, Epot, '+-')
 
       # Kinetic energy
-      ax2 = plt.subplot2grid((2,3),(0,1))
+      ax2 = plt.subplot2grid((5,5),(0,1))
       ax2.set_xlabel('Time [s]')
       ax2.set_ylabel('Total kinetic energy [J]')
       ax2.plot(t, Ekin, '+-')
 
       # Rotational energy
-      ax3 = plt.subplot2grid((2,3),(0,2))
+      ax3 = plt.subplot2grid((5,5),(0,2))
       ax3.set_xlabel('Time [s]')
       ax3.set_ylabel('Total rotational energy [J]')
       ax3.plot(t, Erot, '+-')
 
-      # Shear energy rate
-      ax4 = plt.subplot2grid((2,3),(1,0))
+      # Total energy
+      ax4 = plt.subplot2grid((5,5),(0,3))
       ax4.set_xlabel('Time [s]')
-      ax4.set_ylabel('Shear energy rate [W]')
-      ax4.plot(t, Es_dot, '+-')
+      ax4.set_ylabel('Total energy [J]')
+      ax4.plot(t, Esum, '+-')
+
+      # Shear energy rate
+      ax5 = plt.subplot2grid((5,5),(1,0))
+      ax5.set_xlabel('Time [s]')
+      ax5.set_ylabel('Frictional dissipation rate [W]')
+      ax5.plot(t, Es_dot, '+-')
       
       # Shear energy
-      ax5 = plt.subplot2grid((2,3),(1,1))
-      ax5.set_xlabel('Time [s]')
-      ax5.set_ylabel('Total shear energy [J]')
-      ax5.plot(t, Es, '+-')
+      ax6 = plt.subplot2grid((5,5),(1,1))
+      ax6.set_xlabel('Time [s]')
+      ax6.set_ylabel('Total frictional dissipation [J]')
+      ax6.plot(t, Es, '+-')
 
-      # Total energy
-      #ax6 = plt.subplot2grid((2,3),(1,2))
-      #ax6.set_xlabel('Time [s]')
-      #ax6.set_ylabel('Total energy [J]')
-      #ax6.plot(t, Esum, '+-')
+      # Visc_n energy rate
+      ax7 = plt.subplot2grid((5,5),(1,2))
+      ax7.set_xlabel('Time [s]')
+      ax7.set_ylabel('Viscous dissipation rate [W]')
+      ax7.plot(t, Ev_dot, '+-')
+      
+      # Visc_nenergy
+      ax8 = plt.subplot2grid((5,5),(1,3))
+      ax8.set_xlabel('Time [s]')
+      ax8.set_ylabel('Total viscous dissipation [J]')
+      ax8.plot(t, Ev, '+-')
+
 
       # Combined view
-      ax6 = plt.subplot2grid((2,3),(1,2))
-      ax6.set_xlabel('Time [s]')
-      ax6.set_ylabel('Energy [J]')
-      ax6.plot(t, Epot, '+-g')
-      ax6.plot(t, Ekin, '+-b')
-      ax6.plot(t, Erot, '+-r')
-      ax6.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
+      ax9 = plt.subplot2grid((5,5),(1,4))
+      ax9.set_xlabel('Time [s]')
+      ax9.set_ylabel('Energy [J]')
+      ax9.plot(t, Epot, '+-g')
+      ax9.plot(t, Ekin, '+-b')
+      ax9.plot(t, Erot, '+-r')
+      ax9.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
 
   elif method == 'walls':
 
