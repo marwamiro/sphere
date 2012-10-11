@@ -385,8 +385,8 @@ __device__ void contactLinear(Float3* F, Float3* T,
       // Shear friction heat production rate: 
       // The energy lost from the tangential spring is dissipated as heat
       //*es_dot += -dot(vel_t_ab, f_t);
-      //*es_dot += length(delta_t0 - delta_t) * devC_k_t / devC_dt; // Seen in EsyS-Particle
-      *es_dot += fabs(dot(delta_t0 - delta_t, f_t)) / devC_dt; 
+      *es_dot += length(delta_t0 - delta_t) * devC_k_t / devC_dt; // Seen in EsyS-Particle
+      //*es_dot += fabs(dot(delta_t0 - delta_t, f_t)) / devC_dt; 
 
     } else { // Static case
 
