@@ -1,5 +1,5 @@
 ------------------------------------------------------------------
- This is the README file for the ESys-particle ray tracing module
+ This is the README file for the SPHERE ray tracing module
    Last revision: May. 18., 2012
 ------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ The ray tracing module was initially developed for the Sphere DEM
 software: http://github.com/anders-dc/sphere
 
 This is a port for visualizing simulation output from the 
-ESys-Particle discrete element method software.
+SPHERE discrete element method software.
 
 It is developed by Anders Damsgaard Christensen, adc@geo.au.dk, and
 is licenced under the GNU General Public Licence (GPL).
