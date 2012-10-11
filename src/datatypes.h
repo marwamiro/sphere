@@ -144,7 +144,8 @@ struct Params {
 int fwritebin(char *target, Particles *p, 
     	      Float4 *host_x, Float4 *host_vel, 
 	      Float4 *host_angvel, Float4 *host_force, 
-	      Float4 *host_torque, uint4 *host_bonds,
+	      Float4 *host_torque, Float4 *host_angpos, 
+	      uint4 *host_bonds,
 	      Grid *grid, Time *time, Params *params,
 	      Float4 *host_w_nx, Float4 *host_w_mvfd);
 
@@ -160,6 +161,7 @@ void gpuMain(Float4* host_x,
 	     Float4* host_angacc,
 	     Float4* host_force,
 	     Float4* host_torque,
+	     Float4* host_angpos,
 	     uint4*  host_bonds,
 	     Particles* p, Grid* grid,
 	     Time* time, Params* params,

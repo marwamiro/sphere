@@ -10,7 +10,7 @@
 __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 			  Float4* dev_angvel_sorted, Float* dev_radius_sorted, // Input
 			  Float4* dev_x, Float4* dev_vel, Float4* dev_angvel, // Output
-			  Float4* dev_force, Float4* dev_torque, // Input
+			  Float4* dev_force, Float4* dev_torque, Float4* dev_angpos, // Input
 			  unsigned int* dev_gridParticleIndex) // Input: Sorted-Unsorted key
 {
   unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
@@ -22,6 +22,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     unsigned int orig_idx = dev_gridParticleIndex[idx];
     Float4 force  = dev_force[orig_idx];
     Float4 torque = dev_torque[orig_idx];
+    Float4 angpos = dev_angpos[orig_idx];
 
     // Initialize acceleration vectors to zero
     Float4 acc    = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -88,6 +89,12 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     //x.y += vel.y * dt;
     //x.z += vel.z * dt;
 
+    // Update angular position. Second-order scheme based on Taylor expansion
+    // (greater accuracy than the first-order Euler's scheme)
+    angpos.x += angvel.x * dt + (angacc.x * dt*dt)/2.0f;
+    angpos.y += angvel.y * dt + (angacc.y * dt*dt)/2.0f;
+    angpos.z += angvel.z * dt + (angacc.z * dt*dt)/2.0f;
+
     // Update position. Second-order scheme based on Taylor expansion 
     // (greater accuracy than the first-order Euler's scheme)
     x.x += vel.x * dt + (acc.x * dt*dt)/2.0f;
@@ -121,6 +128,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     // Store data in global memory at original, pre-sort positions
     dev_angvel[orig_idx] = angvel;
     dev_vel[orig_idx]    = vel;
+    dev_angpos[orig_idx] = angpos;
     dev_x[orig_idx]      = x;
   } 
 } // End of integrate(...)

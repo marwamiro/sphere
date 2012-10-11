@@ -39,6 +39,7 @@ class Spherebin:
     self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
     self.force   = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
     self.torque  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+    self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
     self.fixvel  = numpy.zeros(self.np, dtype=numpy.float64)
     self.xsum    = numpy.zeros(self.np, dtype=numpy.float64)
     self.radius  = numpy.zeros(self.np, dtype=numpy.float64)
@@ -112,6 +113,7 @@ class Spherebin:
       self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
       self.force   = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
       self.torque  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+      self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
       self.fixvel  = numpy.zeros(self.np, dtype=numpy.float64)
       self.xsum    = numpy.zeros(self.np, dtype=numpy.float64)
       self.radius  = numpy.zeros(self.np, dtype=numpy.float64)
@@ -145,6 +147,7 @@ class Spherebin:
 	  self.angvel[j,i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 	  self.force[j,i]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 	  self.torque[j,i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+	  self.angpos[j,i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
  
       # Per-particle single-value parameters
       for j in range(self.np):
@@ -247,6 +250,7 @@ class Spherebin:
 	  fh.write(self.angvel[j,i].astype(numpy.float64))
 	  fh.write(self.force[j,i].astype(numpy.float64))
 	  fh.write(self.torque[j,i].astype(numpy.float64))
+	  fh.write(self.angpos[j,i].astype(numpy.float64))
  
       # Per-particle single-value parameters
       for j in range(self.np):
@@ -549,6 +553,11 @@ class Spherebin:
     z_adjust = 1.1	# Overheightening of grid. 1.0 = no overheightening
     self.num[2] = numpy.ceil((z_max-z_min)*z_adjust/cellsize)
     self.L[2] = (z_max-z_min)*z_adjust
+    
+    # zero kinematics
+    self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
+    self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
+    self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
 
     # Initialize upper wall
     self.wmode[0] = 0
@@ -574,6 +583,11 @@ class Spherebin:
     z_adjust = 1.1	# Overheightening of grid. 1.0 = no overheightening
     self.num[2] = numpy.ceil((z_max-z_min)*z_adjust/cellsize)
     self.L[2] = (z_max-z_min)*z_adjust
+
+    # zero kinematics
+    self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
+    self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
+    self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
 
     # Initialize upper wall
     self.wmode[0] = 1
@@ -606,9 +620,10 @@ class Spherebin:
     # Initialize upper wall
     self.w_devs[0] = deviatoric_stress
 
-    # Zero kinematics
-    self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
-    self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+    # zero kinematics
+    self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
+    self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
+    self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
 
     fixheight = 2*cellsize
     #fixheight = cellsize

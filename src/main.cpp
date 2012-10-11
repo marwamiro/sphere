@@ -190,6 +190,7 @@ int main(int argc, char *argv[])
   Float4 *host_angacc = new Float4[p.np];  // Particle angular acceleration vector (dotomega)
   Float4 *host_force  = new Float4[p.np];  // Particle summed force
   Float4 *host_torque = new Float4[p.np];  // Particle summed torque
+  Float4 *host_angpos = new Float4[p.np];  // Particle angular position
 
 
   uint4  *host_bonds  = new uint4[p.np];   // Bonds from particle [i] to two particles
@@ -223,6 +224,9 @@ int main(int argc, char *argv[])
       exit(1);
     if (fread(&host_torque[j].x, sizeof(Float), 1, fp) != 1)
       exit(1);
+    if (fread(&host_angpos[j].x, sizeof(Float), 1, fp) != 1)
+      exit(1);
+
 
     if (fread(&host_x[j].y, sizeof(Float), 1, fp) != 1)
       exit(1); // Return unsuccessful exit status
@@ -234,6 +238,8 @@ int main(int argc, char *argv[])
       exit(1);
     if (fread(&host_torque[j].y, sizeof(Float), 1, fp) != 1)
       exit(1);
+    if (fread(&host_angpos[j].y, sizeof(Float), 1, fp) != 1)
+      exit(1);
 
     if (fread(&host_x[j].z, sizeof(Float), 1, fp) != 1)
       exit(1); // Return unsuccessful exit status
@@ -244,6 +250,8 @@ int main(int argc, char *argv[])
     if (fread(&host_force[j].z, sizeof(Float), 1, fp) != 1)
       exit(1);
     if (fread(&host_torque[j].z, sizeof(Float), 1, fp) != 1)
+      exit(1);
+    if (fread(&host_angpos[j].z, sizeof(Float), 1, fp) != 1)
       exit(1);
   }
 
@@ -438,6 +446,7 @@ int main(int argc, char *argv[])
 	  host_angacc,
 	  host_force,
 	  host_torque,
+	  host_angpos,
 	  host_bonds,
 	  &p, &grid, 
 	  &time, &params,
@@ -457,6 +466,7 @@ int main(int argc, char *argv[])
   delete[] host_angacc;
   delete[] host_force;
   delete[] host_torque;
+  delete[] host_angpos;
 
   // Particle bonds
   delete[] host_bonds;

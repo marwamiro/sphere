@@ -17,6 +17,7 @@ int fwritebin(char *target,
     Float4 *host_angvel, 
     Float4 *host_force, 
     Float4 *host_torque, 
+    Float4 *host_angpos, 
     uint4 *host_bonds,
     Grid *grid, 
     Time *time, 
@@ -73,6 +74,7 @@ int fwritebin(char *target,
       fwrite(&host_angvel[j].x, sizeof(Float), 1, fp);
       fwrite(&host_force[j].x, sizeof(Float), 1, fp);
       fwrite(&host_torque[j].x, sizeof(Float), 1, fp);
+      fwrite(&host_angpos[j].x, sizeof(Float), 1, fp);
 
       // y-axis
       fwrite(&host_x[j].y, sizeof(Float), 1, fp);
@@ -80,6 +82,7 @@ int fwritebin(char *target,
       fwrite(&host_angvel[j].y, sizeof(Float), 1, fp);
       fwrite(&host_force[j].y, sizeof(Float), 1, fp);
       fwrite(&host_torque[j].y, sizeof(Float), 1, fp);
+      fwrite(&host_angpos[j].y, sizeof(Float), 1, fp);
 
       // z-axis
       fwrite(&host_x[j].z, sizeof(Float), 1, fp);
@@ -87,6 +90,7 @@ int fwritebin(char *target,
       fwrite(&host_angvel[j].z, sizeof(Float), 1, fp);
       fwrite(&host_force[j].z, sizeof(Float), 1, fp);
       fwrite(&host_torque[j].z, sizeof(Float), 1, fp);
+      fwrite(&host_angpos[j].z, sizeof(Float), 1, fp);
     } 
 
     // Individual particle values
@@ -200,6 +204,8 @@ int fwritebin(char *target,
       fwrite(&d, sizeof(d), 1, fp);
       d = (double)host_torque[j].x;
       fwrite(&d, sizeof(d), 1, fp);
+      d = (double)host_angpos[j].x;
+      fwrite(&d, sizeof(d), 1, fp);
 
       // y-axis
       d = (double)host_x[j].y;
@@ -212,6 +218,8 @@ int fwritebin(char *target,
       fwrite(&d, sizeof(d), 1, fp);
       d = (double)host_torque[j].y;
       fwrite(&d, sizeof(d), 1, fp);
+      d = (double)host_angpos[j].y;
+      fwrite(&d, sizeof(d), 1, fp);
 
       // z-axis
       d = (double)host_x[j].z;
@@ -223,6 +231,8 @@ int fwritebin(char *target,
       d = (double)host_force[j].z;
       fwrite(&d, sizeof(d), 1, fp);
       d = (double)host_torque[j].z;
+      fwrite(&d, sizeof(d), 1, fp);
+      d = (double)host_angpos[j].z;
       fwrite(&d, sizeof(d), 1, fp);
     } 
 

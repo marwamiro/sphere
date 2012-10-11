@@ -161,6 +161,7 @@ __host__ void gpuMain(Float4* host_x,
 		      Float4* host_angacc,
 		      Float4* host_force,
 		      Float4* host_torque,
+		      Float4* host_angpos,
 		      uint4*  host_bonds,
 		      Particles* p, 
 		      Grid* grid, 
@@ -185,6 +186,7 @@ __host__ void gpuMain(Float4* host_x,
   Float4* dev_angacc;	// Particle angular acceleration
   Float4* dev_force;	// Sum of forces
   Float4* dev_torque;	// Sum of torques
+  Float4* dev_angpos;	// Particle angular position
   Float*  dev_radius;	// Particle radius
   Float*  dev_es_dot;	// Current shear energy producion rate
   Float*  dev_ev_dot;	// Current viscous energy producion rate
@@ -240,6 +242,7 @@ __host__ void gpuMain(Float4* host_x,
   cudaMalloc((void**)&dev_angacc, memSizeF4);
   cudaMalloc((void**)&dev_force, memSizeF4);
   cudaMalloc((void**)&dev_torque, memSizeF4);
+  cudaMalloc((void**)&dev_angpos, memSizeF4);
   cudaMalloc((void**)&dev_radius, memSizeF);
   cudaMalloc((void**)&dev_radius_sorted, memSizeF);
   cudaMalloc((void**)&dev_es_dot, memSizeF);
@@ -280,6 +283,7 @@ __host__ void gpuMain(Float4* host_x,
   cudaMemcpy(dev_angacc, host_angacc, memSizeF4, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_force, host_force, memSizeF4, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_torque, host_torque, memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_angpos, host_angpos, memSizeF4, cudaMemcpyHostToDevice);
   //cudaMemcpy(dev_bonds, host_bonds, sizeof(uint4) * p->np, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_radius, p->radius, memSizeF, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_es_dot, p->es_dot, memSizeF, cudaMemcpyHostToDevice);
@@ -361,7 +365,7 @@ __host__ void gpuMain(Float4* host_x,
   sprintf(file,"%s/output/%s.output0.bin", cwd, inputbin);
   if (fwritebin(file, p, host_x, host_vel, 
 		host_angvel, host_force, 
-		host_torque,
+		host_torque, host_angpos,
 		host_bonds,
 		grid, time, params,
 		host_w_nx, host_w_mvfd) != 0)  {
@@ -539,7 +543,7 @@ __host__ void gpuMain(Float4* host_x,
     integrate<<<dimGrid, dimBlock>>>(dev_x_sorted, dev_vel_sorted, 
 				     dev_angvel_sorted, dev_radius_sorted,
 				     dev_x, dev_vel, dev_angvel,
-				     dev_force, dev_torque, 
+				     dev_force, dev_torque, dev_angpos,
 				     dev_gridParticleIndex);
 
     cudaThreadSynchronize();
@@ -598,6 +602,7 @@ __host__ void gpuMain(Float4* host_x,
       cudaMemcpy(host_angvel, dev_angvel, memSizeF4, cudaMemcpyDeviceToHost);
       cudaMemcpy(host_force, dev_force, memSizeF4, cudaMemcpyDeviceToHost);
       cudaMemcpy(host_torque, dev_torque, memSizeF4, cudaMemcpyDeviceToHost);
+      cudaMemcpy(host_angpos, dev_angpos, memSizeF4, cudaMemcpyDeviceToHost);
       //cudaMemcpy(host_bonds, dev_bonds, sizeof(uint4) * p->np, cudaMemcpyDeviceToHost);
       cudaMemcpy(p->es_dot, dev_es_dot, memSizeF, cudaMemcpyDeviceToHost);
       cudaMemcpy(p->ev_dot, dev_ev_dot, memSizeF, cudaMemcpyDeviceToHost);
@@ -620,7 +625,8 @@ __host__ void gpuMain(Float4* host_x,
 
       if (fwritebin(file, p, host_x, host_vel, 
 	    	    host_angvel, host_force, 
-		    host_torque, host_bonds,
+		    host_torque, host_angpos,
+		    host_bonds,
 		    grid, time, params,
 	    	    host_w_nx, host_w_mvfd) != 0) {
 	cout << "\n Error during fwritebin() in main loop\n";
@@ -695,6 +701,7 @@ __host__ void gpuMain(Float4* host_x,
   cudaFree(dev_angacc);
   cudaFree(dev_force);
   cudaFree(dev_torque);
+  cudaFree(dev_angpos);
   cudaFree(dev_radius);
   cudaFree(dev_radius_sorted);
   cudaFree(dev_es_dot);
