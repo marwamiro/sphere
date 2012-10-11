@@ -479,14 +479,16 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	  } else {
 	    __syncthreads();
 	    // Remove this contact (there is no particle with index=np)
-	    dev_contacts[mempos] = devC_np; 
+	    dev_contacts[mempos] = devC_np;
 	    // Zero sum of shear displacement in this position
 	    dev_delta_t[mempos] = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	  }
-	} else {
+
+	}/* else { // if dev_contacts[mempos] == devC_np
 	  __syncthreads();
+	  // Zero sum of shear displacement in this position
 	  dev_delta_t[mempos] = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-	}
+	} */
       } // Contact loop end
 
 

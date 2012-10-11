@@ -273,17 +273,17 @@ This appendix contains the following source code files:
 
 \subsection{CUDA raytracing source code}
 %\subsubsection{rt\_kernel.h}
-\lstinputlisting[caption={rt\_kernel.h},label={rt-kernel.h},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel.h}
+\lstinputlisting[caption={rt-kernel.h},label={rt-kernel.h},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel.h}
 
 %\subsubsection{rt\_kernel.cu}
-\lstinputlisting[caption={rt\_kernel.cu},label={rt-kernel.cu},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel.cu}
+\lstinputlisting[caption={rt-kernel.cu},label={rt-kernel.cu},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel.cu}
 
 \subsection{CPU raytracing source code}
 %\subsubsection{rt\_kernel\_cpu.h}
-\lstinputlisting[caption={rt\_kernel\_cpu.h},label={rt-kernel-cpu.h},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel-cpu.h}
+\lstinputlisting[caption={rt-kernel-cpu.h},label={rt-kernel-cpu.h},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel-cpu.h}
 
 %\subsubsection{rt\_kernel\_cpu.cpp}
-\lstinputlisting[caption={rt\_kernel\_cpu.cpp},label={rt-kernel-cpu.cpp},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel-cpu.cpp}
+\lstinputlisting[caption={rt-kernel-cpu.cpp},label={rt-kernel-cpu.cpp},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel-cpu.cpp}
 
 
 
@@ -291,47 +291,6 @@ This appendix contains the following source code files:
 
 
 
-
-
-
-
-\section{Bloopers}
-This section contains pictures of the unfinished raytracer in a malfunctioning state, which can provide interesting, however unusable, results.
-
-\begin{figure}[!h]
-\centering
-\includegraphics[width=0.30\textwidth]{bloopers/black.png}
-\caption{An end result encountered way too many times, e.g. after inadvertently dividing the focal length with zero.}
-\label{fig:black}
-\end{figure}
-
-\begin{figure}[!h]
-\centering
-\includegraphics[width=0.30\textwidth]{bloopers/twisted.png}
-\caption{Twisted appearance caused by wrong thread/block layout.}
-\label{fig:twisted}
-\end{figure}
-
-\begin{figure}[!h]
-\centering
-\includegraphics[width=0.30\textwidth]{bloopers/wrong_order.png}
-\caption{A problem with the distance determination caused the particles to be displayed in a wrong order.}
-\label{fig:wrongorder}
-\end{figure}
-
-\begin{figure}[!h]
-\centering
-\includegraphics[width=0.30\textwidth]{bloopers/colorful.png}
-\caption{Colorful result caused by forgetting to normalize the normal vector calculation.}
-\label{fig:colorful}
-\end{figure}
-
-\begin{figure}[!h]
-\centering
-\includegraphics[width=0.30\textwidth]{bloopers/cpu_wrong_colorful.png}
-\caption{Another colorful result with wrong order of particles, cause by using \texttt{abs()} (meant for integers) instead of \texttt{fabs()} (meant for floats).}
-\label{fig:colorful_cpu}
-\end{figure}
 
 
 

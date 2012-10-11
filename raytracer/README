@@ -1,37 +1,36 @@
 ------------------------------------------------------------------
-This is the README file for the SPHERE ray tracing module. 
-  Last revision: Oct. 17., 2011
+ This is the README file for the ESys-particle ray tracing module
+   Last revision: May. 18., 2012
 ------------------------------------------------------------------
 
- BACKGROUND INFORMATION
+BACKGROUND INFORMATION
+======================
 
-The ray tracing module was developed as an exam project in the 
-course "Data Parallel Computing", held Q1 at the Department of 
-Computer Science, Aarhus University, Denmark by Thomas Sangild 
-Sørensen. 
+The ray tracing module was initially developed for the Sphere DEM
+software: http://github.com/anders-dc/sphere
 
-It is used for visualizing simulation output from the SPHERE
-discrete element method software.
+This is a port for visualizing simulation output from the 
+ESys-Particle discrete element method software.
 
-It is developed by Anders Damsgaard Christensen, adc@cs.au.dk, and
+It is developed by Anders Damsgaard Christensen, adc@geo.au.dk, and
 is licenced under the GNU General Public Licence (GPL).
 
 Documentation can be found in the file doc/raytracer.pdf
 
-------------------------------------------------------------------
 
-  REQUIREMENTS
+REQUIREMENTS
+============
 
 For compiling the raytracer, the following software is required:
  - GNU compiler collection
  - CUDA developer drivers
  - CUDA toolkit
 When executing the compiled code, a CUDA compatible GPU is
-necessary.
+necessary, along with appropriate developer device drivers.
 
-------------------------------------------------------------------
 
-  USAGE INSTRUCTIONS
+USAGE INSTRUCTIONS
+==================
  
 The source code is built using GNU make with the command:
   ./make
