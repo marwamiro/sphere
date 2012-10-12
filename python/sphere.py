@@ -42,16 +42,16 @@ class Spherebin:
     self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
     self.fixvel  = numpy.zeros(self.np, dtype=numpy.float64)
     self.xsum    = numpy.zeros(self.np, dtype=numpy.float64)
-    self.radius  = numpy.zeros(self.np, dtype=numpy.float64)
-    self.rho     = numpy.zeros(self.np, dtype=numpy.float64)
-    self.k_n     = numpy.zeros(self.np, dtype=numpy.float64)
-    self.k_t     = numpy.zeros(self.np, dtype=numpy.float64)
+    self.radius  = numpy.ones(self.np, dtype=numpy.float64)
+    self.rho     = numpy.ones(self.np, dtype=numpy.float64)
+    self.k_n     = numpy.ones(self.np, dtype=numpy.float64) * 1.16e9
+    self.k_t     = numpy.ones(self.np, dtype=numpy.float64) * 1.16e9
     self.k_r	 = numpy.zeros(self.np, dtype=numpy.float64)
     self.gamma_n = numpy.zeros(self.np, dtype=numpy.float64)
     self.gamma_t = numpy.zeros(self.np, dtype=numpy.float64)
     self.gamma_r = numpy.zeros(self.np, dtype=numpy.float64)
-    self.mu_s    = numpy.zeros(self.np, dtype=numpy.float64)
-    self.mu_d    = numpy.zeros(self.np, dtype=numpy.float64)
+    self.mu_s    = numpy.ones(self.np, dtype=numpy.float64)
+    self.mu_d    = numpy.ones(self.np, dtype=numpy.float64)
     self.mu_r    = numpy.zeros(self.np, dtype=numpy.float64)
     self.es_dot  = numpy.zeros(self.np, dtype=numpy.float64)
     self.ev_dot  = numpy.zeros(self.np, dtype=numpy.float64)
@@ -63,11 +63,11 @@ class Spherebin:
 
     # Constant, single-value physical parameters
     self.globalparams = numpy.zeros(1, dtype=numpy.int32)
-    self.g            = numpy.zeros(self.nd, dtype=numpy.float64)
+    self.g            = numpy.array([0.0, 0.0, -9.80], dtype=numpy.float64)
     self.kappa        = numpy.zeros(1, dtype=numpy.float64)
     self.db           = numpy.zeros(1, dtype=numpy.float64)
     self.V_b          = numpy.zeros(1, dtype=numpy.float64)
-    self.shearmodel   = numpy.zeros(1, dtype=numpy.uint32)
+    self.shearmodel   = numpy.ones(1, dtype=numpy.uint32)
 
     # Wall data
     self.nw 	 = numpy.ones(1, dtype=numpy.uint32) * nw
@@ -81,9 +81,9 @@ class Spherebin:
     
     # x- and y-boundary behavior
     self.periodic = numpy.zeros(1, dtype=numpy.uint32)
-    self.gamma_wn = numpy.zeros(1, dtype=numpy.float64)
-    self.gamma_ws = numpy.zeros(1, dtype=numpy.float64)
-    self.gamma_wr = numpy.zeros(1, dtype=numpy.float64)
+    self.gamma_wn = numpy.ones(1, dtype=numpy.float64) * 1e3
+    self.gamma_ws = numpy.ones(1, dtype=numpy.float64) * 1e3
+    self.gamma_wr = numpy.ones(1, dtype=numpy.float64) * 1e3
 
 
   # Read binary data
@@ -400,6 +400,50 @@ class Spherebin:
     #self.nw[0] = numpy.ones(1, dtype=numpy.uint32) * 1
     self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
 
+  # Fit cell number according to world dimensions
+  def fitNum(self):
+    """ Create cells. cellsize is increased from 2*r_max until it fits 
+        the horizontal grid.
+	Call after setting self.L, self.num and self.radius
+    """
+    cellsize_min = 2.1 * numpy.amax(self.radius)
+    self.num[0] = numpy.ceil((self.L[0]-self.origo[0])/cellsize_min)
+    self.num[1] = numpy.ceil((self.L[1]-self.origo[1])/cellsize_min)
+    self.num[2] = numpy.ceil((self.L[2]-self.origo[2])/cellsize_min)
+
+
+  # Generate grid based on particle positions
+  def initGrid(self, g = numpy.array([0.0, 0.0, -9.80665]),
+               margin = numpy.array([2.0, 2.0, 2.0]),
+	       periodic = 1,
+	       shearmodel = 2):
+    """ Initialize grid suitable for the particle positions set previously.
+        The margin parameter adjusts the distance (in no. of max. radii)
+	from the particle boundaries.
+    """
+
+    self.g = g
+    self.periodic[0] = periodic
+
+    # Cell configuration
+    r_max = numpy.amax(self.radius)
+    
+    # Max. and min. coordinates of world
+    self.origo = numpy.array([numpy.amin(self.x[:,0] - self.radius[:]),
+			      numpy.amin(self.x[:,1] - self.radius[:]),
+			      numpy.amin(self.x[:,2] - self.radius[:])]) \
+			      - margin*r_max
+    self.L = numpy.array([numpy.amax(self.x[:,0] + self.radius[:]),
+      			  numpy.amax(self.x[:,1] + self.radius[:]),
+			  numpy.amax(self.x[:,2] + self.radius[:])]) \
+			  + margin*r_max
+
+    # Fit cell size to world dimensions
+    fitNum()
+
+    self.shearmodel[0] = shearmodel
+
+
   # Initialize particle positions to regular, grid-like, non-overlapping configuration
   def initGridPos(self, g = numpy.array([0.0, 0.0, -9.80665]), 
       		        gridnum = numpy.array([12, 12, 36]),
@@ -522,7 +566,6 @@ class Spherebin:
     x_max = numpy.max(self.x[:,0] + self.radius)
     y_max = numpy.max(self.x[:,1] + self.radius)
     z_max = numpy.max(self.x[:,2] + self.radius)
-    cellsize = 2.1 * r_max
     # Adjust size of world
     self.num[0] = numpy.ceil(x_max/cellsize)
     self.num[1] = numpy.ceil(y_max/cellsize)
