@@ -134,21 +134,21 @@ int main(const int argc, const char* argv[])
       p[i].x = (float)d;	// Typecast to single precision
       (void)fread(&d, sizeof(d), 1, fin);
       v.x  = (float)d;
-      for (int j=0; j<3; j++)
+      for (int j=0; j<4; j++)
 	(void)fread(&blankd, sizeof(blankd), 1, fin);
 
       (void)fread(&d, sizeof(d), 1, fin);
       p[i].y = (float)d;
       (void)fread(&d, sizeof(d), 1, fin);
       v.y  = (float)d;
-      for (int j=0; j<3; j++)
+      for (int j=0; j<4; j++)
 	(void)fread(&blankd, sizeof(blankd), 1, fin);
 
       (void)fread(&d, sizeof(d), 1, fin);
       p[i].z = (float)d;
       (void)fread(&d, sizeof(d), 1, fin);
       v.z  = (float)d;
-      for (int j=0; j<3; j++)
+      for (int j=0; j<4; j++)
 	(void)fread(&blankd, sizeof(blankd), 1, fin);
 
       // Save velocity vector length
