@@ -768,9 +768,9 @@ __host__ void gpuMain(Float4* host_x,
   cudaFree(dev_w_force_partial);
 
   // Contact info arrays
-  delete [] host_contacts;
-  delete [] host_distmod;
-  delete [] host_delta_t;
+  delete[] host_contacts;
+  delete[] host_distmod;
+  delete[] host_delta_t;
 
   printf("Done\n");
 } /* EOF */
