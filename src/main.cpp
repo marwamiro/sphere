@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
   p.es         = new Float[p.np];      // Total shear energy dissipation
   p.ev         = new Float[p.np];      // Total viscous energy dissipation
   p.p	       = new Float[p.np];      // Pressure excerted onto particle
-  params.wmode = new int[MAXWALLS];    // Wall BC's, 0: devs, 1: vel
+  params.wmode = new int[MAXWALLS];    // Wall BC's, 0: fixed, 1: devs, 2: vel
 
   // Allocate Float4 host arrays
   Float4 *host_x      = new Float4[p.np];  // Center coordinates for each particle (x)
@@ -300,6 +300,7 @@ int main(int argc, char *argv[])
     if (fread(&params.g[i], sizeof(params.g[i]), 1, fp) != 1)
       exit(1);
   }
+
   if (fread(&params.kappa, sizeof(params.kappa), 1, fp) != 1)
     exit(1);
   if (fread(&params.db, sizeof(params.db), 1, fp) != 1)
@@ -328,7 +329,7 @@ int main(int argc, char *argv[])
 
   // Read wall data
   for (j=0; j<params.nw; ++j) {
-    // Wall condition mode: 0: devs, 1: vel
+    // Wall condition mode: 0: fixed, 1: devs, 2: vel
     if (fread(&params.wmode[j], sizeof(params.wmode[j]), 1, fp) != 1)
       exit(1);
 
@@ -409,8 +410,10 @@ int main(int argc, char *argv[])
 
   cout << "  - Top BC: ";
   if (params.wmode[0] == 0)
-    cout << "Deviatoric stress\n";
+    cout << "Fixed\n";
   else if (params.wmode[0] == 1)
+    cout << "Deviatoric stress\n";
+  else if (params.wmode[0] == 2)
     cout << "Velocity\n";
   else {
     cerr << "Top boundary condition not recognized!\n";

@@ -9,7 +9,7 @@ __constant__ Float        devC_dt;	   // Time step length
 __constant__ int          devC_global;	   // Parameter properties, 1: global, 0: individual
 __constant__ Float        devC_g[ND];	   // Gravitational acceleration vector
 __constant__ unsigned int devC_np;	   // Number of particles
-__constant__ char	  devC_nc;	   // Max. number of contacts a particle can have
+__constant__ int	  devC_nc;	   // Max. number of contacts a particle can have
 __constant__ unsigned int devC_shearmodel; // Shear force model: 1: viscous, frictional, 2: elastic, frictional
 __constant__ Float        devC_k_n;	   // Material normal stiffness
 __constant__ Float        devC_k_t;	   // Material tangential stiffness

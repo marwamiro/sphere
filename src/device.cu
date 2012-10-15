@@ -95,7 +95,7 @@ __host__ void transferToConstantMemory(Particles* p,
   cout << "\n  Transfering data to constant device memory:     ";
 
   cudaMemcpyToSymbol("devC_np", &p->np, sizeof(p->np));
-  cudaMemcpyToSymbol("devC_nc", &NC, sizeof(char));
+  cudaMemcpyToSymbol("devC_nc", &NC, sizeof(int));
   cudaMemcpyToSymbol("devC_origo", grid->origo, sizeof(Float)*ND);
   cudaMemcpyToSymbol("devC_L", grid->L, sizeof(Float)*ND);
   cudaMemcpyToSymbol("devC_num", grid->num, sizeof(unsigned int)*ND);
@@ -217,11 +217,14 @@ __host__ void gpuMain(Float4* host_x,
 
   // Particle contact bookkeeping
   unsigned int* dev_contacts;
+  unsigned int* host_contacts = new unsigned int[p->np*NC];
   // Particle pair distance correction across periodic boundaries
   Float4* dev_distmod;
+  Float4* host_distmod = new Float4[p->np*NC];
   // x,y,z contains the interparticle vector, corrected if contact 
   // is across a periodic boundary. 
   Float4* dev_delta_t; // Accumulated shear distance of contact
+  Float4* host_delta_t = new Float4[p->np*NC];
 
   // Particle memory size
   unsigned int memSizeF  = sizeof(Float) * p->np;
@@ -616,6 +619,14 @@ __host__ void gpuMain(Float4* host_x,
       cudaMemcpy(host_w_mvfd, dev_w_mvfd, 
 	  	 sizeof(Float)*params->nw*4, cudaMemcpyDeviceToHost);
 
+  
+      // Contact information
+      if (CONTACTINFO == 1) {
+	cudaMemcpy(host_contacts, dev_contacts, sizeof(unsigned int)*p->np*NC, cudaMemcpyDeviceToHost);
+	cudaMemcpy(host_delta_t, dev_delta_t, memSizeF4*NC, cudaMemcpyDeviceToHost);
+	cudaMemcpy(host_distmod, dev_distmod, memSizeF4*NC, cudaMemcpyDeviceToHost);
+      }
+
       // Pause the CPU thread until all CUDA calls previously issued are completed
       cudaThreadSynchronize();
 
@@ -631,6 +642,36 @@ __host__ void gpuMain(Float4* host_x,
 	    	    host_w_nx, host_w_mvfd) != 0) {
 	cout << "\n Error during fwritebin() in main loop\n";
 	exit(EXIT_FAILURE);
+      }
+
+      if (CONTACTINFO == 1) {
+	// Write contact information to stdout
+	cout << "\n\n---------------------------\n"
+	     << "t = " << time->current << " s.\n"
+	     << "---------------------------\n";
+
+	for (int n = 0; n < p->np; ++n) {
+	  cout << "\n## Particle " << n << " ##\n";
+
+	  cout  << "- contacts:\n";
+	  for (int nc = 0; nc < NC; ++nc) 
+	    cout << "[" << nc << "]=" << host_contacts[nc+NC*n] << '\n';
+
+	  cout << "\n- delta_t:\n";
+	  for (int nc = 0; nc < NC; ++nc) 
+	    cout << host_delta_t[nc+NC*n].x << '\t'
+		 << host_delta_t[nc+NC*n].y << '\t'
+		 << host_delta_t[nc+NC*n].z << '\t'
+		 << host_delta_t[nc+NC*n].w << '\n';
+
+	  cout << "\n- distmod:\n";
+	  for (int nc = 0; nc < NC; ++nc) 
+	    cout << host_distmod[nc+NC*n].x << '\t'
+		 << host_distmod[nc+NC*n].y << '\t'
+		 << host_distmod[nc+NC*n].z << '\t'
+		 << host_distmod[nc+NC*n].w << '\n';
+	}
+	cout << '\n';
       }
 
       // Update status.dat at the interval of filetime 
@@ -725,6 +766,11 @@ __host__ void gpuMain(Float4* host_x,
   cudaFree(dev_w_mvfd);
   cudaFree(dev_w_force);
   cudaFree(dev_w_force_partial);
+
+  // Contact info arrays
+  delete [] host_contacts;
+  delete [] host_distmod;
+  delete [] host_delta_t;
 
   printf("Done\n");
 } /* EOF */

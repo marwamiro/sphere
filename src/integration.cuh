@@ -181,8 +181,11 @@ __global__ void integrateWalls(Float4* dev_w_nx,
     // write-after-read, or write-after-write hazards. 
     Float4 w_nx   = dev_w_nx[idx];
     Float4 w_mvfd = dev_w_mvfd[idx];
-    int wmode = devC_wmode[idx];  // Wall BC, 0: devs, 1: vel
+    int wmode = devC_wmode[idx];  // Wall BC, 0: fixed, 1: devs, 2: vel
     Float acc;
+
+    if (wmode == 0) // Wall fixed: do nothing
+      return;
 
     // Find the final sum of forces on wall
     w_mvfd.z = 0.0f;
@@ -201,7 +204,7 @@ __global__ void integrateWalls(Float4* dev_w_nx,
     acc = (w_mvfd.z + N)/w_mvfd.x;
 
     // If Wall BC is controlled by velocity, it should not change
-    if (wmode == 1) { 
+    if (wmode == 2) { 
       acc = 0.0f;
     }
 

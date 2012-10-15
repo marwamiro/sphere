@@ -10,9 +10,14 @@
 
 
 // Enable profiling of kernel runtimes?
-// 0: No
+// 0: No (default)
 // 1: Yes
 #define PROFILING 0
+
+// Output information about contacts to stdout?
+// 0: No (default)
+// 1: Yes
+#define CONTACTINFO 0
 
 
 //////////////////////
@@ -60,8 +65,8 @@ const unsigned int ND = 3;
 const Float VERS = 0.25;
 
 // Max. number of contacts per particle
-//const char NC = 16;
-const char NC = 32;
+//const int NC = 16;
+const int NC = 32;
 
 
 ///////////////////////////

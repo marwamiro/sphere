@@ -43,7 +43,7 @@ class Spherebin:
     self.fixvel  = numpy.zeros(self.np, dtype=numpy.float64)
     self.xsum    = numpy.zeros(self.np, dtype=numpy.float64)
     self.radius  = numpy.ones(self.np, dtype=numpy.float64)
-    self.rho     = numpy.ones(self.np, dtype=numpy.float64)
+    self.rho     = numpy.ones(self.np, dtype=numpy.float64) * 2600.0
     self.k_n     = numpy.ones(self.np, dtype=numpy.float64) * 1.16e9
     self.k_t     = numpy.ones(self.np, dtype=numpy.float64) * 1.16e9
     self.k_r	 = numpy.zeros(self.np, dtype=numpy.float64)
@@ -62,18 +62,19 @@ class Spherebin:
     self.bonds   = numpy.ones(self.np*4, dtype=numpy.uint32).reshape(self.np,4) * self.np
 
     # Constant, single-value physical parameters
-    self.globalparams = numpy.zeros(1, dtype=numpy.int32)
-    self.g            = numpy.array([0.0, 0.0, -9.80], dtype=numpy.float64)
+    self.globalparams = numpy.ones(1, dtype=numpy.int32)
+    self.g            = numpy.array([0.0, 0.0, 0.0], dtype=numpy.float64)
     self.kappa        = numpy.zeros(1, dtype=numpy.float64)
     self.db           = numpy.zeros(1, dtype=numpy.float64)
     self.V_b          = numpy.zeros(1, dtype=numpy.float64)
-    self.shearmodel   = numpy.ones(1, dtype=numpy.uint32)
+    self.shearmodel   = numpy.ones(1, dtype=numpy.uint32) * 2
 
     # Wall data
     self.nw 	 = numpy.ones(1, dtype=numpy.uint32) * nw
     self.wmode   = numpy.zeros(self.nw, dtype=numpy.int32)
     self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
-    self.w_x     = numpy.zeros(self.nw, dtype=numpy.float64)
+    self.w_n[nw-1,nd-1] = -1.0
+    self.w_x     = numpy.ones(self.nw, dtype=numpy.float64)
     self.w_m     = numpy.zeros(self.nw, dtype=numpy.float64)
     self.w_vel   = numpy.zeros(self.nw, dtype=numpy.float64)
     self.w_force = numpy.zeros(self.nw, dtype=numpy.float64)
@@ -81,9 +82,9 @@ class Spherebin:
     
     # x- and y-boundary behavior
     self.periodic = numpy.zeros(1, dtype=numpy.uint32)
-    self.gamma_wn = numpy.ones(1, dtype=numpy.float64) * 1e3
-    self.gamma_ws = numpy.ones(1, dtype=numpy.float64) * 1e3
-    self.gamma_wr = numpy.ones(1, dtype=numpy.float64) * 1e3
+    self.gamma_wn = numpy.ones(1, dtype=numpy.float64) * 1.0e3
+    self.gamma_ws = numpy.ones(1, dtype=numpy.float64) * 1.0e3
+    self.gamma_wr = numpy.ones(1, dtype=numpy.float64) * 1.0e3
 
 
   # Read binary data
@@ -390,7 +391,7 @@ class Spherebin:
     self.shearmodel[0] = shearmodel
 
     # Initialize upper wall
-    self.wmode[0] = 0	# 0: devs, 1: vel
+    self.wmode[0] = 0	# 0: fixed, 1: devs, 2: vel
     self.w_n[0,2] = -1.0
     self.w_x[0] = self.L[2]
     self.w_m[0] = self.rho[0] * self.np * math.pi * r_max**3
@@ -400,23 +401,34 @@ class Spherebin:
     #self.nw[0] = numpy.ones(1, dtype=numpy.uint32) * 1
     self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
 
-  # Fit cell number according to world dimensions
-  def fitNum(self):
-    """ Create cells. cellsize is increased from 2*r_max until it fits 
-        the horizontal grid.
-	Call after setting self.L, self.num and self.radius
+    
+  # Generate grid based on particle positions
+  def initGrid(self):
+    """ Initialize grid suitable for the particle positions set previously.
+        The margin parameter adjusts the distance (in no. of max. radii)
+	from the particle boundaries.
     """
+
+
+    # Cell configuration
     cellsize_min = 2.1 * numpy.amax(self.radius)
     self.num[0] = numpy.ceil((self.L[0]-self.origo[0])/cellsize_min)
     self.num[1] = numpy.ceil((self.L[1]-self.origo[1])/cellsize_min)
     self.num[2] = numpy.ceil((self.L[2]-self.origo[2])/cellsize_min)
 
+    if (self.num[0] < 4 or self.num[1] < 4 or self.num[2] < 4):
+      print("Error: The grid must be at least 3 cells in each direction")
+      print(" Grid: x={}, y={}, z={}".format(self.num[0], self.num[1], self.num[2]))
+
+    # Put upper wall at top boundary
+    self.w_x[0] = self.L[0]
+
 
   # Generate grid based on particle positions
-  def initGrid(self, g = numpy.array([0.0, 0.0, -9.80665]),
-               margin = numpy.array([2.0, 2.0, 2.0]),
-	       periodic = 1,
-	       shearmodel = 2):
+  def initGridAndWorldsize(self, g = numpy.array([0.0, 0.0, -9.80665]),
+			   margin = numpy.array([2.0, 2.0, 2.0]),
+			   periodic = 1,
+			   shearmodel = 2):
     """ Initialize grid suitable for the particle positions set previously.
         The margin parameter adjusts the distance (in no. of max. radii)
 	from the particle boundaries.
@@ -438,8 +450,13 @@ class Spherebin:
 			  numpy.amax(self.x[:,2] + self.radius[:])]) \
 			  + margin*r_max
 
-    # Fit cell size to world dimensions
-    fitNum()
+    cellsize_min = 2.1 * r_max	
+    self.num[0] = numpy.ceil((self.L[0]-self.origo[0])/cellsize_min)
+    self.num[1] = numpy.ceil((self.L[1]-self.origo[1])/cellsize_min)
+    self.num[2] = numpy.ceil((self.L[2]-self.origo[2])/cellsize_min)
+
+    if (self.num[0] < 4 or self.num[1] < 4 or self.num[2]):
+      print("Error: The grid must be at least 3 cells in each direction")
 
     self.shearmodel[0] = shearmodel
 
@@ -603,7 +620,7 @@ class Spherebin:
     self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
 
     # Initialize upper wall
-    self.wmode[0] = 0
+    self.wmode[0] = 1 # devs
     self.w_n[0,2] = -1.0
     self.w_x[0] = self.L[2]
     self.w_m[0] = self.rho[0] * self.np * math.pi * (cellsize/2.0)**3
@@ -633,7 +650,7 @@ class Spherebin:
     self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
 
     # Initialize upper wall
-    self.wmode[0] = 1
+    self.wmode[0] = 2 # strain rate controlled
     self.w_n[0,2] = -1.0
     self.w_x[0] = self.L[2]
     self.w_m[0] = self.rho[0] * self.np * math.pi * (cellsize/2.0)**3
@@ -929,31 +946,57 @@ class Spherebin:
 
 
 def render(binary,
-           out = '~/img_out/rt-out',
+           out = '../img_out/out',
 	   graphicsformat = 'jpg',
 	   resolution = numpy.array([800, 800]),
 	   workhorse = 'GPU',
 	   method = 'pressure',
 	   max_val = 4e3,
-	   rt_bin = '../raytracer/rt'):
+	   rt_bin = '../raytracer/rt',
+	   verbose=True):
   """ Render target binary using the sphere raytracer.
   """
 
+  stdout = ""
+  if (verbose == False):
+    stdout = " > /dev/null"
+
   # Use raytracer to render the scene into a temporary PPM file
   if workhorse == 'GPU':
-    subprocess.call(rt_bin + " GPU {0} {1} {2} {3}.ppm {4} {5}" \
-	.format(binary, resolution[0], resolution[1], out, method, max_val), shell=True)
+    subprocess.call(rt_bin + " GPU {0} {1} {2} {3}.ppm {4} {5}"\
+	.format(binary, resolution[0], resolution[1], out, method, max_val) + stdout, shell=True)
   if workhorse == 'CPU':
-    subprocess.call(rt_bin + " CPU {0} {1} {2} {3}.ppm" \
-	.format(binary, resolution[0], resolution[1], out), shell=True)
+    subprocess.call(rt_bin + " CPU {0} {1} {2} {3}.ppm"\
+	.format(binary, resolution[0], resolution[1], out) + stdout, shell=True)
 
   # Use ImageMagick's convert command to change the graphics format
-  subprocess.call("convert {0}.ppm {0}.{1}" \
+  subprocess.call("convert {0}.ppm {0}.{1}"\
       .format(out, graphicsformat), shell=True)
 
   # Delete temporary PPM file
   subprocess.call("rm {0}.ppm".format(out), shell=True)
   
+def renderAll(project,
+    	      rt_bin = "~/code/sphere/raytracer/rt",
+	      out_folder = "../img_out",
+	      graphics_format = "png",
+	      workhorse = "GPU",
+	      method = "pressure",
+	      max_val = 10e3,
+	      resolution = numpy.array([800, 800])):
+
+  lastfile = status(project)
+
+  for i in range(lastfile+1):
+    # Input binary filename
+    fn = "../output/{0}.output{1}.bin".format(project, i)
+
+    # Output image name (without extension)
+    out = out_folder + "/{0}.output{1}".format(project, i)
+    
+    # Call raytracer, also converts to format
+    render(fn, out, graphics_format, resolution, workhorse, method, max_val, rt_bin, verbose = False)
+
   
 def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
   """ Visualize output from the target project,
