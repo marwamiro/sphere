@@ -138,8 +138,8 @@ __device__ void contactLinearViscous(Float3* F, Float3* T,
   // Relative contact interface velocity of particle surfaces at
   // the contact, with rolling (Hinrichsen and Wolf 2004, eq. 13.10)
   Float3 vel_ab = vel_ab_linear
-			+ radius_a * cross(n_ab, angvel_a)
-			+ radius_b * cross(n_ab, angvel_b);
+			+ (radius_a + delta_ab/2.0f) * cross(n_ab, angvel_a)
+			+ (radius_b + delta_ab/2.0f) * cross(n_ab, angvel_b);
 
   // Relative contact interface rolling velocity
   Float3 angvel_ab = angvel_a - angvel_b;
@@ -238,7 +238,7 @@ __device__ void contactLinearViscous(Float3* F, Float3* T,
   // Add force components from this collision to total force for particle
   *F += f_n + f_t + f_c; 
   //*T += -R_bar * cross(n_ab, f_t) + T_res;
-  *T += -radius_a * cross(n_ab, f_t) + T_res;
+  *T += -(radius_a + delta_ab/2.0f) * cross(n_ab, f_t) + T_res;
 
   // Pressure excerted onto the particle from this contact
   *p += f_n_length / (4.0f * PI * radius_a*radius_a);
@@ -289,8 +289,8 @@ __device__ void contactLinear(Float3* F, Float3* T,
   // Relative contact interface velocity of particle surfaces at
   // the contact, with rolling (Hinrichsen and Wolf 2004, eq. 13.10)
   Float3 vel_ab = vel_ab_linear
-			+ radius_a * cross(n_ab, angvel_a)
-			+ radius_b * cross(n_ab, angvel_b);
+			+ (radius_a + delta_ab/2.0f) * cross(n_ab, angvel_a)
+			+ (radius_b + delta_ab/2.0f) * cross(n_ab, angvel_b);
 
   // Relative contact interface rolling velocity
   Float3 angvel_ab = angvel_a - angvel_b;
@@ -314,9 +314,6 @@ __device__ void contactLinear(Float3* F, Float3* T,
 
   // Compute the normal stiffness of the contact
   //Float k_n_ab = k_n_a * k_n_b / (k_n_a + k_n_b);
-
-  // Calculate rolling radius
-  //Float R_bar = (radius_a + radius_b) / 2.0f;
 
   // Normal force component: Elastic
   //f_n = -devC_k_n * delta_ab * n_ab;
@@ -351,8 +348,8 @@ __device__ void contactLinear(Float3* F, Float3* T,
   if (delta_t0_length > 0.f || vel_t_ab_length > 0.f) {
 
     // Shear force: Visco-Elastic, limited by Coulomb friction
-    Float3 f_t_elast = -1.0f * devC_k_t * delta_t0;
-    Float3 f_t_visc  = -1.0f * devC_gamma_t * vel_t_ab;
+    Float3 f_t_elast = -devC_k_t * delta_t0;
+    Float3 f_t_visc  = -devC_gamma_t * vel_t_ab;
 
     Float f_t_limit;
     
@@ -380,7 +377,7 @@ __device__ void contactLinear(Float3* F, Float3* T,
       // In a slip event, the tangential spring is adjusted to a 
       // length which is consistent with Coulomb's equation
       // (Hinrichsen and Wolf, 2004)
-      delta_t = -1.0f/devC_k_t * f_t + devC_gamma_t * vel_t_ab;
+      delta_t = -1.0f/devC_k_t * (f_t + devC_gamma_t * vel_t_ab);
 
       // Shear friction heat production rate: 
       // The energy lost from the tangential spring is dissipated as heat
@@ -413,7 +410,180 @@ __device__ void contactLinear(Float3* F, Float3* T,
   // Add force components from this collision to total force for particle
   *F += f_n + f_t + f_c; 
   //*T += -R_bar * cross(n_ab, f_t) + T_res;
-  *T += -radius_a * cross(n_ab, f_t) + T_res;
+  *T += -(radius_a + delta_ab/2.0f) * cross(n_ab, f_t) + T_res;
+
+  // Pressure excerted onto the particle from this contact
+  *p += f_n_length / (4.0f * PI * radius_a*radius_a);
+
+  // Store sum of tangential displacements
+  dev_delta_t[mempos] = MAKE_FLOAT4(delta_t.x, delta_t.y, delta_t.z, 0.0f);
+
+} // End of contactLinear()
+
+
+// Non-linear contact model for particle-particle interactions
+// Based on Hertzian and Mindlin contact theories (e.g. Hertz, 1882, Mindlin and 
+// Deresiewicz, 1953, Johnson, 1985). See Yohannes et al 2012 for example.
+__device__ void contactHertz(Float3* F, Float3* T, 
+    			     Float* es_dot, Float* ev_dot, Float* p,
+			     unsigned int idx_a_orig,
+			     unsigned int idx_b_orig, 
+			      Float4  vel_a, 
+			      Float4* dev_vel,
+			      Float3  angvel_a,
+			      Float4* dev_angvel,
+			      Float radius_a, Float radius_b, 
+			      Float3 x_ab, Float x_ab_length, 
+			      Float delta_ab, Float4* dev_delta_t,
+			      unsigned int mempos) 
+{
+
+  // Allocate variables and fetch missing time=t values for particle A and B
+  Float4 vel_b     = dev_vel[idx_b_orig];
+  Float4 angvel4_b = dev_angvel[idx_b_orig];
+
+  // Fetch previous sum of shear displacement for the contact pair
+  Float4 delta_t0_4 = dev_delta_t[mempos];
+
+  Float3 delta_t0_uncor = MAKE_FLOAT3(delta_t0_4.x,
+					       delta_t0_4.y,
+					       delta_t0_4.z);
+
+  // Convert to Float3
+  Float3 angvel_b = MAKE_FLOAT3(angvel4_b.x, angvel4_b.y, angvel4_b.z);
+
+  // Force between grain pair decomposed into normal- and tangential part
+  Float3 f_n, f_t, f_c, T_res;
+
+  // Normal vector of contact
+  Float3 n_ab = x_ab/x_ab_length;
+
+  // Relative contact interface velocity, w/o rolling
+  Float3 vel_ab_linear = MAKE_FLOAT3(vel_a.x - vel_b.x, 
+					      vel_a.y - vel_b.y, 
+					      vel_a.z - vel_b.z);
+
+  // Relative contact interface velocity of particle surfaces at
+  // the contact, with rolling (Hinrichsen and Wolf 2004, eq. 13.10)
+  Float3 vel_ab = vel_ab_linear
+			+ (radius_a + delta_ab/2.0f) * cross(n_ab, angvel_a)
+			+ (radius_b + delta_ab/2.0f) * cross(n_ab, angvel_b);
+
+  // Relative contact interface rolling velocity
+  Float3 angvel_ab = angvel_a - angvel_b;
+  Float  angvel_ab_length = length(angvel_ab);
+
+  // Normal component of the relative contact interface velocity
+  Float vel_n_ab = dot(vel_ab_linear, n_ab);
+
+  // Tangential component of the relative contact interface velocity
+  // Hinrichsen and Wolf 2004, eq. 13.9
+  Float3 vel_t_ab = vel_ab - (n_ab * dot(vel_ab, n_ab));
+  Float  vel_t_ab_length = length(vel_t_ab);
+
+  // Correct tangential displacement vector, which is
+  // necessary if the tangential plane rotated
+  Float3 delta_t0 = delta_t0_uncor - (n_ab * dot(delta_t0_uncor, n_ab));
+  Float  delta_t0_length = length(delta_t0);
+
+  // New tangential displacement vector
+  Float3 delta_t;
+
+  // Normal force component
+  f_n = (-devC_k_n * powf(delta_ab, 3.0f/2.0f)  
+         -devC_gamma_n * powf(delta_ab, 1.0f/4.0f) * vel_n_ab)
+        * n_ab;
+
+  // Store energy dissipated in normal viscous component
+  // watt = gamma_n * vel_n * dx_n / dt
+  // watt = gamma_n * vel_n * vel_n * dt / dt
+  // watt = gamma_n * vel_n * vel_n
+  // watt = N*m/s = N*s/m * m/s * m/s * s / s
+  *ev_dot += devC_gamma_n * vel_n_ab * vel_n_ab;
+
+
+  // Make sure the viscous damping doesn't exceed the elastic component,
+  // i.e. the damping factor doesn't exceed the critical damping, 2*sqrt(m*k_n)
+  if (dot(f_n, n_ab) < 0.0f)
+    f_n = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
+
+  Float f_n_length = length(f_n);
+
+  // Add max. capillary force
+  f_c = -devC_kappa * sqrtf(radius_a * radius_b) * n_ab;
+
+  // Initialize force vectors to zero
+  f_t   = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
+  T_res = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
+
+  // Apply a tangential force if the previous tangential displacement
+  // is non-zero, or the current sliding velocity is non-zero.
+  if (delta_t0_length > 0.f || vel_t_ab_length > 0.f) {
+
+    // Shear force: Visco-Elastic, limited by Coulomb friction
+    Float3 f_t_elast = -devC_k_t * powf(delta_ab, 1.0f/2.0f) * delta_t0;
+    Float3 f_t_visc  = -devC_gamma_t * powf(delta_ab, 1.0f/4.0f) * vel_t_ab;
+    Float f_t_limit;
+    
+    if (vel_t_ab_length > 0.001f) { // Dynamic friciton
+      f_t_limit = devC_mu_d * length(f_n-f_c);
+    } else { // Static friction
+      f_t_limit = devC_mu_s * length(f_n-f_c);
+    }
+
+    // Tangential force before friction limit correction
+    f_t = f_t_elast + f_t_visc;
+    Float f_t_length = length(f_t);
+
+    // If failure criterion is not met, contact is viscous-linear elastic.
+    // If failure criterion is met, contact force is limited, 
+    // resulting in a slip and energy dissipation
+    if (f_t_length > f_t_limit) { // Dynamic case
+      
+      // Frictional force is reduced to equal the limit
+      f_t *= f_t_limit/f_t_length;
+
+      // A slip event zeros the displacement vector
+      //delta_t = make_Float3(0.0f, 0.0f, 0.0f);
+
+      // In a slip event, the tangential spring is adjusted to a 
+      // length which is consistent with Coulomb's equation
+      // (Hinrichsen and Wolf, 2004)
+      delta_t = (f_t + devC_gamma_t * powf(delta_ab, 1.0f/4.0f) * vel_t_ab)
+	      / (-devC_k_t * powf(delta_ab, 1.0f/2.0f));
+
+      // Shear friction heat production rate: 
+      // The energy lost from the tangential spring is dissipated as heat
+      //*es_dot += -dot(vel_t_ab, f_t);
+      *es_dot += length(delta_t0 - delta_t) * devC_k_t / devC_dt; // Seen in EsyS-Particle
+      //*es_dot += fabs(dot(delta_t0 - delta_t, f_t)) / devC_dt; 
+
+    } else { // Static case
+
+      // No correction of f_t is required
+
+      // Add tangential displacement to total tangential displacement
+      delta_t = delta_t0 + vel_t_ab * devC_dt;
+    }
+  }
+
+  if (angvel_ab_length > 0.f) {
+    // Apply rolling resistance (Zhou et al. 1999)
+    //T_res = -angvel_ab/angvel_ab_length * devC_mu_r * R_bar * length(f_n);
+
+    // New rolling resistance model
+    /*T_res = -1.0f * fmin(devC_gamma_r * R_bar * angvel_ab_length,
+			 devC_mu_r * R_bar * f_n_length)
+            * angvel_ab/angvel_ab_length;*/
+    T_res = -1.0f * fmin(devC_gamma_r * radius_a * angvel_ab_length,
+			 devC_mu_r * radius_a * f_n_length)
+            * angvel_ab/angvel_ab_length;
+  }
+
+  // Add force components from this collision to total force for particle
+  *F += f_n + f_t + f_c; 
+  //*T += -R_bar * cross(n_ab, f_t) + T_res;
+  *T += -(radius_a + delta_ab/2.0f) * cross(n_ab, f_t) + T_res;
 
   // Pressure excerted onto the particle from this contact
   *p += f_n_length / (4.0f * PI * radius_a*radius_a);
