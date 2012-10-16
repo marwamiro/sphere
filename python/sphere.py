@@ -67,7 +67,7 @@ class Spherebin:
     self.kappa        = numpy.zeros(1, dtype=numpy.float64)
     self.db           = numpy.zeros(1, dtype=numpy.float64)
     self.V_b          = numpy.zeros(1, dtype=numpy.float64)
-    self.shearmodel   = numpy.ones(1, dtype=numpy.uint32) * 2
+    self.shearmodel   = numpy.ones(1, dtype=numpy.uint32) * 2    # contactLinear default
 
     # Wall data
     self.nw 	 = numpy.ones(1, dtype=numpy.uint32) * nw
