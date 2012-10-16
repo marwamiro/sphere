@@ -426,7 +426,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     Float3 T = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
 
     // Apply linear elastic, frictional contact model to registered contacts
-    if (devC_shearmodel == 2) {
+    if (devC_shearmodel == 2 || devC_shearmodel == 3) {
       unsigned int idx_b_orig, mempos;
       Float delta_n, x_ab_length, radius_b;
       Float3 x_ab;
@@ -458,24 +458,31 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 
 	  // Process collision if the particles are overlapping
 	  if (delta_n < 0.0f) {
-	    /*contactLinearViscous(&F, &T, &es_dot, &ev_dot, &p, 
-	      		       idx_a_orig, idx_b_orig,
-			       dev_vel, 
-			       dev_angvel,
-			       radius_a, radius_b, 
-			       x_ab, x_ab_length,
-			       delta_n, devC_kappa);*/
-	    contactLinear(&F, &T, &es_dot, &ev_dot, &p, 
-			  idx_a_orig,
-			  idx_b_orig,
-			  vel_a,
-			  dev_vel,
-			  angvel_a,
-			  dev_angvel,
-			  radius_a, radius_b, 
-			  x_ab, x_ab_length,
-			  delta_n, dev_delta_t, 
-			  mempos);
+	    if (devC_shearmodel == 2) {
+	      contactLinear(&F, &T, &es_dot, &ev_dot, &p, 
+			    idx_a_orig,
+			    idx_b_orig,
+			    vel_a,
+			    dev_vel,
+			    angvel_a,
+			    dev_angvel,
+			    radius_a, radius_b, 
+			    x_ab, x_ab_length,
+			    delta_n, dev_delta_t, 
+			    mempos);
+	    } else if (devC_shearmodel == 3) {
+	      contactHertz(&F, &T, &es_dot, &ev_dot, &p, 
+			   idx_a_orig,
+			   idx_b_orig,
+			   vel_a,
+			   dev_vel,
+			   angvel_a,
+			   dev_angvel,
+			   radius_a, radius_b, 
+			   x_ab, x_ab_length,
+			   delta_n, dev_delta_t, 
+			   mempos);
+	    }
 	  } else {
 	    __syncthreads();
 	    // Remove this contact (there is no particle with index=np)
