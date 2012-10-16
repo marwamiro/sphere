@@ -426,7 +426,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     Float3 T = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
 
     // Apply linear elastic, frictional contact model to registered contacts
-    if (devC_shearmodel == 2 || devC_shearmodel == 3) {
+    if (devC_shearmodel == 2 || devC_shearmodel == 3) {
       unsigned int idx_b_orig, mempos;
       Float delta_n, x_ab_length, radius_b;
       Float3 x_ab;

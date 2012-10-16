@@ -487,7 +487,7 @@ __host__ void gpuMain(Float4* host_x,
     // The contact search in topology() is only necessary for determining
     // the accumulated shear distance needed in the linear elastic
     // and nonlinear contact force model
-    if (params->shearmodel == 2 || params->shearmodel == 3) {
+    if (params->shearmodel == 2 || params->shearmodel == 3) {
       // For each particle: Search contacts in neighbor cells
       if (PROFILING == 1)
 	startTimer(&kernel_tic);
