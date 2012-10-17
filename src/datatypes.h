@@ -12,7 +12,7 @@
 // Enable profiling of kernel runtimes?
 // 0: No (default)
 // 1: Yes
-#define PROFILING 0
+#define PROFILING 1
 
 // Output information about contacts to stdout?
 // 0: No (default)
