@@ -591,7 +591,7 @@ __device__ void contactHertz(Float3* F, Float3* T,
   // Store sum of tangential displacements
   dev_delta_t[mempos] = MAKE_FLOAT4(delta_t.x, delta_t.y, delta_t.z, 0.0f);
 
-} // End of contactLinear()
+} // End of contactHertz()
 
 
 #endif

@@ -397,7 +397,13 @@ int main(int argc, char *argv[])
   if (params.shearmodel == 1)
     cout << "  - Shear force model: Viscous, fricional\n";
   else if (params.shearmodel == 2)
-    cout << "  - Shear force model: Elastic, frictional\n";
+    cout << "  - Shear force model: Linear elastic, viscous, frictional\n";
+  else if (params.shearmodel == 3)
+    cout << "  - Shear force model: Nonlinear (Hertzian) elastic, viscous, frictional\n";
+  else {
+    cerr << "Error: Shear model value not understood.\n";
+    exit(1);
+  }
 
   cout << "  - Number of dynamic walls: " << params.nw << "\n";
 
