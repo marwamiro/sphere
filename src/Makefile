@@ -1,5 +1,5 @@
 # Cuda paths
-#CUDA_INSTALL_PATH=/usr
+CUDA_INSTALL_PATH=/usr/local/bin
 #CUDA_BIN=$(CUDA_INSTALL_PATH)/bin
 
 # Define the editor and optional arguments
@@ -52,7 +52,7 @@ else			# If Linux
   #GL_LIBS+=-L/usr/X11/lib -lglut -lGL -lGLU
   SDKPATH=$(HOME)/NVIDIA_GPU_Computing_SDK/C/common
   EXECUTABLE=../sphere_linux_$(ARCH)
-  LDFLAGS=-L$(SDKPATH)/lib/linux -L$(CUDA_INSTALL_PATH)/lib64
+  LDFLAGS=-L$(SDKPATH)/lib/linux -L$(CUDA_INSTALL_PATH)/lib -L$(CUDA_INSTALL_PATH)/lib64
 endif
 
 INCLUDES+=-I. -I$(SDKPATH)/shared/inc -I$(SDKPATH)/inc -I$(CUDA_INSTALL_PATH)/include
