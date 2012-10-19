@@ -1,13 +1,14 @@
 # Cuda paths
-CUDA_INSTALL_PATH=/usr/local/cuda
-CUDA_BIN=$(CUDA_INSTALL_PATH)/bin
+#CUDA_INSTALL_PATH=/usr
+#CUDA_BIN=$(CUDA_INSTALL_PATH)/bin
 
 # Define the editor and optional arguments
 EDITOR=vim -p
 
 # Define compilers and linker
 CC=g++
-NVCC=$(CUDA_BIN)/nvcc
+#NVCC=$(CUDA_BIN)/nvcc
+NVCC=nvcc
 LINKER=$(CC)
 
 # Flags for producing optimized code
