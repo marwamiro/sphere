@@ -977,13 +977,14 @@ def render(binary,
   subprocess.call("rm {0}.ppm".format(out), shell=True)
   
 def renderAll(project,
-    	      rt_bin = "~/code/sphere/raytracer/rt",
+	      method = "pressure",
+	      max_val = 10e3,
 	      out_folder = "../img_out",
 	      graphics_format = "png",
 	      workhorse = "GPU",
-	      method = "pressure",
-	      max_val = 10e3,
-	      resolution = numpy.array([800, 800])):
+	      resolution = numpy.array([800, 800]),
+    	      rt_bin = "~/code/sphere/raytracer/rt",
+	      verbose = False):
 
   lastfile = status(project)
 
@@ -995,10 +996,10 @@ def renderAll(project,
     out = out_folder + "/{0}.output{1}".format(project, i)
     
     # Call raytracer, also converts to format
-    render(fn, out, graphics_format, resolution, workhorse, method, max_val, rt_bin, verbose = False)
+    render(fn, out, graphics_format, resolution, workhorse, method, max_val, rt_bin, verbose)
 
   
-def visualize(project, method = 'energy', savefig = False, outformat = 'png'):
+def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
   """ Visualize output from the target project,
       where the temporal progress is of interest.
   """
