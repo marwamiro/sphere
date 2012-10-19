@@ -717,21 +717,21 @@ __host__ void gpuMain(Float4* host_x,
                  + t_topology + t_interact + t_summation + t_integrateWalls;
     cout << "\nKernel profiling statistics:\n"
          << "  - calcParticleCellID:\t" << t_calcParticleCellID/1000.0 << " s"
-	 << " (" << 100.0*t_calcParticleCellID/t_sum << " %)\n"
+	 << "\t(" << 100.0*t_calcParticleCellID/t_sum << " %)\n"
          << "  - thrustsort:\t\t" << t_thrustsort/1000.0 << " s"
-	 << " (" << 100.0*t_thrustsort/t_sum << " %)\n"
+	 << "\t(" << 100.0*t_thrustsort/t_sum << " %)\n"
          << "  - reorderArrays:\t" << t_reorderArrays/1000.0 << " s"
-	 << " (" << 100.0*t_reorderArrays/t_sum << " %)\n"
+	 << "\t(" << 100.0*t_reorderArrays/t_sum << " %)\n"
          << "  - topology:\t\t" << t_topology/1000.0 << " s"
-	 << " (" << 100.0*t_topology/t_sum << " %)\n"
+	 << "\t(" << 100.0*t_topology/t_sum << " %)\n"
          << "  - interact:\t\t" << t_interact/1000.0 << " s"
-	 << " (" << 100.0*t_interact/t_sum << " %)\n"
+	 << "\t(" << 100.0*t_interact/t_sum << " %)\n"
          << "  - integrate:\t\t" << t_integrate/1000.0 << " s"
-	 << " (" << 100.0*t_integrate/t_sum << " %)\n"
+	 << "\t(" << 100.0*t_integrate/t_sum << " %)\n"
          << "  - summation:\t\t" << t_summation/1000.0 << " s"
-	 << " (" << 100.0*t_summation/t_sum << " %)\n"
+	 << "\t(" << 100.0*t_summation/t_sum << " %)\n"
          << "  - integrateWalls:\t" << t_integrateWalls/1000.0 << " s"
-	 << " (" << 100.0*t_integrateWalls/t_sum << " %)\n";
+	 << "\t(" << 100.0*t_integrateWalls/t_sum << " %)\n";
   }
 
 
