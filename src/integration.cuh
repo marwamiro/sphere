@@ -15,7 +15,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 {
   unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
 
-  if (idx < devC_np) { // Condition prevents block size error
+  if (idx < devC_params.np) { // Condition prevents block size error
 
     // Copy data to temporary arrays to avoid any potential read-after-write, 
     // write-after-read, or write-after-write hazards. 
@@ -35,10 +35,10 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     Float  radius = dev_radius_sorted[idx];
 
     // Coherent read from constant memory to registers
-    Float  dt    = devC_dt;
-    Float3 origo = MAKE_FLOAT3(devC_origo[0], devC_origo[1], devC_origo[2]); 
-    Float3 L     = MAKE_FLOAT3(devC_L[0], devC_L[1], devC_L[2]);
-    Float  rho   = devC_rho;
+    Float  dt    = devC_params.dt;
+    Float3 origo = MAKE_FLOAT3(devC_grid.origo[0], devC_grid.origo[1], devC_grid.origo[2]); 
+    Float3 L     = MAKE_FLOAT3(devC_grid.L[0], devC_grid.L[1], devC_grid.L[2]);
+    Float  rho   = devC_params.rho;
 
     // Particle mass
     Float m = 4.0f/3.0f * PI * radius*radius*radius * rho;
@@ -55,9 +55,9 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     angacc.z = torque.z * 1.0f / (2.0f/5.0f * m * radius*radius);
 
     // Add gravity
-    acc.x += devC_g[0];
-    acc.y += devC_g[1];
-    acc.z += devC_g[2];
+    acc.x += devC_params.g[0];
+    acc.y += devC_params.g[1];
+    acc.z += devC_params.g[2];
 
     // Check if particle has a fixed horizontal velocity
     if (vel.w > 0.0f) {
@@ -68,7 +68,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
       // to allow for dilation.
       acc.x = 0.0f;
       acc.y = 0.0f;
-      acc.z -= devC_g[2];
+      acc.z -= devC_params.g[2];
 
       // Zero the angular acceleration
       angacc = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -106,7 +106,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     x.w += vel.x * dt + (acc.x * dt*dt)/2.0f;
 
     // Move particle across boundary if it is periodic
-    if (devC_periodic == 1) {
+    if (devC_params.periodic == 1) {
       if (x.x < origo.x)
 	x.x += L.x;
       if (x.x > L.x)
@@ -115,7 +115,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 	x.y += L.y;
       if (x.y > L.y)
 	x.y -= L.y;
-    } else if (devC_periodic == 2) {
+    } else if (devC_params.periodic == 2) {
       if (x.x < origo.x)
 	x.x += L.x;
       if (x.x > L.x)
@@ -142,7 +142,7 @@ __global__ void summation(Float* in, Float *out)
   unsigned int cacheIdx = threadIdx.x;
 
   Float temp = 0.0f;
-  while (idx < devC_np) {
+  while (idx < devC_params.np) {
     temp += in[idx];
     idx += blockDim.x * gridDim.x;
   }
@@ -175,13 +175,13 @@ __global__ void integrateWalls(Float4* dev_w_nx,
 {
   unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
 
-  if (idx < devC_nw) { // Condition prevents block size error
+  if (idx < devC_params.nw) { // Condition prevents block size error
 
     // Copy data to temporary arrays to avoid any potential read-after-write, 
     // write-after-read, or write-after-write hazards. 
     Float4 w_nx   = dev_w_nx[idx];
     Float4 w_mvfd = dev_w_mvfd[idx];
-    int wmode = devC_wmode[idx];  // Wall BC, 0: fixed, 1: devs, 2: vel
+    int wmode = devC_params.wmode[idx];  // Wall BC, 0: fixed, 1: devs, 2: vel
     Float acc;
 
     if (wmode == 0) // Wall fixed: do nothing
@@ -193,11 +193,11 @@ __global__ void integrateWalls(Float4* dev_w_nx,
       w_mvfd.z += dev_w_force_partial[i];
     }
 
-    Float dt = devC_dt;
+    Float dt = devC_params.dt;
 
     // Normal load = Deviatoric stress times wall surface area,
     // directed downwards.
-    Float N = -w_mvfd.w*devC_L[0]*devC_L[1];
+    Float N = -w_mvfd.w*devC_grid.L[0]*devC_grid.L[1];
 
     // Calculate resulting acceleration of wall
     // (Wall mass is stored in w component of position Float4)

@@ -133,7 +133,6 @@ int main(int argc, char *argv[])
     exit(1); 
 
   // Copy timestep length to constant memory structure
-  //time.dt *= 10; // For debugging: Increase timestep one magnitude
   params.dt = time.dt;
 
   // Copy number of particles to constant memory structure
@@ -158,10 +157,10 @@ int main(int argc, char *argv[])
 
   // Allocate host arrays
   cout << "\n  Allocating host memory:                         ";
-  grid.origo   = new Float[ND];        // Coordinate system origo
-  grid.L       = new Float[ND];        // Model world dimensions
-  grid.num     = new unsigned int[ND]; // Number of cells in each dimension
-  params.g     = new Float[ND];	       // Gravitational acceleration vector
+  //grid.origo   = new Float[ND];        // Coordinate system origo
+  //grid.L       = new Float[ND];        // Model world dimensions
+  //grid.num     = new unsigned int[ND]; // Number of cells in each dimension
+  //params.g     = new Float[ND];	       // Gravitational acceleration vector
   p.radius     = new Float[p.np];      // Particle radii
   p.rho        = new Float[p.np];      // Particle densities
   p.m          = new Float[p.np];      // Particle masses
@@ -180,7 +179,7 @@ int main(int argc, char *argv[])
   p.es         = new Float[p.np];      // Total shear energy dissipation
   p.ev         = new Float[p.np];      // Total viscous energy dissipation
   p.p	       = new Float[p.np];      // Pressure excerted onto particle
-  params.wmode = new int[MAXWALLS];    // Wall BC's, 0: fixed, 1: devs, 2: vel
+  //params.wmode = new int[MAXWALLS];    // Wall BC's, 0: fixed, 1: devs, 2: vel
 
   // Allocate Float4 host arrays
   Float4 *host_x      = new Float4[p.np];  // Center coordinates for each particle (x)
@@ -481,10 +480,10 @@ int main(int argc, char *argv[])
   delete[] host_bonds;
 
   // Particle single-value parameters
-  delete[] grid.origo;
-  delete[] grid.L;
-  delete[] grid.num;
-  delete[] params.g;
+  //delete[] grid.origo;
+  //delete[] grid.L;
+  //delete[] grid.num;
+  //delete[] params.g;
   delete[] p.radius;
   delete[] p.k_n;
   delete[] p.k_t;

@@ -94,20 +94,23 @@ __host__ void transferToConstantMemory(Particles* p,
 
   cout << "\n  Transfering data to constant device memory:     ";
 
-  cudaMemcpyToSymbol("devC_np", &p->np, sizeof(p->np));
+  //cudaMemcpyToSymbol("devC_np", &p->np, sizeof(p->np));
   cudaMemcpyToSymbol("devC_nc", &NC, sizeof(int));
-  cudaMemcpyToSymbol("devC_origo", grid->origo, sizeof(Float)*ND);
-  cudaMemcpyToSymbol("devC_L", grid->L, sizeof(Float)*ND);
-  cudaMemcpyToSymbol("devC_num", grid->num, sizeof(unsigned int)*ND);
-  cudaMemcpyToSymbol("devC_dt", &time->dt, sizeof(Float));
-  cudaMemcpyToSymbol("devC_global", &params->global, sizeof(int));
-  cudaMemcpyToSymbol("devC_g", params->g, sizeof(Float)*ND);
-  cudaMemcpyToSymbol("devC_nw", &params->nw, sizeof(unsigned int));
-  cudaMemcpyToSymbol("devC_periodic", &params->periodic, sizeof(int));
+  //cudaMemcpyToSymbol("devC_origo", grid->origo, sizeof(Float)*ND);
+  //cudaMemcpyToSymbol("devC_L", grid->L, sizeof(Float)*ND);
+  //cudaMemcpyToSymbol("devC_num", grid->num, sizeof(unsigned int)*ND);
+  //cudaMemcpyToSymbol("devC_dt", &time->dt, sizeof(Float));
+  //cudaMemcpyToSymbol("devC_global", &params->global, sizeof(int));
+  //cudaMemcpyToSymbol("devC_g", params->g, sizeof(Float)*ND);
+  //cudaMemcpyToSymbol("devC_nw", &params->nw, sizeof(unsigned int));
+  //cudaMemcpyToSymbol("devC_periodic", &params->periodic, sizeof(int));
+
+  cudaMemcpyToSymbol(devC_grid, grid, sizeof(grid));
 
   if (params->global == 1) {
     // If the physical properties of the particles are global (params.global == true),
     //   copy the values from the first particle into the designated constant memory. 
+ 
     //printf("(params.global == %d) ", params.global);
     params->k_n     = p->k_n[0];
     params->k_t	    = p->k_t[0];
@@ -119,24 +122,25 @@ __host__ void transferToConstantMemory(Particles* p,
     params->mu_d    = p->mu_d[0];
     params->mu_r    = p->mu_r[0];
     params->rho     = p->rho[0];
-    cudaMemcpyToSymbol("devC_k_n", &params->k_n, sizeof(Float));
-    cudaMemcpyToSymbol("devC_k_t", &params->k_t, sizeof(Float));
-    cudaMemcpyToSymbol("devC_k_r", &params->k_r, sizeof(Float));
-    cudaMemcpyToSymbol("devC_gamma_n", &params->gamma_n, sizeof(Float));
-    cudaMemcpyToSymbol("devC_gamma_t", &params->gamma_t, sizeof(Float));
-    cudaMemcpyToSymbol("devC_gamma_r", &params->gamma_r, sizeof(Float));
-    cudaMemcpyToSymbol("devC_gamma_wn", &params->gamma_wn, sizeof(Float));
-    cudaMemcpyToSymbol("devC_gamma_ws", &params->gamma_ws, sizeof(Float));
-    cudaMemcpyToSymbol("devC_gamma_wr", &params->gamma_wr, sizeof(Float));
-    cudaMemcpyToSymbol("devC_mu_s", &params->mu_s, sizeof(Float));
-    cudaMemcpyToSymbol("devC_mu_d", &params->mu_d, sizeof(Float));
-    cudaMemcpyToSymbol("devC_mu_r", &params->mu_r, sizeof(Float));
-    cudaMemcpyToSymbol("devC_rho", &params->rho, sizeof(Float));
-    cudaMemcpyToSymbol("devC_kappa", &params->kappa, sizeof(Float));
-    cudaMemcpyToSymbol("devC_db", &params->db, sizeof(Float));
-    cudaMemcpyToSymbol("devC_V_b", &params->V_b, sizeof(Float));
-    cudaMemcpyToSymbol("devC_shearmodel", &params->shearmodel, sizeof(unsigned int));
-    cudaMemcpyToSymbol("devC_wmode", &params->wmode, sizeof(int)*MAXWALLS);
+    cudaMemcpyToSymbol(devC_params, params, sizeof(params));
+    //cudaMemcpyToSymbol("devC_k_n", &params->k_n, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_k_t", &params->k_t, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_k_r", &params->k_r, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_gamma_n", &params->gamma_n, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_gamma_t", &params->gamma_t, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_gamma_r", &params->gamma_r, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_gamma_wn", &params->gamma_wn, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_gamma_ws", &params->gamma_ws, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_gamma_wr", &params->gamma_wr, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_mu_s", &params->mu_s, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_mu_d", &params->mu_d, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_mu_r", &params->mu_r, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_rho", &params->rho, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_kappa", &params->kappa, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_db", &params->db, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_V_b", &params->V_b, sizeof(Float));
+    //cudaMemcpyToSymbol("devC_shearmodel", &params->shearmodel, sizeof(unsigned int));
+    //cudaMemcpyToSymbol("devC_wmode", &params->wmode, sizeof(int)*MAXWALLS);
   } else {
     //printf("(params.global == %d) ", params.global);
     // Copy params structure with individual physical values from host to global memory

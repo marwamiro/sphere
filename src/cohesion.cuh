@@ -62,11 +62,11 @@ __device__ void bondLinear(Float3* N, Float3* T, Float* es_dot, Float* p,
     Float R_bar = (radius_a + radius_b)/2.0f;
 
     // Normal force component: Elastic
-    f_n = devC_k_n * delta_ab * n_ab;
+    f_n = devC_params.k_n * delta_ab * n_ab;
 
     if (length(vel_t_ab) > 0.f) {
       // Shear force component: Viscous
-      f_t = -1.0f * devC_gamma_t * vel_t_ab;
+      f_t = -1.0f * devC_params.gamma_t * vel_t_ab;
 
       // Shear friction production rate [W]
       //*es_dot += -dot(vel_t_ab, f_t);
@@ -112,7 +112,7 @@ __device__ void capillaryCohesion_exp(Float3* N, Float radius_a,
   R_geo = sqrtf(radius_a * radius_b);
 
   // The exponential falloff of the capillary force with distance
-  lambda = 0.9f * h * sqrtf(devC_V_b/R_har);
+  lambda = 0.9f * h * sqrtf(devC_params.V_b/R_har);
 
   // Calculate cohesional force
   f_c = -kappa * R_geo * expf(-delta_ab/lambda) * n_ab;

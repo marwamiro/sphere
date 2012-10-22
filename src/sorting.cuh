@@ -6,12 +6,12 @@ __device__ int calcCellID(Float3 x)
   unsigned int i_x, i_y, i_z;
 
   // Calculate integral coordinates:
-  i_x = floor((x.x - devC_origo[0]) / (devC_L[0]/devC_num[0]));
-  i_y = floor((x.y - devC_origo[1]) / (devC_L[1]/devC_num[1]));
-  i_z = floor((x.z - devC_origo[2]) / (devC_L[2]/devC_num[2]));
+  i_x = floor((x.x - devC_grid.origo[0]) / (devC_grid.L[0]/devC_grid.num[0]));
+  i_y = floor((x.y - devC_grid.origo[1]) / (devC_grid.L[1]/devC_grid.num[1]));
+  i_z = floor((x.z - devC_grid.origo[2]) / (devC_grid.L[2]/devC_grid.num[2]));
 
   // Integral coordinates are converted to 1D coordinate:
-  return (i_z * devC_num[1]) * devC_num[0] + i_y * devC_num[0] + i_x;
+  return (i_z * devC_grid.num[1]) * devC_grid.num[0] + i_y * devC_grid.num[0] + i_x;
 
 } // End of calcCellID(...)
 
@@ -25,7 +25,7 @@ __global__ void calcParticleCellID(unsigned int* dev_gridParticleCellID,
   //unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
   unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-  if (idx < devC_np) { // Condition prevents block size error
+  if (idx < devC_params.np) { // Condition prevents block size error
 
     //volatile Float4 x = dev_x[idx]; // Ensure coalesced read
     Float4 x = dev_x[idx]; // Ensure coalesced read
@@ -68,7 +68,7 @@ __global__ void reorderArrays(unsigned int* dev_cellStart, unsigned int* dev_cel
   unsigned int cellID;
 
   // Read cellID data and store it in shared memory (shared_data)
-  if (idx < devC_np) { // Condition prevents block size error
+  if (idx < devC_params.np) { // Condition prevents block size error
     cellID = dev_gridParticleCellID[idx];
 
     // Load hash data into shared memory, allowing access to neighbor particle cellID values
@@ -85,7 +85,7 @@ __global__ void reorderArrays(unsigned int* dev_cellStart, unsigned int* dev_cel
   __syncthreads();
 
   // Find lowest and highest particle index in each cell
-  if (idx < devC_np) { // Condition prevents block size error
+  if (idx < devC_params.np) { // Condition prevents block size error
     // If this particle has a different cell index to the previous particle, it's the first
     // particle in the cell -> Store the index of this particle in the cell.
     // The previous particle must be the last particle in the previous cell.
@@ -96,7 +96,7 @@ __global__ void reorderArrays(unsigned int* dev_cellStart, unsigned int* dev_cel
     }
 
     // Check wether the thread is the last one
-    if (idx == (devC_np - 1)) 
+    if (idx == (devC_params.np - 1)) 
       dev_cellEnd[cellID] = idx + 1;
 
 

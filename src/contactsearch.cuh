@@ -14,44 +14,44 @@ __device__ int findDistMod(int3* targetCell, Float3* distmod)
   // Check whether x- and y boundaries are to be treated as periodic
   // 1: x- and y boundaries periodic
   // 2: x boundaries periodic
-  if (devC_periodic == 1) {
+  if (devC_params.periodic == 1) {
 
     // Periodic x-boundary
     if (targetCell->x < 0) {
-      targetCell->x = devC_num[0] - 1;
-      *distmod += MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
+      targetCell->x = devC_grid.num[0] - 1;
+      *distmod += MAKE_FLOAT3(devC_grid.L[0], 0.0f, 0.0f);
     }
-    if (targetCell->x == devC_num[0]) {
+    if (targetCell->x == devC_grid.num[0]) {
       targetCell->x = 0;
-      *distmod -= MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
+      *distmod -= MAKE_FLOAT3(devC_grid.L[0], 0.0f, 0.0f);
     }
 
     // Periodic y-boundary
     if (targetCell->y < 0) {
-      targetCell->y = devC_num[1] - 1;
-      *distmod += MAKE_FLOAT3(0.0f, devC_L[1], 0.0f);
+      targetCell->y = devC_grid.num[1] - 1;
+      *distmod += MAKE_FLOAT3(0.0f, devC_grid.L[1], 0.0f);
     }
-    if (targetCell->y == devC_num[1]) {
+    if (targetCell->y == devC_grid.num[1]) {
       targetCell->y = 0;
-      *distmod -= MAKE_FLOAT3(0.0f, devC_L[1], 0.0f);
+      *distmod -= MAKE_FLOAT3(0.0f, devC_grid.L[1], 0.0f);
     }
 
 
   // Only x-boundaries are periodic
-  } else if (devC_periodic == 2) {
+  } else if (devC_params.periodic == 2) {
 
     // Periodic x-boundary
     if (targetCell->x < 0) {
-      targetCell->x = devC_num[0] - 1;
-      *distmod += MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
+      targetCell->x = devC_grid.num[0] - 1;
+      *distmod += MAKE_FLOAT3(devC_grid.L[0], 0.0f, 0.0f);
     }
-    if (targetCell->x == devC_num[0]) {
+    if (targetCell->x == devC_grid.num[0]) {
       targetCell->x = 0;
-      *distmod -= MAKE_FLOAT3(devC_L[0], 0.0f, 0.0f);
+      *distmod -= MAKE_FLOAT3(devC_grid.L[0], 0.0f, 0.0f);
     }
 
     // Hande out-of grid cases on y-axis
-    if (targetCell->y < 0 || targetCell->y == devC_num[1])
+    if (targetCell->y < 0 || targetCell->y == devC_grid.num[1])
       return -1;
 
 
@@ -59,14 +59,14 @@ __device__ int findDistMod(int3* targetCell, Float3* distmod)
   } else {
 
     // Hande out-of grid cases on x- and y-axes
-    if (targetCell->x < 0 || targetCell->x == devC_num[0])
+    if (targetCell->x < 0 || targetCell->x == devC_grid.num[0])
       return -1;
-    if (targetCell->y < 0 || targetCell->y == devC_num[1])
+    if (targetCell->y < 0 || targetCell->y == devC_grid.num[1])
       return -1;
   }
 
   // Handle out-of-grid cases on z-axis
-  if (targetCell->z < 0 || targetCell->z == devC_num[2])
+  if (targetCell->z < 0 || targetCell->z == devC_grid.num[2])
     return -1;
 
   // Return successfully
@@ -107,8 +107,8 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
   //// Check and process particle-particle collisions
 
   // Calculate linear cell ID
-  unsigned int cellID = targetCell.x + targetCell.y * devC_num[0]
-			+ (devC_num[0] * devC_num[1]) * targetCell.z; 
+  unsigned int cellID = targetCell.x + targetCell.y * devC_grid.num[0]
+			+ (devC_grid.num[0] * devC_grid.num[1]) * targetCell.z; 
 
   // Lowest particle index in cell
   unsigned int startIdx = dev_cellStart[cellID];
@@ -126,7 +126,7 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
 	// Fetch position and velocity of particle B.
 	Float4 x_b      = dev_x_sorted[idx_b];
 	Float  radius_b = dev_radius_sorted[idx_b];
-	Float  kappa 	= devC_kappa;
+	Float  kappa 	= devC_params.kappa;
 
 	// Distance between particle centers (Float4 -> Float3)
 	Float3 x_ab = MAKE_FLOAT3(x_a.x - x_b.x, 
@@ -150,7 +150,7 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
 				       radius_a, radius_b, 
 				       x_ab, x_ab_length,
 				       delta_ab, kappa);
-	} else if (delta_ab < devC_db) { 
+	} else if (delta_ab < devC_params.db) { 
 	  // Check wether particle distance satisfies the capillary bond distance
 	  capillaryCohesion_exp(F, radius_a, radius_b, delta_ab, 
 	      			x_ab, x_ab_length, kappa);
@@ -202,8 +202,8 @@ __device__ void findContactsInCell(int3 targetCell,
   //// Check and process particle-particle collisions
 
   // Calculate linear cell ID
-  unsigned int cellID = targetCell.x + targetCell.y * devC_num[0]
-			+ (devC_num[0] * devC_num[1]) * targetCell.z; 
+  unsigned int cellID = targetCell.x + targetCell.y * devC_grid.num[0]
+			+ (devC_grid.num[0] * devC_grid.num[1]) * targetCell.z; 
 
   // Lowest particle index in cell
   unsigned int startIdx = dev_cellStart[cellID];
@@ -256,10 +256,10 @@ __device__ void findContactsInCell(int3 targetCell,
 	  unsigned int cidx;
 
 	  // Find out, if particle is already registered in contact list
-	  for (int i=0; i<devC_nc; ++i) {
+	  for (int i=0; i < devC_nc; ++i) {
 	    __syncthreads();
 	    cidx = dev_contacts[(unsigned int)(idx_a_orig*devC_nc+i)];
-	    if (cidx == devC_np) // Write to position of now-deleted contact
+	    if (cidx == devC_params.np) // Write to position of now-deleted contact
 	      cpos = i;
 	    else if (cidx == idx_b_orig) { // Write to position of same contact
 	      cpos = i;
@@ -322,7 +322,7 @@ __global__ void topology(unsigned int* dev_cellStart,
 {
   // Thread index equals index of particle A
   unsigned int idx_a = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx_a < devC_np) {
+  if (idx_a < devC_params.np) {
     // Fetch particle data in global read
     Float4 x_a      = dev_x_sorted[idx_a];
     Float  radius_a = dev_radius_sorted[idx_a];
@@ -335,9 +335,9 @@ __global__ void topology(unsigned int* dev_cellStart,
     int3 targetPos;
 
     // Calculate cell address in grid from position of particle
-    gridPos.x = floor((x_a.x - devC_origo[0]) / (devC_L[0]/devC_num[0]));
-    gridPos.y = floor((x_a.y - devC_origo[1]) / (devC_L[1]/devC_num[1]));
-    gridPos.z = floor((x_a.z - devC_origo[2]) / (devC_L[2]/devC_num[2]));
+    gridPos.x = floor((x_a.x - devC_grid.origo[0]) / (devC_grid.L[0]/devC_grid.num[0]));
+    gridPos.y = floor((x_a.y - devC_grid.origo[1]) / (devC_grid.L[1]/devC_grid.num[1]));
+    gridPos.z = floor((x_a.z - devC_grid.origo[2]) / (devC_grid.L[2]/devC_grid.num[2]));
 
     // Find overlaps between particle no. idx and all particles
     // from its own cell + 26 neighbor cells
@@ -390,7 +390,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
   // Thread index equals index of particle A
   unsigned int idx_a = blockIdx.x * blockDim.x + threadIdx.x;
 
-  if (idx_a < devC_np) {
+  if (idx_a < devC_params.np) {
 
     // Fetch particle data in global read
     unsigned int idx_a_orig = dev_gridParticleIndex[idx_a];
@@ -402,12 +402,12 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     Float4 w_up_mvfd = dev_w_mvfd[0];
 
     // Fetch world dimensions in constant memory read
-    Float3 origo = MAKE_FLOAT3(devC_origo[0], 
-			       devC_origo[1], 
-			       devC_origo[2]); 
-    Float3 L = MAKE_FLOAT3(devC_L[0], 
-			   devC_L[1], 
-			   devC_L[2]);
+    Float3 origo = MAKE_FLOAT3(devC_grid.origo[0], 
+			       devC_grid.origo[1], 
+			       devC_grid.origo[2]); 
+    Float3 L = MAKE_FLOAT3(devC_grid.L[0], 
+			   devC_grid.L[1], 
+			   devC_grid.L[2]);
 
     // Index of particle which is bonded to particle A.
     // The index is equal to the particle no (p.np)
@@ -426,7 +426,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     Float3 T = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
 
     // Apply linear elastic, frictional contact model to registered contacts
-    if (devC_shearmodel == 2 || devC_shearmodel == 3) {
+    if (devC_params.shearmodel == 2 || devC_params.shearmodel == 3) {
       unsigned int idx_b_orig, mempos;
       Float delta_n, x_ab_length, radius_b;
       Float3 x_ab;
@@ -454,11 +454,11 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	delta_n = x_ab_length - (radius_a + radius_b);
 
 
-	if (idx_b_orig != (unsigned int)devC_np) {
+	if (idx_b_orig != (unsigned int)devC_params.np) {
 
 	  // Process collision if the particles are overlapping
 	  if (delta_n < 0.0f) {
-	    if (devC_shearmodel == 2) {
+	    if (devC_params.shearmodel == 2) {
 	      contactLinear(&F, &T, &es_dot, &ev_dot, &p, 
 			    idx_a_orig,
 			    idx_b_orig,
@@ -470,7 +470,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 			    x_ab, x_ab_length,
 			    delta_n, dev_delta_t, 
 			    mempos);
-	    } else if (devC_shearmodel == 3) {
+	    } else if (devC_params.shearmodel == 3) {
 	      contactHertz(&F, &T, &es_dot, &ev_dot, &p, 
 			   idx_a_orig,
 			   idx_b_orig,
@@ -486,7 +486,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	  } else {
 	    __syncthreads();
 	    // Remove this contact (there is no particle with index=np)
-	    dev_contacts[mempos] = devC_np;
+	    dev_contacts[mempos] = devC_params.np;
 	    // Zero sum of shear displacement in this position
 	    dev_delta_t[mempos] = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	  }
@@ -501,15 +501,15 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 
     // Find contacts and process collisions immidiately for
     // shearmodel 1 (visco-frictional).
-    } else if (devC_shearmodel == 1) {
+    } else if (devC_params.shearmodel == 1) {
 
       int3 gridPos;
       int3 targetPos;
 
       // Calculate address in grid from position
-      gridPos.x = floor((x_a.x - devC_origo[0]) / (devC_L[0]/devC_num[0]));
-      gridPos.y = floor((x_a.y - devC_origo[1]) / (devC_L[1]/devC_num[1]));
-      gridPos.z = floor((x_a.z - devC_origo[2]) / (devC_L[2]/devC_num[2]));
+      gridPos.x = floor((x_a.x - devC_grid.origo[0]) / (devC_grid.L[0]/devC_grid.num[0]));
+      gridPos.y = floor((x_a.y - devC_grid.origo[1]) / (devC_grid.L[1]/devC_grid.num[1]));
+      gridPos.z = floor((x_a.z - devC_grid.origo[2]) / (devC_grid.L[2]/devC_grid.num[2]));
 
       // Find overlaps between particle no. idx and all particles
       // from its own cell + 26 neighbor cells.
@@ -555,7 +555,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     }
 
 
-    if (devC_periodic == 0) {
+    if (devC_params.periodic == 0) {
 
       // Left wall
       delta_w = x_a.x - radius_a - origo.x;
@@ -593,7 +593,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 				 w_n, delta_w, 0.0f);
       }
 
-    } else if (devC_periodic == 2) {
+    } else if (devC_params.periodic == 2) {
 
       // Front wall
       delta_w = x_a.y - radius_a - origo.y;
@@ -624,8 +624,8 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     dev_torque[orig_idx]  = MAKE_FLOAT4(T.x, T.y, T.z, 0.0f);
     dev_es_dot[orig_idx]  = es_dot;
     dev_ev_dot[orig_idx]  = ev_dot;
-    dev_es[orig_idx]     += es_dot * devC_dt;
-    dev_ev[orig_idx]     += ev_dot * devC_dt;
+    dev_es[orig_idx]     += es_dot * devC_params.dt;
+    dev_ev[orig_idx]     += ev_dot * devC_params.dt;
     dev_p[orig_idx]       = p;
     dev_w_force[orig_idx] = w_force;
   }

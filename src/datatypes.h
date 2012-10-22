@@ -99,9 +99,9 @@ struct Particles {
 // Structure containing grid parameters
 struct Grid {
   unsigned int nd;
-  Float *origo;
-  Float *L;
-  unsigned int *num;
+  Float origo[ND];
+  Float L[ND];
+  unsigned int num[ND];
 };
 
 // Structure containing time parameters
@@ -115,13 +115,12 @@ struct Time {
 
 // Structure containing constant, global physical parameters
 struct Params {
-  //bool global;
   int global;
-  Float *g;
+  Float g[ND];
+  Float dt;
   unsigned int np;
   unsigned int nw;
-  int* wmode;
-  Float dt; 
+  int wmode[MAXWALLS];
   Float k_n;
   Float k_t;
   Float k_r;
