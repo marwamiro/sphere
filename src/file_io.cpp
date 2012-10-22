@@ -142,7 +142,7 @@ int fwritebin(char *target,
     }
     fwrite(&params->periodic, sizeof(params->periodic), 1, fp);
     fwrite(&params->gamma_wn, sizeof(params->gamma_wn), 1, fp);
-    fwrite(&params->gamma_ws, sizeof(params->gamma_ws), 1, fp);
+    fwrite(&params->gamma_wt, sizeof(params->gamma_wt), 1, fp);
     fwrite(&params->gamma_wr, sizeof(params->gamma_wr), 1, fp);
 
 
@@ -320,7 +320,7 @@ int fwritebin(char *target,
     fwrite(&params->periodic, sizeof(params->periodic), 1, fp);
     d = (double)params->gamma_wn;
     fwrite(&d, sizeof(d), 1, fp);
-    d = (double)params->gamma_ws;
+    d = (double)params->gamma_wt;
     fwrite(&d, sizeof(d), 1, fp);
     d = (double)params->gamma_wr;
     fwrite(&d, sizeof(d), 1, fp);

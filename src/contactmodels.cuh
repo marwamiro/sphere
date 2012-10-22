@@ -61,7 +61,7 @@ __device__ Float contactLinear_wall(Float3* F, Float3* T, Float* es_dot,
   // divide by zero (producing a NaN)
   if (vel_t_length > 0.f) {
 
-    Float f_t_visc  = devC_params.gamma_ws * vel_t_length; // Tangential force by viscous model
+    Float f_t_visc  = devC_params.gamma_wt * vel_t_length; // Tangential force by viscous model
     Float f_t_limit = devC_params.mu_s * f_n_length;      // Max. friction
 
     // If the shear force component exceeds the friction,

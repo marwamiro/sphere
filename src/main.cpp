@@ -372,7 +372,7 @@ int main(int argc, char *argv[])
   // Wall viscosities
   if (fread(&params.gamma_wn, sizeof(params.gamma_wn), 1, fp) != 1)
     exit(1);
-  if (fread(&params.gamma_ws, sizeof(params.gamma_ws), 1, fp) != 1)
+  if (fread(&params.gamma_wt, sizeof(params.gamma_wt), 1, fp) != 1)
     exit(1);
   if (fread(&params.gamma_wr, sizeof(params.gamma_wr), 1, fp) != 1)
     exit(1);
