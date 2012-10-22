@@ -17,8 +17,6 @@
 #include "contactsearch.cuh"
 #include "integration.cuh"
 
-#include "cuPrintf.cu"
-
 // Wrapper function for initializing the CUDA components.
 // Called from main.cpp
 //extern "C"
@@ -93,15 +91,6 @@ __global__ void checkConstantValues(int* dev_equal,
   // Values ok (0)
   *dev_equal = 0;
 
-  cuPrintf("dev_grid.nd = %u\n", dev_grid->nd);
-  cuPrintf("devC_grid.nd = %u\n", devC_grid.nd);
-  cuPrintf("dev_grid.num.x = %u\n", dev_grid->num[0]);
-  cuPrintf("devC_grid.num.x = %u\n", devC_grid.num[1]);
-  cuPrintf("dev_params.np = %u\n", dev_params->np);
-  cuPrintf("devC_params.np = %u\n", devC_params.np);
-  cuPrintf("dev_params.mu_s = %f\n", dev_params->mu_s);
-  cuPrintf("devC_params.mu_s = %f\n", devC_params.mu_s);
-
   if (dev_grid->nd != 3) {
     *dev_equal = 3;
     return;
@@ -167,7 +156,6 @@ __global__ void checkConstantValues(int* dev_equal,
 // values in constant memory.
 __host__ void checkConstantMemory(Grid* grid, Params* params)
 {
-  cudaPrintfInit();
 
   // Allocate space in global device memory
   Grid* dev_grid;
@@ -196,7 +184,6 @@ __host__ void checkConstantMemory(Grid* grid, Params* params)
   cudaFree(dev_params);
   cudaFree(dev_equal);
 
-  cudaPrintfDisplay(stdout, true);
 
   // Are the values equal?
   if (*equal != 0) {
@@ -512,8 +499,6 @@ __host__ void gpuMain(Float4* host_x,
        << "             progress by executing:\n"
        << "                $ ./sphere_status " << inputbin << "\n\n";
 
-  // Enable cuPrintf()
-  //cudaPrintfInit();
 
   // Start GPU clock
   cudaEvent_t dev_tic, dev_toc;
@@ -629,9 +614,6 @@ __host__ void gpuMain(Float4* host_x,
 				      dev_contacts,
 				      dev_distmod);
 
-      // Empty cuPrintf() buffer to console
-      //cudaThreadSynchronize();
-      //cudaPrintfDisplay(stdout, true);
 
       // Synchronization point
       cudaThreadSynchronize();
@@ -660,9 +642,6 @@ __host__ void gpuMain(Float4* host_x,
 				    dev_distmod,
 				    dev_delta_t);
 
-    // Empty cuPrintf() buffer to console
-    //cudaThreadSynchronize();
-    //cudaPrintfDisplay(stdout, true);
 
     // Synchronization point
     cudaThreadSynchronize();
@@ -864,9 +843,6 @@ __host__ void gpuMain(Float4* host_x,
 	 << "\t(" << 100.0*t_integrateWalls/t_sum << " %)\n";
   }
 
-
-  // Free memory allocated to cudaPrintfInit
-  //cudaPrintfEnd();
 
   // Free GPU device memory  
   printf("\nLiberating device memory:                        ");
