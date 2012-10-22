@@ -456,8 +456,8 @@ int main(int argc, char *argv[])
 	  host_torque,
 	  host_angpos,
 	  host_bonds,
-	  &p, &grid, 
-	  &time, &params,
+	  p, grid, 
+	  time, params,
 	  host_w_nx,
 	  host_w_mvfd,
 	  cwd, inputbin);

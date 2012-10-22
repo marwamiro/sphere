@@ -1,5 +1,5 @@
 # Cuda paths
-CUDA_INSTALL_PATH=/usr/local/bin
+CUDA_INSTALL_PATH=/usr/local/cuda
 #CUDA_BIN=$(CUDA_INSTALL_PATH)/bin
 
 # Define the editor and optional arguments

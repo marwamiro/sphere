@@ -17,6 +17,7 @@
 #include "contactsearch.cuh"
 #include "integration.cuh"
 
+#include "cuPrintf.cu"
 
 // Wrapper function for initializing the CUDA components.
 // Called from main.cpp
@@ -83,6 +84,129 @@ __host__ void stopTimer(cudaEvent_t *kernel_tic,
     *sum += *kernel_elapsed;
 }
 
+// Check values of parameters in constant memory
+__global__ void checkConstantValues(int* dev_equal,
+    				    Grid* dev_grid,
+				    Params* dev_params)
+{
+
+  // Values ok (0)
+  *dev_equal = 0;
+
+  cuPrintf("dev_grid.nd = %u\n", dev_grid->nd);
+  cuPrintf("devC_grid.nd = %u\n", devC_grid.nd);
+  cuPrintf("dev_grid.num.x = %u\n", dev_grid->num[0]);
+  cuPrintf("devC_grid.num.x = %u\n", devC_grid.num[1]);
+  cuPrintf("dev_params.np = %u\n", dev_params->np);
+  cuPrintf("devC_params.np = %u\n", devC_params.np);
+  cuPrintf("dev_params.mu_s = %f\n", dev_params->mu_s);
+  cuPrintf("devC_params.mu_s = %f\n", devC_params.mu_s);
+
+  if (dev_grid->nd != 3) {
+    *dev_equal = 3;
+    return;
+  } else if (devC_grid.nd != 3) {
+    *dev_equal = 4;
+    return; 
+  } else if (devC_grid.num[0] != 4) {
+    *dev_equal = 6;
+    return;
+  } else if (dev_grid->num[0] != 4) {
+    *dev_equal = 5;
+    return;
+  }
+
+
+  // Compare values between global- and constant
+  // memory structures
+  if (dev_grid->nd != devC_grid.nd ||
+      dev_grid->origo[0] != devC_grid.origo[0] ||
+      dev_grid->origo[1] != devC_grid.origo[1] ||
+      dev_grid->origo[2] != devC_grid.origo[2] ||
+      dev_grid->L[0] != devC_grid.L[0] ||
+      dev_grid->L[1] != devC_grid.L[1] ||
+      dev_grid->L[2] != devC_grid.L[2] ||
+      dev_grid->num[0] != devC_grid.num[0] ||
+      dev_grid->num[1] != devC_grid.num[1] ||
+      dev_grid->num[2] != devC_grid.num[2])
+    *dev_equal = 1; // Not ok
+
+  else if (dev_params->global != devC_params.global ||
+      dev_params->g[0] != devC_params.g[0] ||
+      dev_params->g[1] != devC_params.g[1] ||
+      dev_params->g[2] != devC_params.g[2] ||
+      dev_params->dt != devC_params.dt ||
+      dev_params->np != devC_params.np ||
+      dev_params->nw != devC_params.nw ||
+      dev_params->wmode[0] != devC_params.wmode[0] ||
+      dev_params->k_n != devC_params.k_n ||
+      dev_params->k_t != devC_params.k_t ||
+      dev_params->k_r != devC_params.k_r ||
+      dev_params->gamma_n != devC_params.gamma_n ||
+      dev_params->gamma_t != devC_params.gamma_t ||
+      dev_params->gamma_r != devC_params.gamma_r ||
+      dev_params->gamma_wn != devC_params.gamma_wn ||
+      dev_params->gamma_wt != devC_params.gamma_wt ||
+      dev_params->gamma_wr != devC_params.gamma_wr ||
+      dev_params->mu_s != devC_params.mu_s ||
+      dev_params->mu_d != devC_params.mu_d ||
+      dev_params->mu_r != devC_params.mu_r ||
+      dev_params->rho != devC_params.rho ||
+      dev_params->kappa != devC_params.kappa ||
+      dev_params->db != devC_params.db ||
+      dev_params->V_b != devC_params.V_b ||
+      dev_params->periodic != devC_params.periodic ||
+      dev_params->shearmodel != devC_params.shearmodel)
+    *dev_equal = 2; // Not ok
+
+}
+
+
+// Copy the constant data components to device memory,
+// and check whether the values correspond to the 
+// values in constant memory.
+__host__ void checkConstantMemory(Grid* grid, Params* params)
+{
+  cudaPrintfInit();
+
+  // Allocate space in global device memory
+  Grid* dev_grid;
+  Params* dev_params;
+  cudaMalloc((void**)&dev_grid, sizeof(Grid));
+  cudaMalloc((void**)&dev_params, sizeof(Params));
+
+  // Copy structure data from host to global device memory
+  cudaMemcpy(dev_grid, grid, sizeof(Grid), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_params, params, sizeof(Params), cudaMemcpyHostToDevice);
+
+  // Compare values between global and constant memory
+  // structures on the device.
+  int* equal = new int;	// The values are equal = 0, if not = 1
+  *equal = 0;
+  int* dev_equal;
+  cudaMalloc((void**)&dev_equal, sizeof(int));
+  checkConstantValues<<<1,1>>>(dev_equal, dev_grid, dev_params);
+  checkForCudaErrors("After constant memory check");
+
+  // Copy result to host
+  cudaMemcpy(equal, dev_equal, sizeof(int), cudaMemcpyDeviceToHost);
+
+  // Free global device memory
+  cudaFree(dev_grid);
+  cudaFree(dev_params);
+  cudaFree(dev_equal);
+
+  cudaPrintfDisplay(stdout, true);
+
+  // Are the values equal?
+  if (*equal != 0) {
+    std::cerr << "Error! The values in constant memory do not "
+              << "seem to be correct (" << *equal << ").\n";
+    exit(1);
+  } else {
+    std::cout << "  Constant values ok (" << *equal << ").\n";
+  }
+}
 // Copy selected constant components to constant device memory.
 //extern "C"
 __host__ void transferToConstantMemory(Particles* p,
@@ -105,7 +229,7 @@ __host__ void transferToConstantMemory(Particles* p,
   //cudaMemcpyToSymbol("devC_nw", &params->nw, sizeof(unsigned int));
   //cudaMemcpyToSymbol("devC_periodic", &params->periodic, sizeof(int));
 
-  cudaMemcpyToSymbol(devC_grid, grid, sizeof(grid));
+  cudaMemcpyToSymbol(devC_grid, grid, sizeof(Grid));
 
   if (params->global == 1) {
     // If the physical properties of the particles are global (params.global == true),
@@ -122,7 +246,7 @@ __host__ void transferToConstantMemory(Particles* p,
     params->mu_d    = p->mu_d[0];
     params->mu_r    = p->mu_r[0];
     params->rho     = p->rho[0];
-    cudaMemcpyToSymbol(devC_params, params, sizeof(params));
+    cudaMemcpyToSymbol(devC_params, params, sizeof(Params));
     //cudaMemcpyToSymbol("devC_k_n", &params->k_n, sizeof(Float));
     //cudaMemcpyToSymbol("devC_k_t", &params->k_t, sizeof(Float));
     //cudaMemcpyToSymbol("devC_k_r", &params->k_r, sizeof(Float));
@@ -153,6 +277,8 @@ __host__ void transferToConstantMemory(Particles* p,
   }
   checkForCudaErrors("After transferring to device constant memory");
 
+  checkConstantMemory(grid, params);
+
   cout << "Done\n";
 }
 
@@ -167,10 +293,10 @@ __host__ void gpuMain(Float4* host_x,
 		      Float4* host_torque,
 		      Float4* host_angpos,
 		      uint4*  host_bonds,
-		      Particles* p, 
-		      Grid* grid, 
-		      Time* time, 
-		      Params* params,
+		      Particles p, 
+		      Grid grid, 
+		      Time time, 
+		      Params params,
 		      Float4* host_w_nx,
 		      Float4* host_w_mvfd,
 		      const char* cwd, 
@@ -180,7 +306,7 @@ __host__ void gpuMain(Float4* host_x,
   using std::cout;	// Namespace directive
 
   // Copy data to constant global device memory
-  transferToConstantMemory(p, grid, time, params);
+  transferToConstantMemory(&p, &grid, &time, &params);
 
   // Declare pointers for particle variables on the device
   Float4* dev_x;	// Particle position
@@ -221,18 +347,18 @@ __host__ void gpuMain(Float4* host_x,
 
   // Particle contact bookkeeping
   unsigned int* dev_contacts;
-  unsigned int* host_contacts = new unsigned int[p->np*NC];
+  unsigned int* host_contacts = new unsigned int[p.np*NC];
   // Particle pair distance correction across periodic boundaries
   Float4* dev_distmod;
-  Float4* host_distmod = new Float4[p->np*NC];
+  Float4* host_distmod = new Float4[p.np*NC];
   // x,y,z contains the interparticle vector, corrected if contact 
   // is across a periodic boundary. 
   Float4* dev_delta_t; // Accumulated shear distance of contact
-  Float4* host_delta_t = new Float4[p->np*NC];
+  Float4* host_delta_t = new Float4[p.np*NC];
 
   // Particle memory size
-  unsigned int memSizeF  = sizeof(Float) * p->np;
-  unsigned int memSizeF4 = sizeof(Float4) * p->np;
+  unsigned int memSizeF  = sizeof(Float) * p.np;
+  unsigned int memSizeF4 = sizeof(Float4) * p.np;
 
   // Allocate device memory for particle variables,
   // tie to previously declared pointers
@@ -257,24 +383,24 @@ __host__ void gpuMain(Float4* host_x,
   cudaMalloc((void**)&dev_es, memSizeF);
   cudaMalloc((void**)&dev_ev, memSizeF);
   cudaMalloc((void**)&dev_p, memSizeF);
-  //cudaMalloc((void**)&dev_bonds, sizeof(uint4) * p->np);
-  //cudaMalloc((void**)&dev_bonds_sorted, sizeof(uint4) * p->np);
+  //cudaMalloc((void**)&dev_bonds, sizeof(uint4) * p.np);
+  //cudaMalloc((void**)&dev_bonds_sorted, sizeof(uint4) * p.np);
 
   // Cell-related arrays
-  cudaMalloc((void**)&dev_gridParticleCellID, sizeof(unsigned int)*p->np);
-  cudaMalloc((void**)&dev_gridParticleIndex, sizeof(unsigned int)*p->np);
-  cudaMalloc((void**)&dev_cellStart, sizeof(unsigned int)*grid->num[0]*grid->num[1]*grid->num[2]);
-  cudaMalloc((void**)&dev_cellEnd, sizeof(unsigned int)*grid->num[0]*grid->num[1]*grid->num[2]);
+  cudaMalloc((void**)&dev_gridParticleCellID, sizeof(unsigned int)*p.np);
+  cudaMalloc((void**)&dev_gridParticleIndex, sizeof(unsigned int)*p.np);
+  cudaMalloc((void**)&dev_cellStart, sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
+  cudaMalloc((void**)&dev_cellEnd, sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
 
   // Particle contact bookkeeping arrays
-  cudaMalloc((void**)&dev_contacts, sizeof(unsigned int)*p->np*NC); // Max NC contacts per particle
-  cudaMalloc((void**)&dev_distmod, sizeof(Float4)*p->np*NC);
-  cudaMalloc((void**)&dev_delta_t, sizeof(Float4)*p->np*NC);
+  cudaMalloc((void**)&dev_contacts, sizeof(unsigned int)*p.np*NC); // Max NC contacts per particle
+  cudaMalloc((void**)&dev_distmod, sizeof(Float4)*p.np*NC);
+  cudaMalloc((void**)&dev_delta_t, sizeof(Float4)*p.np*NC);
 
   // Wall arrays
-  cudaMalloc((void**)&dev_w_nx, sizeof(Float)*params->nw*4);
-  cudaMalloc((void**)&dev_w_mvfd, sizeof(Float)*params->nw*4);
-  cudaMalloc((void**)&dev_w_force, sizeof(Float)*params->nw*p->np);
+  cudaMalloc((void**)&dev_w_nx, sizeof(Float)*params.nw*4);
+  cudaMalloc((void**)&dev_w_mvfd, sizeof(Float)*params.nw*4);
+  cudaMalloc((void**)&dev_w_force, sizeof(Float)*params.nw*p.np);
 
   checkForCudaErrors("Post device memory allocation");
   cout << "Done\n";
@@ -291,32 +417,32 @@ __host__ void gpuMain(Float4* host_x,
   cudaMemcpy(dev_force, host_force, memSizeF4, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_torque, host_torque, memSizeF4, cudaMemcpyHostToDevice);
   cudaMemcpy(dev_angpos, host_angpos, memSizeF4, cudaMemcpyHostToDevice);
-  //cudaMemcpy(dev_bonds, host_bonds, sizeof(uint4) * p->np, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_radius, p->radius, memSizeF, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_es_dot, p->es_dot, memSizeF, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_ev_dot, p->ev_dot, memSizeF, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_es, p->es, memSizeF, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_ev, p->ev, memSizeF, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_p, p->p, memSizeF, cudaMemcpyHostToDevice);
+  //cudaMemcpy(dev_bonds, host_bonds, sizeof(uint4) * p.np, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_radius, p.radius, memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_es_dot, p.es_dot, memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_ev_dot, p.ev_dot, memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_es, p.es, memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_ev, p.ev, memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_p, p.p, memSizeF, cudaMemcpyHostToDevice);
 
   // Wall data (wall mass and number in constant memory)
-  cudaMemcpy(dev_w_nx, host_w_nx, sizeof(Float)*params->nw*4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_w_mvfd, host_w_mvfd, sizeof(Float)*params->nw*4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_w_nx, host_w_nx, sizeof(Float)*params.nw*4, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_w_mvfd, host_w_mvfd, sizeof(Float)*params.nw*4, cudaMemcpyHostToDevice);
   
   // Initialize contacts lists to p.np
-  unsigned int* npu = new unsigned int[p->np*NC];
-  for (unsigned int i=0; i<(p->np*NC); ++i)
-    npu[i] = p->np;
-  cudaMemcpy(dev_contacts, npu, sizeof(unsigned int)*p->np*NC, cudaMemcpyHostToDevice);
+  unsigned int* npu = new unsigned int[p.np*NC];
+  for (unsigned int i=0; i<(p.np*NC); ++i)
+    npu[i] = p.np;
+  cudaMemcpy(dev_contacts, npu, sizeof(unsigned int)*p.np*NC, cudaMemcpyHostToDevice);
   delete[] npu;
 
   // Create array of 0.0 values on the host and transfer these to the distance 
   // modifier and shear displacement arrays
-  Float4* zerosF4 = new Float4[p->np*NC];
-  for (unsigned int i=0; i<(p->np*NC); ++i)
+  Float4* zerosF4 = new Float4[p.np*NC];
+  for (unsigned int i=0; i<(p.np*NC); ++i)
     zerosF4[i] = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-  cudaMemcpy(dev_distmod, zerosF4, sizeof(Float4)*p->np*NC, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_delta_t, zerosF4, sizeof(Float4)*p->np*NC, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_distmod, zerosF4, sizeof(Float4)*p.np*NC, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_delta_t, zerosF4, sizeof(Float4)*p.np*NC, cudaMemcpyHostToDevice);
   delete[] zerosF4;
 
   checkForCudaErrors("Post memcopy");
@@ -339,7 +465,7 @@ __host__ void gpuMain(Float4* host_x,
   // GPU workload configuration
   unsigned int threadsPerBlock = 256; 
   // Create enough blocks to accomodate the particles
-  unsigned int blocksPerGrid   = iDivUp(p->np, threadsPerBlock); 
+  unsigned int blocksPerGrid   = iDivUp(p.np, threadsPerBlock); 
   dim3 dimGrid(blocksPerGrid, 1, 1); // Blocks arranged in 1D grid
   dim3 dimBlock(threadsPerBlock, 1, 1); // Threads arranged in 1D block
   // Shared memory per block
@@ -363,18 +489,18 @@ __host__ void gpuMain(Float4* host_x,
   sprintf(file,"%s/output/%s.status.dat", cwd, inputbin);
   fp = fopen(file, "w");
   fprintf(fp,"%2.4e %2.4e %d\n", 
-      	  time->current, 
-	  100.0*time->current/time->total, 
-	  time->step_count);
+      	  time.current, 
+	  100.0*time.current/time.total, 
+	  time.step_count);
   fclose(fp);
 
   // Write first output data file: output0.bin, thus testing writing of bin files
   sprintf(file,"%s/output/%s.output0.bin", cwd, inputbin);
-  if (fwritebin(file, p, host_x, host_vel, 
+  if (fwritebin(file, &p, host_x, host_vel, 
 		host_angvel, host_force, 
 		host_torque, host_angpos,
 		host_bonds,
-		grid, time, params,
+		&grid, &time, &params,
 		host_w_nx, host_w_mvfd) != 0)  {
     std::cerr << "\n Problem during fwritebin \n";
     exit(EXIT_FAILURE);
@@ -412,11 +538,11 @@ __host__ void gpuMain(Float4* host_x,
     cudaEventCreate(&kernel_toc);
   }
 
-  cout << "  Current simulation time: " << time->current << " s.";
+  cout << "  Current simulation time: " << time.current << " s.";
 
 
   // MAIN CALCULATION TIME LOOP
-  while (time->current <= time->total) {
+  while (time.current <= time.total) {
 
     // Increment iteration counter
     ++iter;
@@ -449,7 +575,7 @@ __host__ void gpuMain(Float4* host_x,
     if (PROFILING == 1)
       startTimer(&kernel_tic);
     thrust::sort_by_key(thrust::device_ptr<uint>(dev_gridParticleCellID),
-			thrust::device_ptr<uint>(dev_gridParticleCellID + p->np),
+			thrust::device_ptr<uint>(dev_gridParticleCellID + p.np),
 			thrust::device_ptr<uint>(dev_gridParticleIndex));
     cudaThreadSynchronize(); // Needed? Does thrust synchronize threads implicitly?
     if (PROFILING == 1)
@@ -461,7 +587,7 @@ __host__ void gpuMain(Float4* host_x,
     // specified with pointer value 0xffffffff, which for a 32 bit unsigned int
     // is 4294967295.
     cudaMemset(dev_cellStart, 0xffffffff, 
-	       grid->num[0]*grid->num[1]*grid->num[2]*sizeof(unsigned int));
+	       grid.num[0]*grid.num[1]*grid.num[2]*sizeof(unsigned int));
     cudaThreadSynchronize();
     checkForCudaErrors("Post cudaMemset");
 
@@ -491,7 +617,7 @@ __host__ void gpuMain(Float4* host_x,
     // The contact search in topology() is only necessary for determining
     // the accumulated shear distance needed in the linear elastic
     // and nonlinear contact force model
-    if (params->shearmodel == 2 || params->shearmodel == 3) {
+    if (params.shearmodel == 2 || params.shearmodel == 3) {
       // For each particle: Search contacts in neighbor cells
       if (PROFILING == 1)
 	startTimer(&kernel_tic);
@@ -571,7 +697,7 @@ __host__ void gpuMain(Float4* host_x,
     // Update wall kinematics
     if (PROFILING == 1)
       startTimer(&kernel_tic);
-    integrateWalls<<< 1, params->nw>>>(dev_w_nx, 
+    integrateWalls<<< 1, params.nw>>>(dev_w_nx, 
 				       dev_w_mvfd,
 				       dev_w_force_partial,
 				       blocksPerGrid);
@@ -584,17 +710,17 @@ __host__ void gpuMain(Float4* host_x,
 
 
     // Update timers and counters
-    time->current    += time->dt;
-    filetimeclock    += time->dt;
+    time.current    += time.dt;
+    filetimeclock    += time.dt;
 
     // Report time to console
     cout << "\r  Current simulation time: " 
-         << time->current << " s.        ";// << std::flush;
+         << time.current << " s.        ";// << std::flush;
 
 
     // Produce output binary if the time interval 
     // between output files has been reached
-    if (filetimeclock > time->file_dt) {
+    if (filetimeclock > time.file_dt) {
 
       // Pause the CPU thread until all CUDA calls previously issued are completed
       cudaThreadSynchronize();
@@ -610,23 +736,23 @@ __host__ void gpuMain(Float4* host_x,
       cudaMemcpy(host_force, dev_force, memSizeF4, cudaMemcpyDeviceToHost);
       cudaMemcpy(host_torque, dev_torque, memSizeF4, cudaMemcpyDeviceToHost);
       cudaMemcpy(host_angpos, dev_angpos, memSizeF4, cudaMemcpyDeviceToHost);
-      //cudaMemcpy(host_bonds, dev_bonds, sizeof(uint4) * p->np, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p->es_dot, dev_es_dot, memSizeF, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p->ev_dot, dev_ev_dot, memSizeF, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p->es, dev_es, memSizeF, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p->ev, dev_ev, memSizeF, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p->p, dev_p, memSizeF, cudaMemcpyDeviceToHost);
+      //cudaMemcpy(host_bonds, dev_bonds, sizeof(uint4) * p.np, cudaMemcpyDeviceToHost);
+      cudaMemcpy(p.es_dot, dev_es_dot, memSizeF, cudaMemcpyDeviceToHost);
+      cudaMemcpy(p.ev_dot, dev_ev_dot, memSizeF, cudaMemcpyDeviceToHost);
+      cudaMemcpy(p.es, dev_es, memSizeF, cudaMemcpyDeviceToHost);
+      cudaMemcpy(p.ev, dev_ev, memSizeF, cudaMemcpyDeviceToHost);
+      cudaMemcpy(p.p, dev_p, memSizeF, cudaMemcpyDeviceToHost);
 
       // Wall data
       cudaMemcpy(host_w_nx, dev_w_nx, 
-	  	 sizeof(Float)*params->nw*4, cudaMemcpyDeviceToHost);
+	  	 sizeof(Float)*params.nw*4, cudaMemcpyDeviceToHost);
       cudaMemcpy(host_w_mvfd, dev_w_mvfd, 
-	  	 sizeof(Float)*params->nw*4, cudaMemcpyDeviceToHost);
+	  	 sizeof(Float)*params.nw*4, cudaMemcpyDeviceToHost);
 
   
       // Contact information
       if (CONTACTINFO == 1) {
-	cudaMemcpy(host_contacts, dev_contacts, sizeof(unsigned int)*p->np*NC, cudaMemcpyDeviceToHost);
+	cudaMemcpy(host_contacts, dev_contacts, sizeof(unsigned int)*p.np*NC, cudaMemcpyDeviceToHost);
 	cudaMemcpy(host_delta_t, dev_delta_t, memSizeF4*NC, cudaMemcpyDeviceToHost);
 	cudaMemcpy(host_distmod, dev_distmod, memSizeF4*NC, cudaMemcpyDeviceToHost);
       }
@@ -635,14 +761,14 @@ __host__ void gpuMain(Float4* host_x,
       cudaThreadSynchronize();
 
       // Write binary output file
-      time->step_count += 1;
-      sprintf(file,"%s/output/%s.output%d.bin", cwd, inputbin, time->step_count);
+      time.step_count += 1;
+      sprintf(file,"%s/output/%s.output%d.bin", cwd, inputbin, time.step_count);
 
-      if (fwritebin(file, p, host_x, host_vel, 
+      if (fwritebin(file, &p, host_x, host_vel, 
 	    	    host_angvel, host_force, 
 		    host_torque, host_angpos,
 		    host_bonds,
-		    grid, time, params,
+		    &grid, &time, &params,
 	    	    host_w_nx, host_w_mvfd) != 0) {
 	cout << "\n Error during fwritebin() in main loop\n";
 	exit(EXIT_FAILURE);
@@ -651,10 +777,10 @@ __host__ void gpuMain(Float4* host_x,
       if (CONTACTINFO == 1) {
 	// Write contact information to stdout
 	cout << "\n\n---------------------------\n"
-	     << "t = " << time->current << " s.\n"
+	     << "t = " << time.current << " s.\n"
 	     << "---------------------------\n";
 
-	for (int n = 0; n < p->np; ++n) {
+	for (int n = 0; n < p.np; ++n) {
 	  cout << "\n## Particle " << n << " ##\n";
 
 	  cout  << "- contacts:\n";
@@ -682,9 +808,9 @@ __host__ void gpuMain(Float4* host_x,
       sprintf(file,"%s/output/%s.status.dat", cwd, inputbin);
       fp = fopen(file, "w");
       fprintf(fp,"%2.4e %2.4e %d\n", 
-	      time->current, 
-	      100.0*time->current/time->total,
-	      time->step_count);
+	      time.current, 
+	      100.0*time.current/time.total,
+	      time.step_count);
       fclose(fp);
 
       filetimeclock = 0.0;
@@ -701,7 +827,7 @@ __host__ void gpuMain(Float4* host_x,
 
   cout << "\nSimulation ended. Statistics:\n"
        << "  - Last output file number: " 
-       << time->step_count << "\n"
+       << time.step_count << "\n"
        << "  - GPU time spent: "
        << dev_time_spent/1000.0f << " s\n"
        << "  - CPU time spent: "
