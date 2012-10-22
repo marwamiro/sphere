@@ -128,7 +128,7 @@ struct Params {
   Float gamma_t;
   Float gamma_r;
   Float gamma_wn;
-  Float gamma_ws;
+  Float gamma_wt;
   Float gamma_wr;
   Float mu_s; 
   Float mu_d;
