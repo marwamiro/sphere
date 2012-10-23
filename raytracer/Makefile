@@ -23,8 +23,11 @@ OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
 
 EXECUTABLE=rt
 
-# NVCC debug compilation
+# NVCC flags
 NVCCFLAGS+=-use_fast_math -gencode arch=compute_20,code=sm_20
+
+# Generate device code
+#NVCCFLAGS+=--export-dir=$(EXECUTABLE).devcode
 
 INCLUDES = -I. -I../libs -I/usr/local/cuda/include
 LIBS = -L/usr/local/cuda/lib64 -L/usr/local/cuda/lib -lcudart -lcuda 
