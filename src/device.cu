@@ -17,6 +17,8 @@
 #include "contactsearch.cuh"
 #include "integration.cuh"
 
+//#include "cuPrintf.cu"
+
 // Wrapper function for initializing the CUDA components.
 // Called from main.cpp
 //extern "C"
@@ -91,21 +93,6 @@ __global__ void checkConstantValues(int* dev_equal,
   // Values ok (0)
   *dev_equal = 0;
 
-  if (dev_grid->nd != 3) {
-    *dev_equal = 3;
-    return;
-  } else if (devC_grid.nd != 3) {
-    *dev_equal = 4;
-    return; 
-  } else if (devC_grid.num[0] != 4) {
-    *dev_equal = 6;
-    return;
-  } else if (dev_grid->num[0] != 4) {
-    *dev_equal = 5;
-    return;
-  }
-
-
   // Compare values between global- and constant
   // memory structures
   if (dev_grid->nd != devC_grid.nd ||
@@ -157,6 +144,8 @@ __global__ void checkConstantValues(int* dev_equal,
 __host__ void checkConstantMemory(Grid* grid, Params* params)
 {
 
+  //cudaPrintfInit();
+
   // Allocate space in global device memory
   Grid* dev_grid;
   Params* dev_params;
@@ -183,6 +172,8 @@ __host__ void checkConstantMemory(Grid* grid, Params* params)
   cudaFree(dev_grid);
   cudaFree(dev_params);
   cudaFree(dev_equal);
+
+  //cudaPrintfDisplay(stdout, true);
 
 
   // Are the values equal?
