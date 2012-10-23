@@ -15,6 +15,10 @@ LINKER=$(CC)
 CCFLAGS=-Wall -O3
 NVCCFLAGS=--use_fast_math -O3 -m64 -gencode=arch=compute_20,code=\"sm_20,compute_20\" -Xcompiler "-O3"
 
+# Save runtime-generated code in cache.
+# Must be specified in env. var. CUDA_DEVCODE_PATH before exec.
+#NVCCFLAGS+=--export-dir code_repo
+
 # Verbose compile?
 #NVCCFLAGS+=--verbose
 

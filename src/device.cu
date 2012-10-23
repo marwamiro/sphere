@@ -175,7 +175,6 @@ __host__ void checkConstantMemory(Grid* grid, Params* params)
 
   //cudaPrintfDisplay(stdout, true);
 
-
   // Are the values equal?
   if (*equal != 0) {
     std::cerr << "Error! The values in constant memory do not "
