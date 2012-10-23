@@ -263,10 +263,9 @@ __host__ void transferToConstantMemory(Particles* p,
     exit(EXIT_FAILURE); // Return unsuccessful exit status
   }
   checkForCudaErrors("After transferring to device constant memory");
+  cout << "Done\n";
 
   checkConstantMemory(grid, params);
-
-  cout << "Done\n";
 }
 
 
