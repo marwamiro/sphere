@@ -998,6 +998,28 @@ def renderAll(project,
     # Call raytracer, also converts to format
     render(fn, out, graphics_format, resolution, workhorse, method, max_val, rt_bin, verbose)
 
+def video(project,
+    	  out_folder = "./",
+    	  video_format = "mp4",
+	  graphics_folder = "../img_out/",
+	  graphics_format = "png",
+	  fps = 25,
+	  qscale = 1,
+	  bitrate = 1800,
+	  verbose = False):
+  # Use ffmpeg to combine images to animation
+
+  # Possible loglevels: quiet, panic, fatal, error, warning, info, verbose, debug
+  loglevel = "info" # verbose = True
+  if (verbose == False):
+    loglevel = "error"
+
+  subprocess.call(\
+      "ffmpeg -qscale {0} -r {1} -b {2} -y ".format(qscale, fps, bitrate) \
+      + "-loglevel " + loglevel + " " \
+      + "-i " + graphics_folder + project + ".output%d." + graphics_format + " " \
+      + out_folder + "/" + project + "." + video_format, shell=True)
+
   
 def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
   """ Visualize output from the target project,
