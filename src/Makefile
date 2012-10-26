@@ -33,7 +33,7 @@ NVCCFLAGS=--use_fast_math -O3 -m64 -gencode=arch=compute_20,code=\"sm_20,compute
 DATE=`date +'%Y.%m.%d-%H:%M:%S'`
 	BACKUPNAME=sphere.$(DATE).tar.gz
 
-CCFILES=main.cpp file_io.cpp
+CCFILES=main.cpp file_io.cpp sphere.cpp
 CUFILES=device.cu utility.cu
 CCOBJECTS=$(CCFILES:.cpp=.o)
 CUOBJECTS=$(CUFILES:.cu=.o)
@@ -82,6 +82,9 @@ device.o: device.cu datatypes.h *.cuh
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
 
 main.o: main.cpp datatypes.h
+	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
+
+sphere.o: sphere.cpp sphere.h
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
 ../sphere_status: sphere_status.cpp

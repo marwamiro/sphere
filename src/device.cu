@@ -7,8 +7,9 @@
 #include "thrust/device_ptr.h"
 #include "thrust/sort.h"
 
+#include "sphere.h"
 #include "datatypes.h"
-#include "datatypes.cuh"
+#include "utility.cuh"
 #include "constants.cuh"
 
 #include "sorting.cuh"	
@@ -22,7 +23,7 @@
 // Wrapper function for initializing the CUDA components.
 // Called from main.cpp
 //extern "C"
-__host__ void initializeGPU(void)
+__host__ void DEM::initializeGPU(void)
 {
   using std::cout; // stdout
 
@@ -141,7 +142,7 @@ __global__ void checkConstantValues(int* dev_equal,
 // Copy the constant data components to device memory,
 // and check whether the values correspond to the 
 // values in constant memory.
-__host__ void checkConstantMemory(Grid* grid, Params* params)
+__host__ void DEM::checkConstantMemory()
 {
 
   //cudaPrintfInit();
@@ -184,127 +185,39 @@ __host__ void checkConstantMemory(Grid* grid, Params* params)
     std::cout << "  Constant values ok (" << *equal << ").\n";
   }
 }
+
 // Copy selected constant components to constant device memory.
-//extern "C"
-__host__ void transferToConstantMemory(Particles* p,
-    				       Grid* grid, 
-				       Time* time, 
-				       Params* params)
+__host__ void DEM::transferToConstantDeviceMemory()
 {
   using std::cout;
 
-  cout << "\n  Transfering data to constant device memory:     ";
+  if (verbose == 1)
+    cout << "\n  Transfering data to constant device memory:     ";
 
-  //cudaMemcpyToSymbol("devC_np", &p->np, sizeof(p->np));
+  cudaMemcpyToSymbol("devC_nd", &nd, sizeof(nd));
+  cudaMemcpyToSymbol("devC_np", &np, sizeof(np));
   cudaMemcpyToSymbol("devC_nc", &NC, sizeof(int));
-  //cudaMemcpyToSymbol("devC_origo", grid->origo, sizeof(Float)*ND);
-  //cudaMemcpyToSymbol("devC_L", grid->L, sizeof(Float)*ND);
-  //cudaMemcpyToSymbol("devC_num", grid->num, sizeof(unsigned int)*ND);
-  //cudaMemcpyToSymbol("devC_dt", &time->dt, sizeof(Float));
-  //cudaMemcpyToSymbol("devC_global", &params->global, sizeof(int));
-  //cudaMemcpyToSymbol("devC_g", params->g, sizeof(Float)*ND);
-  //cudaMemcpyToSymbol("devC_nw", &params->nw, sizeof(unsigned int));
-  //cudaMemcpyToSymbol("devC_periodic", &params->periodic, sizeof(int));
-
   cudaMemcpyToSymbol(devC_grid, grid, sizeof(Grid));
-
-  if (params->global == 1) {
-    // If the physical properties of the particles are global (params.global == true),
-    //   copy the values from the first particle into the designated constant memory. 
- 
-    //printf("(params.global == %d) ", params.global);
-    params->k_n     = p->k_n[0];
-    params->k_t	    = p->k_t[0];
-    params->k_r	    = p->k_r[0];
-    params->gamma_n = p->gamma_n[0];
-    params->gamma_t = p->gamma_t[0];
-    params->gamma_r = p->gamma_r[0];
-    params->mu_s    = p->mu_s[0];
-    params->mu_d    = p->mu_d[0];
-    params->mu_r    = p->mu_r[0];
-    params->rho     = p->rho[0];
-    cudaMemcpyToSymbol(devC_params, params, sizeof(Params));
-    //cudaMemcpyToSymbol("devC_k_n", &params->k_n, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_k_t", &params->k_t, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_k_r", &params->k_r, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_gamma_n", &params->gamma_n, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_gamma_t", &params->gamma_t, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_gamma_r", &params->gamma_r, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_gamma_wn", &params->gamma_wn, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_gamma_ws", &params->gamma_ws, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_gamma_wr", &params->gamma_wr, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_mu_s", &params->mu_s, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_mu_d", &params->mu_d, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_mu_r", &params->mu_r, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_rho", &params->rho, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_kappa", &params->kappa, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_db", &params->db, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_V_b", &params->V_b, sizeof(Float));
-    //cudaMemcpyToSymbol("devC_shearmodel", &params->shearmodel, sizeof(unsigned int));
-    //cudaMemcpyToSymbol("devC_wmode", &params->wmode, sizeof(int)*MAXWALLS);
-  } else {
-    //printf("(params.global == %d) ", params.global);
-    // Copy params structure with individual physical values from host to global memory
-    //Params *dev_params;
-    //HANDLE_ERROR(cudaMalloc((void**)&dev_params, sizeof(Params)));
-    //HANDLE_ERROR(cudaMemcpyToSymbol(dev_params, &params, sizeof(Params)));
-    //printf("Done\n");
-    std::cerr << "\n\nError: SPHERE is not yet ready for non-global physical variables.\nBye!\n";
-    exit(EXIT_FAILURE); // Return unsuccessful exit status
-  }
+  cudaMemcpyToSymbol(devC_params, params, sizeof(Params));
+  
   checkForCudaErrors("After transferring to device constant memory");
-  cout << "Done\n";
+  
+  if (verbose == 1)
+    cout << "Done\n";
 
-  checkConstantMemory(grid, params);
+  checkConstantMemory();
 }
 
 
 //extern "C"
-__host__ void gpuMain(Float4* host_x,
-		      Float4* host_vel,
-		      Float4* host_acc,
-		      Float4* host_angvel,
-		      Float4* host_angacc,
-		      Float4* host_force,
-		      Float4* host_torque,
-		      Float4* host_angpos,
-		      uint4*  host_bonds,
-		      Particles p, 
-		      Grid grid, 
-		      Time time, 
-		      Params params,
-		      Float4* host_w_nx,
-		      Float4* host_w_mvfd,
-		      const char* cwd, 
-		      const char* inputbin)
+__host__ void DEM::startTime()
 {
 
   using std::cout;	// Namespace directive
 
   // Copy data to constant global device memory
-  transferToConstantMemory(&p, &grid, &time, &params);
+  transferToConstantDeviceMemory();
 
-  // Declare pointers for particle variables on the device
-  Float4* dev_x;	// Particle position
-  Float4* dev_vel;	// Particle linear velocity
-  Float4* dev_angvel;	// Particle angular velocity
-  Float4* dev_acc;	// Particle linear acceleration
-  Float4* dev_angacc;	// Particle angular acceleration
-  Float4* dev_force;	// Sum of forces
-  Float4* dev_torque;	// Sum of torques
-  Float4* dev_angpos;	// Particle angular position
-  Float*  dev_radius;	// Particle radius
-  Float*  dev_es_dot;	// Current shear energy producion rate
-  Float*  dev_ev_dot;	// Current viscous energy producion rate
-  Float*  dev_es;	// Total shear energy excerted on particle
-  Float*  dev_ev;	// Total viscous energy excerted on particle
-  Float*  dev_p;	// Pressure excerted onto particle
-  //uint4*  dev_bonds;	// Particle bond pairs
-
-  // Declare pointers for wall vectors on the device
-  Float4* dev_w_nx;            // Wall normal (x,y,z) and position (w)
-  Float4* dev_w_mvfd;          // Wall mass (x), velocity (y), force (z) 
-  			       // and deviatoric stress (w)
   Float*  dev_w_force;	       // Resulting force on wall per particle
   Float*  dev_w_force_partial; // Partial sum from block of threads
 
@@ -313,7 +226,6 @@ __host__ void gpuMain(Float4* host_x,
   Float4* dev_vel_sorted;
   Float4* dev_angvel_sorted;
   Float*  dev_radius_sorted; 
-  //uint4*  dev_bonds_sorted;
 
   // Grid-particle array pointers
   unsigned int* dev_gridParticleCellID;
@@ -337,7 +249,8 @@ __host__ void gpuMain(Float4* host_x,
   unsigned int memSizeF4 = sizeof(Float4) * p.np;
 
   // Allocate device memory for particle variables,
-  // tie to previously declared pointers
+  // tied to previously declared pointers in structures
+  allocateGlobalDeviceMemory();
   cout << "  Allocating device memory:                       ";
 
   // Particle arrays
