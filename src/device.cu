@@ -656,7 +656,7 @@ __host__ void DEM::startTime()
 
       if (CONTACTINFO == 1) {
 	// Write contact information to stdout
-	cout << "\n\n---------------------------\n"
+	/*cout << "\n\n---------------------------\n"
 	     << "t = " << time.current << " s.\n"
 	     << "---------------------------\n";
 
@@ -681,7 +681,7 @@ __host__ void DEM::startTime()
 		 << host_distmod[nc+NC*n].z << '\t'
 		 << host_distmod[nc+NC*n].w << '\n';
 	}
-	cout << '\n';
+	cout << '\n';*/
       }
 
       // Update status.dat at the interval of filetime 
