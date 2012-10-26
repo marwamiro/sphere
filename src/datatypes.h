@@ -1,5 +1,3 @@
-// datatypes.h -- Structure templates and function prototypes
-
 // Avoiding multiple inclusions of header file
 #ifndef DATATYPES_H_
 #define DATATYPES_H_
@@ -7,171 +5,80 @@
 #include <math.h>
 #include "vector_functions.h"
 //#include "vector_arithmetic.h"
+#include "typedefs.h"
+#include "constants.h"
 
 
-// Enable profiling of kernel runtimes?
-// 0: No (default)
-// 1: Yes
-#define PROFILING 1
+////////////////////////////
+// STRUCTURE DECLARATIONS //
+////////////////////////////
 
-// Output information about contacts to stdout?
-// 0: No (default)
-// 1: Yes
-#define CONTACTINFO 0
+// Structure containing kinematic particle values
+struct Kinematics {
+  Float4 *x;		// Positions + radii (w)
+  Float2 *xysum;	// Horizontal distance traveled
+  Float4 *vel;		// Translational velocities + fixvels (w)
+  Float4 *force;	// Sums of forces
+  Float4 *angpos;	// Angular positions
+  Float4 *angvel;	// Angular velocities
+  Float4 *torque;	// Sums of torques
+};
 
-
-//////////////////////
-// TYPE DEFINITIONS //
-//////////////////////
-
-// REMEMBER: When changing the precision below,
-// change values in typedefs.h accordingly.
-
-// Uncomment all five lines below for single precision
-/*
-typedef Float Float;
-typedef Float3 Float3;
-typedef Float4 Float4;
-#define MAKE_FLOAT3(x, y, z) make_Float3(x, y, z)
-#define MAKE_FLOAT4(x, y, z, w) make_Float4(x, y, z, w)
-*/
-
-
-// Uncomment all five lines below for double precision
-///*
-typedef double Float;
-typedef double2 Float2;
-typedef double3 Float3;
-typedef double4 Float4;
-#define MAKE_FLOAT3(x, y, z) make_double3(x, y, z)
-#define MAKE_FLOAT4(x, y, z, w) make_double4(x, y, z, w)
-//*/
-
-
-////////////////////////
-// SYMBOLIC CONSTANTS //
-////////////////////////
-
-// Define the max. number of walls
-#define MAXWALLS 6
-
-
-const Float PI = 3.14159265358979;
-
-// Number of dimensions (1 and 2 NOT functional)
-const unsigned int ND = 3;
-
-// Define source code version
-const Float VERS = 0.25;
-
-// Max. number of contacts per particle
-//const int NC = 16;
-const int NC = 32;
-
-
-///////////////////////////
-// STRUCTURE DECLARATION //
-///////////////////////////
-
-// Structure containing variable particle parameters
-struct Particles {
-  Float *radius;
-  Float *k_n;
-  Float *k_t;
-  Float *k_r;
-  Float *gamma_n;
-  Float *gamma_t;
-  Float *gamma_r;
-  Float *mu_s;
-  Float *mu_d;
-  Float *mu_r;
-  Float *rho;
-  Float *es_dot;
-  Float *ev_dot;
-  Float *es;
-  Float *ev;
-  Float *p;
-  Float *m;
-  Float *I;
-  unsigned int np;
+// Structure containing individual physical particle parameters
+struct Energies {
+  Float *es_dot;	// Frictional dissipation rates
+  Float *es;		// Frictional dissipations
+  Float *ev_dot;	// Viscous dissipation rates
+  Float *ev;		// Viscous dissipations
+  Float *p;		// Pressures
+  //uint4 *bonds;		// Cohesive bonds
 };
 
 // Structure containing grid parameters
 struct Grid {
-  unsigned int nd;
-  Float origo[ND];
-  Float L[ND];
-  unsigned int num[ND];
+  Float origo[ND];	// World coordinate system origo
+  Float L[ND];		// World dimensions
+  unsigned int num[ND];	// Neighbor-search cells along each axis
+  int periodic;		// Behavior of boundaries at 1st and 2nd world edge
 };
 
 // Structure containing time parameters
 struct Time {
-  Float dt;
-  double current;
-  double total;
-  Float file_dt;
-  unsigned int step_count;
+  Float dt;		// Computational time step length
+  double current;	// Current time
+  double total;		// Total time (at the end of experiment)
+  Float file_dt;	// Time between output files
+  unsigned int step_count; // Number of steps taken at current time
 };
 
 // Structure containing constant, global physical parameters
 struct Params {
-  int global;
-  Float g[ND];
-  Float dt;
-  unsigned int np;
-  unsigned int nw;
-  int wmode[MAXWALLS];
-  Float k_n;
-  Float k_t;
-  Float k_r;
-  Float gamma_n;
-  Float gamma_t;
-  Float gamma_r;
-  Float gamma_wn;
-  Float gamma_wt;
-  Float gamma_wr;
-  Float mu_s; 
-  Float mu_d;
-  Float mu_r;
-  Float rho;
-  Float kappa;
-  Float db;
-  Float V_b;
-  int periodic;
-  unsigned int shearmodel;
+  Float g[ND];		// Gravitational acceleration
+  Float k_n;		// Normal stiffness
+  Float k_t;		// Tangential stiffness
+  Float k_r;		// Rotational stiffness
+  Float gamma_n;	// Normal viscosity
+  Float gamma_t;	// Tangential viscosity
+  Float gamma_r;	// Rotational viscosity
+  Float mu_s; 		// Static friction coefficient
+  Float mu_d;		// Dynamic friction coefficient
+  Float mu_r;		// Rotational friction coefficient
+  Float rho;		// Material density
+  unsigned int contactmodel; // Inter-particle contact model
+  Float kappa;		// Capillary bond prefactor
+  Float db;		// Capillary bond debonding distance
+  Float V_b;		// Volume of fluid in capillary bond
 };
 
-
-/////////////////////////
-// PROTOTYPE FUNCTIONS //
-/////////////////////////
-int fwritebin(char *target, Particles *p, 
-    	      Float4 *host_x, Float4 *host_vel, 
-	      Float4 *host_angvel, Float4 *host_force, 
-	      Float4 *host_torque, Float4 *host_angpos, 
-	      uint4 *host_bonds,
-	      Grid *grid, Time *time, Params *params,
-	      Float4 *host_w_nx, Float4 *host_w_mvfd);
-
-// device.cu
-//extern "C"
-void initializeGPU(void);
-
-//extern "C"
-void gpuMain(Float4* host_x,
-    	     Float4* host_vel,
-	     Float4* host_acc,
-	     Float4* host_angvel,
-	     Float4* host_angacc,
-	     Float4* host_force,
-	     Float4* host_torque,
-	     Float4* host_angpos,
-	     uint4*  host_bonds,
-	     Particles p, Grid grid,
-	     Time time, Params params,
-	     Float4* host_w_nx,
-	     Float4* host_w_mvfd,
-	     const char* cwd,
-	     const char* inputbin);
+// Structure containing wall parameters
+struct Walls {
+  unsigned int nw;	// Number of walls (<= MAXWALLS)
+  int wmode[MAXWALLS];	// Wall modes
+  Float4* nx;		// Wall normal and position
+  Float4* mvfd;		// Wall mass, velocity, force and dev. stress
+  Float gamma_wn;	// Wall normal viscosity
+  Float gamma_wt;	// Wall tangential viscosity
+  Float gamma_wr;	// Wall rolling viscosity
+};
 
 #endif

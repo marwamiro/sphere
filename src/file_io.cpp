@@ -1,348 +1,344 @@
-#include <stdio.h>  // Standard library functions for file input and output
-#include <stdlib.h> // Functions involving memory allocation, process control, conversions and others
-#include <unistd.h> // UNIX only: For getcwd
-#include <string.h> // For strerror and strcmp
-#include <cuda.h>
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+
+#include "typedefs.h"
 #include "datatypes.h"
+#include "constants.h"
+#include "sphere.h"
 
-
-// Write host variables to target binary file
-// The output format should ALWAYS be double precision,
-// so this function will typecast the data before write
-// if it is single precision.
-int fwritebin(char *target, 
-    Particles *p, 
-    Float4 *host_x, 
-    Float4 *host_vel, 
-    Float4 *host_angvel, 
-    Float4 *host_force, 
-    Float4 *host_torque, 
-    Float4 *host_angpos, 
-    uint4 *host_bonds,
-    Grid *grid, 
-    Time *time, 
-    Params *params,
-    Float4 *host_w_nx, 
-    Float4 *host_w_mvfd)
+// Read DEM data from binary file
+void DEM::readbin(const char *target)
 {
 
-  FILE *fp;
-  unsigned int u;
-  unsigned int j;
+  if (verbose == 1)
+    std::cout << "reading binary: " << target << '\n';
 
-  if ((fp = fopen(target,"wb")) == NULL) {
-    printf("Could create output binary file. Bye.\n");
-    return 1; // Return unsuccessful exit status
+  int err = 0;
+
+  // Open input file
+  FILE *fp;
+  if ((fp = fopen(target, "rb")) == NULL) {
+    std::cerr << "Could not read input binary file '"
+      << target << "'\n";
+    exit(++err);
+  }
+
+  // Read data
+  if(fread(&nd, sizeof(nd), 1, fp) != 1)
+    exit(++err); // Return unsuccessful exit status
+
+  if (fread(&np, sizeof(np), 1, fp) != 1)
+    exit(++err); // Return unsuccessful exit status
+  if (verbose == 1) {
+    std::cout << "  - Number of dimensions: nd = " << nd << "\n"
+      << "  - Number of particles:  np = " << np << "\n";
+  }
+
+  if (nd != ND) {
+    std::cerr << "Dimensionality mismatch between dataset and this SPHERE program.\n"
+      << "The dataset is " << nd 
+      << "D, this SPHERE binary is " << ND << "D.\n"
+      << "This execution is terminating.\n";
+    exit(++err); // Return unsuccessful exit status
+  }
+
+  // Check precision choice
+  if (verbose == 1)
+    std::cout << "  - Compiled for ";
+  if (sizeof(Float) == sizeof(float)) {
+    if (verbose == 1)
+      std::cout << "single";
+  } else if (sizeof(Float) == sizeof(double)) {
+    if (verbose == 1)
+      std::cout << "double";
+  } else {
+    std::cerr << "Error! Chosen precision not available. Check datatypes.h\n";
+    exit(++err);
+  }
+  if (verbose == 1)
+    std::cout << " precision\n";
+
+  // Read time parameters
+  if (fread(&time.dt, sizeof(time.dt), 1, fp) != 1)
+    exit(++err); // Return unsuccessful exit status
+  if (fread(&time.current, sizeof(time.current), 1, fp) != 1)
+    exit(++err); 
+  if (fread(&time.total, sizeof(time.total), 1, fp) != 1)
+    exit(++err); 
+  if (fread(&time.file_dt, sizeof(time.file_dt), 1, fp) != 1)
+    exit(++err); 
+  if (fread(&time.step_count, sizeof(time.step_count), 1, fp) != 1)
+    exit(++err); 
+
+  // Output display parameters to screen
+  if (verbose == 1) {
+    std::cout << "  - Timestep length:      time.dt         = " 
+      << time.dt << " s\n"
+      << "  - Start at time:        time.current    = " 
+      << time.current << " s\n"
+      << "  - Total sim. time:      time.total      = " 
+      << time.total << " s\n"
+      << "  - File output interval: time.file_dt    = " 
+      << time.file_dt << " s\n"
+      << "  - Start at step count:  time.step_count = " 
+      << time.step_count << "\n";
+  }
+
+  // For spatial vectors an array of Float4 vectors is chosen for best fit with 
+  // GPU memory handling. Vector variable structure: ( x, y, z, <empty>).
+  // Indexing starts from 0.
+
+  // Allocate host arrays
+  if (verbose == 1)
+    std::cout << "\n  Allocating host memory:                         ";
+  // Allocate more host arrays
+  k.x	   = new Float4[np];
+  k.xysum  = new Float2[np];
+  k.vel	   = new Float4[np];
+  k.force  = new Float4[np];
+  k.angpos = new Float4[np];
+  k.angvel = new Float4[np];
+  k.torque = new Float4[np];
+
+  e.es_dot = new Float[np];
+  e.es     = new Float[np];
+  e.ev_dot = new Float[np];
+  e.ev     = new Float[np];
+  e.p	   = new Float[np];
+
+  if (verbose == 1)
+    std::cout << "Done\n";
+
+  if (verbose == 1)
+    std::cout << "  Reading remaining data from input binary:       ";
+
+  // Read grid parameters
+  if (fread(&grid.origo, sizeof(grid.origo[0]), nd, fp) != nd)
+    exit(++err); // Return unsuccessful exit status
+  if (fread(&grid.L, sizeof(grid.L[0]), nd, fp) != nd)
+    exit(++err);
+  if (fread(&grid.num, sizeof(grid.num[0]), nd, fp) != nd)
+    exit(++err);
+  if (fread(&grid.periodic, sizeof(grid.periodic), 1, fp) != 1)
+    exit(++err);
+
+  // Read kinematic values
+  if (fread(&k.x, sizeof(Float4), np, fp) != np)
+    exit(++err);
+  if (fread(&k.xysum, sizeof(Float2), np, fp) != np)
+    exit(++err);
+  if (fread(&k.vel, sizeof(Float4), np, fp) != np)
+    exit(++err);
+  if (fread(&k.force, sizeof(Float4), np, fp) != np)
+    exit(++err);
+  if (fread(&k.angpos, sizeof(Float4), np, fp) != np)
+    exit(++err);
+  if (fread(&k.angvel, sizeof(Float4), np, fp) != np)
+    exit(++err);
+  if (fread(&k.torque, sizeof(Float4), np, fp) != np)
+    exit(++err);
+  // mass (m) and inertia (I) are calculated on device
+
+  // Read energies
+  if (fread(&e.es_dot, sizeof(e.es_dot[0]), np, fp) != np)
+    exit(++err);
+  if (fread(&e.es, sizeof(e.es[0]), np, fp) != np)
+    exit(++err);
+  if (fread(&e.ev_dot, sizeof(e.ev_dot[0]), np, fp) != np)
+    exit(++err);
+  if (fread(&e.ev, sizeof(e.ev[0]), np, fp) != np)
+    exit(++err);
+  if (fread(&e.p, sizeof(e.p[0]), np, fp) != np)
+    exit(++err);
+
+  // Read constant, global physical parameters
+  if (fread(&params.g, sizeof(params.g[0]), nd, fp) != nd)
+    exit(++err);
+  if (fread(&params.k_n, sizeof(params.k_n), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.k_t, sizeof(params.k_t), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.k_r, sizeof(params.k_r), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.gamma_n, sizeof(params.gamma_n), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.gamma_t, sizeof(params.gamma_t), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.gamma_r, sizeof(params.gamma_r), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.mu_s, sizeof(params.mu_s), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.mu_d, sizeof(params.mu_d), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.mu_r, sizeof(params.mu_r), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.rho, sizeof(params.rho), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.contactmodel, sizeof(params.contactmodel), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.kappa, sizeof(params.kappa), 1, fp) != 1)
+    exit(++err);
+  if (fread(&params.db, sizeof(params.db), 1, fp) != 1)
+    exit(++err); 
+  if (fread(&params.V_b, sizeof(params.V_b), 1, fp) != 1)
+    exit(++err); 
+
+  // Read wall parameters
+  if (fread(&walls.nw, sizeof(walls.nw), 1, fp) != 1)
+    exit(++err); 
+  // Allocate host memory for walls
+  // Wall normal (x,y,z), w: wall position on axis parallel to wall normal
+  // Wall mass (x), velocity (y), force (z), and deviatoric stress (w)
+  walls.nx   = new Float4[walls.nw];
+  walls.mvfd = new Float4[walls.nw]; 
+
+  if (fread(&walls.wmode, sizeof(walls.wmode[0]), walls.nw, fp) != walls.nw)
+    exit(++err);
+  if (fread(&walls.nx, sizeof(Float4), walls.nw, fp) != 1)
+    exit(++err);
+  if (fread(&walls.mvfd, sizeof(Float4), walls.nw, fp) != 1)
+    exit(++err);
+  if (fread(&walls.gamma_wn, sizeof(walls.gamma_wn), 1, fp) != 1)
+    exit(++err);
+  if (fread(&walls.gamma_wt, sizeof(walls.gamma_wt), 1, fp) != 1)
+    exit(++err);
+  if (fread(&walls.gamma_wr, sizeof(walls.gamma_wr), 1, fp) != 1)
+    exit(++err);
+
+
+  if (walls.nw > MAXWALLS) {
+    std::cerr << "Error; MAXWALLS (" << MAXWALLS << ") in datatypes.h "
+      << "is smaller than the number of walls specified in the "
+      << "input file (" << walls.nw << ").\n";
+  }
+
+  fclose(fp);
+
+  if (verbose == 1)
+    std::cout << "Done\n";
+
+}
+
+// Write DEM data to binary file
+void DEM::writebin(const char *target)
+{
+  int err = 0;
+
+  // Open output file
+  FILE *fp;
+  if ((fp = fopen(target, "wb")) == NULL) {
+    std::cerr << "could create output binary file '"
+      << target << "'.\n";
+    exit(++err); // Return unsuccessful exit status
   }
 
   // If double precision: Values can be written directly
   if (sizeof(Float) == sizeof(double)) {
 
-    // World dimensions
-    fwrite(&grid->nd, sizeof(grid->nd), 1, fp);
+    fwrite(&nd, sizeof(nd), 1, fp);
+    fwrite(&np, sizeof(np), 1, fp);
 
-    // Number of particles
-    fwrite(&p->np, sizeof(p->np), 1, fp);
+    // Write temporal parameters
+    if (fwrite(&time.dt, sizeof(time.dt), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&time.current, sizeof(time.current), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&time.total, sizeof(time.total), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&time.file_dt, sizeof(time.file_dt), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&time.step_count, sizeof(time.step_count), 1, fp) != 1)
+      exit(++err);
 
-    // Temporal parameters
-    fwrite(&time->dt, sizeof(time->dt), 1, fp);
-    fwrite(&time->current, sizeof(time->current), 1, fp);
-    fwrite(&time->total, sizeof(time->total), 1, fp);
-    fwrite(&time->file_dt, sizeof(time->file_dt), 1, fp);
-    fwrite(&time->step_count, sizeof(time->step_count), 1, fp);
+    // Write grid parameters
+    if (fwrite(&grid.origo, sizeof(grid.origo[0]), nd, fp) != nd)
+      exit(++err);
+    if (fwrite(&grid.L, sizeof(grid.L[0]), nd, fp) != nd)
+      exit(++err);
+    if (fwrite(&grid.num, sizeof(grid.num[0]), nd, fp) != nd)
+      exit(++err);
+    if (fwrite(&grid.periodic, sizeof(grid.periodic), 1, fp) != 1)
+      exit(++err);
 
-    // World coordinate system origo
-    for (u=0; u<grid->nd; ++u) {
-      fwrite(&grid->origo[u], sizeof(grid->origo[u]), 1, fp);
-    }
+    // Write kinematic values
+    if (fwrite(&k.x, sizeof(Float4), np, fp) != np)
+      exit(++err);
+    if (fwrite(&k.xysum, sizeof(Float2), np, fp) != np)
+      exit(++err);
+    if (fwrite(&k.vel, sizeof(Float4), np, fp) != np)
+      exit(++err);
+    if (fwrite(&k.force, sizeof(Float4), np, fp) != np)
+      exit(++err);
+    if (fwrite(&k.angpos, sizeof(Float4), np, fp) != np)
+      exit(++err);
+    if (fwrite(&k.angvel, sizeof(Float4), np, fp) != np)
+      exit(++err);
+    if (fwrite(&k.torque, sizeof(Float4), np, fp) != np)
+      exit(++err);
 
-    // World dimensions
-    for (u=0; u<grid->nd; ++u) {
-      fwrite(&grid->L[u], sizeof(grid->L[u]), 1, fp);
-    }
+    // Write energies
+    if (fwrite(&e.es_dot, sizeof(e.es_dot[0]), np, fp) != np)
+      exit(++err);
+    if (fwrite(&e.es, sizeof(e.es[0]), np, fp) != np)
+      exit(++err);
+    if (fwrite(&e.ev_dot, sizeof(e.ev_dot[0]), np, fp) != np)
+      exit(++err);
+    if (fwrite(&e.ev, sizeof(e.ev[0]), np, fp) != np)
+      exit(++err);
+    if (fwrite(&e.p, sizeof(e.p[0]), np, fp) != np)
+      exit(++err);
 
-    // Grid cells along each dimension
-    for (u=0; u<grid->nd; ++u) {
-      fwrite(&grid->num[u], sizeof(grid->num[u]), 1, fp);
-    }
+    // Write constant, global physical parameters
+    if (fwrite(&params.g, sizeof(params.g[0]), nd, fp) != nd)
+      exit(++err);
+    if (fwrite(&params.k_n, sizeof(params.k_n), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.k_t, sizeof(params.k_t), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.k_r, sizeof(params.k_r), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.gamma_n, sizeof(params.gamma_n), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.gamma_t, sizeof(params.gamma_t), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.gamma_r, sizeof(params.gamma_r), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.mu_s, sizeof(params.mu_s), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.mu_d, sizeof(params.mu_d), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.mu_r, sizeof(params.mu_r), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.rho, sizeof(params.rho), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.contactmodel, sizeof(params.contactmodel), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.kappa, sizeof(params.kappa), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.db, sizeof(params.db), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&params.V_b, sizeof(params.V_b), 1, fp) != 1)
+      exit(++err);
 
-    // Particle vectors
-    for (j=0; j<p->np; ++j) {
-      // x-axis
-      fwrite(&host_x[j].x, sizeof(Float), 1, fp);
-      fwrite(&host_vel[j].x, sizeof(Float), 1, fp);
-      fwrite(&host_angvel[j].x, sizeof(Float), 1, fp);
-      fwrite(&host_force[j].x, sizeof(Float), 1, fp);
-      fwrite(&host_torque[j].x, sizeof(Float), 1, fp);
-      fwrite(&host_angpos[j].x, sizeof(Float), 1, fp);
-
-      // y-axis
-      fwrite(&host_x[j].y, sizeof(Float), 1, fp);
-      fwrite(&host_vel[j].y, sizeof(Float), 1, fp);
-      fwrite(&host_angvel[j].y, sizeof(Float), 1, fp);
-      fwrite(&host_force[j].y, sizeof(Float), 1, fp);
-      fwrite(&host_torque[j].y, sizeof(Float), 1, fp);
-      fwrite(&host_angpos[j].y, sizeof(Float), 1, fp);
-
-      // z-axis
-      fwrite(&host_x[j].z, sizeof(Float), 1, fp);
-      fwrite(&host_vel[j].z, sizeof(Float), 1, fp);
-      fwrite(&host_angvel[j].z, sizeof(Float), 1, fp);
-      fwrite(&host_force[j].z, sizeof(Float), 1, fp);
-      fwrite(&host_torque[j].z, sizeof(Float), 1, fp);
-      fwrite(&host_angpos[j].z, sizeof(Float), 1, fp);
-    } 
-
-    // Individual particle values
-    for (j=0; j<p->np; ++j) {
-      fwrite(&host_vel[j].w, sizeof(Float), 1, fp);
-      fwrite(&host_x[j].w, sizeof(Float), 1, fp);
-      fwrite(&p->radius[j], sizeof(p->radius[j]), 1, fp);
-      fwrite(&p->rho[j], sizeof(p->rho[j]), 1, fp);
-      fwrite(&p->k_n[j], sizeof(p->k_n[j]), 1, fp);
-      fwrite(&p->k_t[j], sizeof(p->k_t[j]), 1, fp);
-      fwrite(&p->k_r[j], sizeof(p->k_r[j]), 1, fp);
-      fwrite(&p->gamma_n[j], sizeof(p->gamma_n[j]), 1, fp);
-      fwrite(&p->gamma_t[j], sizeof(p->gamma_t[j]), 1, fp);
-      fwrite(&p->gamma_r[j], sizeof(p->gamma_r[j]), 1, fp);
-      fwrite(&p->mu_s[j], sizeof(p->mu_s[j]), 1, fp);
-      fwrite(&p->mu_d[j], sizeof(p->mu_d[j]), 1, fp);
-      fwrite(&p->mu_r[j], sizeof(p->mu_r[j]), 1, fp);
-      fwrite(&p->es_dot[j], sizeof(p->es_dot[j]), 1, fp);
-      fwrite(&p->ev_dot[j], sizeof(p->ev_dot[j]), 1, fp);
-      fwrite(&p->es[j], sizeof(p->es[j]), 1, fp);
-      fwrite(&p->ev[j], sizeof(p->ev[j]), 1, fp);
-      fwrite(&p->p[j], sizeof(p->p[j]), 1, fp);
-    }
-
-    // Singular parameters
-    fwrite(&params->global, sizeof(params->global), 1, fp);
-    for (u=0; u<grid->nd; ++u) {
-      fwrite(&params->g[u], sizeof(params->g[u]), 1, fp);
-    }
-    fwrite(&params->kappa, sizeof(params->kappa), 1, fp);
-    fwrite(&params->db, sizeof(params->db), 1, fp);
-    fwrite(&params->V_b, sizeof(params->V_b), 1, fp);
-    fwrite(&params->shearmodel, sizeof(params->shearmodel), 1, fp);
-
-    // Walls
-    fwrite(&params->nw, sizeof(params->nw), 1, fp); // No. of walls
-    for (j=0; j<params->nw; ++j) {
-      fwrite(&params->wmode[j], sizeof(params->wmode[j]), 1, fp);
-      // Wall normal
-      fwrite(&host_w_nx[j].x, sizeof(Float), 1, fp);
-      fwrite(&host_w_nx[j].y, sizeof(Float), 1, fp);
-      fwrite(&host_w_nx[j].z, sizeof(Float), 1, fp);
-
-      fwrite(&host_w_nx[j].w, sizeof(Float), 1, fp);   // Wall position
-      fwrite(&host_w_mvfd[j].x, sizeof(Float), 1, fp); // Wall mass
-      fwrite(&host_w_mvfd[j].y, sizeof(Float), 1, fp); // Wall velocity
-      fwrite(&host_w_mvfd[j].z, sizeof(Float), 1, fp); // Wall force
-      fwrite(&host_w_mvfd[j].w, sizeof(Float), 1, fp); // Wall deviatoric stress
-    }
-    fwrite(&params->periodic, sizeof(params->periodic), 1, fp);
-    fwrite(&params->gamma_wn, sizeof(params->gamma_wn), 1, fp);
-    fwrite(&params->gamma_wt, sizeof(params->gamma_wt), 1, fp);
-    fwrite(&params->gamma_wr, sizeof(params->gamma_wr), 1, fp);
-
-
-    // Write bond pair values
-    for (j=0; j<p->np; ++j) {
-      fwrite(&host_bonds[j].x, sizeof(unsigned int), 1, fp);
-      fwrite(&host_bonds[j].y, sizeof(unsigned int), 1, fp);
-      fwrite(&host_bonds[j].z, sizeof(unsigned int), 1, fp);
-      fwrite(&host_bonds[j].w, sizeof(unsigned int), 1, fp);
-    }
-
-  } else if (sizeof(Float) == sizeof(float)) {
-    // Single precision: Type conversion required
-
-    double d; // Double precision placeholder
-
-    // World dimensions
-    fwrite(&grid->nd, sizeof(grid->nd), 1, fp);
-
-    // Number of particles
-    fwrite(&p->np, sizeof(p->np), 1, fp);
-
-    // Temporal parameters
-    d = (double)time->dt;
-    fwrite(&d, sizeof(d), 1, fp);
-    fwrite(&time->current, sizeof(time->current), 1, fp);
-    fwrite(&time->total, sizeof(time->total), 1, fp);
-    d = (double)time->file_dt;
-    fwrite(&d, sizeof(d), 1, fp);
-    fwrite(&time->step_count, sizeof(time->step_count), 1, fp);
-
-    // World coordinate system origo
-    for (u=0; u<grid->nd; ++u) {
-      d = (double)grid->origo[u];
-      fwrite(&d, sizeof(d), 1, fp);
-    }
-
-    // World dimensions
-    for (u=0; u<grid->nd; ++u) {
-      d = (double)grid->L[u];
-      fwrite(&d, sizeof(d), 1, fp);
-    }
-
-    // Grid cells along each dimension
-    for (u=0; u<grid->nd; ++u) {
-      fwrite(&grid->num[u], sizeof(grid->num[u]), 1, fp);
-    }
-
-    // Particle vectors
-    for (j=0; j<p->np; ++j) {
-      // x-axis
-      d = (double)host_x[j].x;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_vel[j].x;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_angvel[j].x;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_force[j].x;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_torque[j].x;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_angpos[j].x;
-      fwrite(&d, sizeof(d), 1, fp);
-
-      // y-axis
-      d = (double)host_x[j].y;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_vel[j].y;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_angvel[j].y;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_force[j].y;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_torque[j].y;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_angpos[j].y;
-      fwrite(&d, sizeof(d), 1, fp);
-
-      // z-axis
-      d = (double)host_x[j].z;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_vel[j].z;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_angvel[j].z;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_force[j].z;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_torque[j].z;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_angpos[j].z;
-      fwrite(&d, sizeof(d), 1, fp);
-    } 
-
-    // Individual particle values
-    for (j=0; j<p->np; ++j) {
-      d = (double)host_vel[j].w;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_x[j].w;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->radius[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->rho[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->k_n[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->k_t[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->k_r[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->gamma_n[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->gamma_t[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->gamma_r[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->mu_s[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->mu_d[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->mu_r[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->es_dot[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->ev_dot[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->es[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->ev[j];
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)p->p[j];
-      fwrite(&d, sizeof(d), 1, fp);
-    }
-
-    // Singular parameters
-    fwrite(&params->global, sizeof(params->global), 1, fp);
-    for (u=0; u<grid->nd; ++u) {
-      d = (double)params->g[u];
-      fwrite(&d, sizeof(d), 1, fp);
-    }
-    d = (double)params->kappa;
-    fwrite(&d, sizeof(d), 1, fp);
-    d = (double)params->db;
-    fwrite(&d, sizeof(d), 1, fp);
-    d = (double)params->V_b;
-    fwrite(&d, sizeof(d), 1, fp);
-    fwrite(&params->shearmodel, sizeof(params->shearmodel), 1, fp);
-
-    // Walls
-    fwrite(&params->nw, sizeof(params->nw), 1, fp); // No. of walls
-    for (j=0; j<params->nw; ++j) {
-
-      // Wall mode
-      d = (double)params->wmode[j];
-      fwrite(&d, sizeof(d), 1, fp);
-
-      // Wall normal
-      d = (double)host_w_nx[j].x;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_w_nx[j].y;
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_w_nx[j].z;
-      fwrite(&d, sizeof(d), 1, fp);
-
-      d = (double)host_w_nx[j].w; 	// Wall position
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_w_mvfd[j].x;	// Wall mass
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_w_mvfd[j].y;	// Wall velocity
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_w_mvfd[j].z;	// Wall force
-      fwrite(&d, sizeof(d), 1, fp);
-      d = (double)host_w_mvfd[j].w;	// Wall deviatoric stress
-      fwrite(&d, sizeof(d), 1, fp);
-    }
-    fwrite(&params->periodic, sizeof(params->periodic), 1, fp);
-    d = (double)params->gamma_wn;
-    fwrite(&d, sizeof(d), 1, fp);
-    d = (double)params->gamma_wt;
-    fwrite(&d, sizeof(d), 1, fp);
-    d = (double)params->gamma_wr;
-    fwrite(&d, sizeof(d), 1, fp);
-
-    // Write bond pair values
-    for (j=0; j<p->np; ++j) {
-      fwrite(&host_bonds[j].x, sizeof(unsigned int), 1, fp);
-      fwrite(&host_bonds[j].y, sizeof(unsigned int), 1, fp);
-      fwrite(&host_bonds[j].z, sizeof(unsigned int), 1, fp);
-      fwrite(&host_bonds[j].w, sizeof(unsigned int), 1, fp);
-    }
+    // Write walls parameters
+    if (fwrite(&walls.nw, sizeof(walls.nw), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&walls.wmode, sizeof(walls.wmode[0]), walls.nw, fp) != walls.nw)
+      exit(++err);
+    if (fwrite(&walls.nx, sizeof(Float4), walls.nw, fp) != walls.nw)
+      exit(++err);
+    if (fwrite(&walls.mvfd, sizeof(Float4), walls.nw, fp) != walls.nw)
+      exit(++err);
+    if (fwrite(&walls.gamma_wn, sizeof(walls.gamma_wn), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&walls.gamma_wt, sizeof(walls.gamma_wt), 1, fp) != 1)
+      exit(++err);
+    if (fwrite(&walls.gamma_wr, sizeof(walls.gamma_wr), 1, fp) != 1)
+      exit(++err);
 
   } else {
-    fprintf(stderr, "Error: Chosen floating-point precision is incompatible with the data file format.\n");
-    exit(1);
+    std::cerr << "Can't write output when in single precision mode.\n";
   }
-
-  fclose(fp);
-
-  // This function returns 0 if it ended without problems,
-  // and 1 if there were problems opening the target file.
-  return 0;
-} // End of fwritebin(...)
-
+}
 
