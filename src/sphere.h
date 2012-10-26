@@ -10,6 +10,9 @@ class DEM {
   // Values and functions only accessible from the class internally
   private:
 
+    // Simulation ID
+    char *sid;
+
     // Output level
     int verbose;
 
@@ -70,7 +73,7 @@ class DEM {
   public:
 
     // Constructor, some parameters with default values
-    DEM(const char *inputbin, 
+    DEM(char *inputbin, 
 	const int verbosity = 1,
 	const int checkVals = 1);
 

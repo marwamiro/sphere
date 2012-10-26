@@ -44,7 +44,7 @@ __device__ Float contactLinear_wall(Float3* F, Float3* T, Float* es_dot,
   //Float3 f_n = -devC_params.k_n * delta * n;
 
   // Normal force component: Elastic - viscous damping
-  Float3 f_n = (-devC_params.k_n * delta - devC_params.gamma_wn * vel_n) * n;
+  Float3 f_n = (-devC_params.k_n * delta - devC_params.gamma_n * vel_n) * n;
 
   // Make sure the viscous damping doesn't exceed the elastic component,
   // i.e. the damping factor doesn't exceed the critical damping, 2*sqrt(m*k_n)
@@ -61,7 +61,7 @@ __device__ Float contactLinear_wall(Float3* F, Float3* T, Float* es_dot,
   // divide by zero (producing a NaN)
   if (vel_t_length > 0.f) {
 
-    Float f_t_visc  = devC_params.gamma_wt * vel_t_length; // Tangential force by viscous model
+    Float f_t_visc  = devC_params.gamma_t * vel_t_length; // Tangential force by viscous model
     Float f_t_limit = devC_params.mu_s * f_n_length;      // Max. friction
 
     // If the shear force component exceeds the friction,
@@ -382,15 +382,15 @@ __device__ void contactLinear(Float3* F, Float3* T,
       // Shear friction heat production rate: 
       // The energy lost from the tangential spring is dissipated as heat
       //*es_dot += -dot(vel_t_ab, f_t);
-      *es_dot += length(delta_t0 - delta_t) * devC_params.k_t / devC_params.dt; // Seen in EsyS-Particle
-      //*es_dot += fabs(dot(delta_t0 - delta_t, f_t)) / devC_params.dt; 
+      *es_dot += length(delta_t0 - delta_t) * devC_params.k_t / devC_dt; // Seen in EsyS-Particle
+      //*es_dot += fabs(dot(delta_t0 - delta_t, f_t)) / devC_dt; 
 
     } else { // Static case
 
       // No correction of f_t is required
 
       // Add tangential displacement to total tangential displacement
-      delta_t = delta_t0 + vel_t_ab * devC_params.dt;
+      delta_t = delta_t0 + vel_t_ab * devC_dt;
     }
   }
 
@@ -555,15 +555,15 @@ __device__ void contactHertz(Float3* F, Float3* T,
       // Shear friction heat production rate: 
       // The energy lost from the tangential spring is dissipated as heat
       //*es_dot += -dot(vel_t_ab, f_t);
-      *es_dot += length(delta_t0 - delta_t) * devC_params.k_t / devC_params.dt; // Seen in EsyS-Particle
-      //*es_dot += fabs(dot(delta_t0 - delta_t, f_t)) / devC_params.dt; 
+      *es_dot += length(delta_t0 - delta_t) * devC_params.k_t / devC_dt; // Seen in EsyS-Particle
+      //*es_dot += fabs(dot(delta_t0 - delta_t, f_t)) / devC_dt; 
 
     } else { // Static case
 
       // No correction of f_t is required
 
       // Add tangential displacement to total tangential displacement
-      delta_t = delta_t0 + vel_t_ab * devC_params.dt;
+      delta_t = delta_t0 + vel_t_ab * devC_dt;
     }
   }
 

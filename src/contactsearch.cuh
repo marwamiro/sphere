@@ -14,7 +14,7 @@ __device__ int findDistMod(int3* targetCell, Float3* distmod)
   // Check whether x- and y boundaries are to be treated as periodic
   // 1: x- and y boundaries periodic
   // 2: x boundaries periodic
-  if (devC_params.periodic == 1) {
+  if (devC_grid.periodic == 1) {
 
     // Periodic x-boundary
     if (targetCell->x < 0) {
@@ -38,7 +38,7 @@ __device__ int findDistMod(int3* targetCell, Float3* distmod)
 
 
   // Only x-boundaries are periodic
-  } else if (devC_params.periodic == 2) {
+  } else if (devC_grid.periodic == 2) {
 
     // Periodic x-boundary
     if (targetCell->x < 0) {
@@ -77,7 +77,7 @@ __device__ int findDistMod(int3* targetCell, Float3* distmod)
 
 // Find overlaps between particle no. 'idx' and particles in cell 'gridpos'.
 // Contacts are processed as soon as they are identified.
-// Used for shearmodel=1, where contact history is not needed.
+// Used for contactmodel=1, where contact history is not needed.
 // Kernel executed on device, and callable from device only.
 // Function is called from interact().
 __device__ void findAndProcessContactsInCell(int3 targetCell, 
@@ -175,7 +175,7 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
 
 // Find overlaps between particle no. 'idx' and particles in cell 'gridpos'
 // Write the indexes of the overlaps in array contacts[].
-// Used for shearmodel=2, where bookkeeping of contact history is necessary.
+// Used for contactmodel=2, where bookkeeping of contact history is necessary.
 // Kernel executed on device, and callable from device only.
 // Function is called from topology().
 __device__ void findContactsInCell(int3 targetCell, 
@@ -257,7 +257,7 @@ __device__ void findContactsInCell(int3 targetCell,
 	  for (int i=0; i < devC_nc; ++i) {
 	    __syncthreads();
 	    cidx = dev_contacts[(unsigned int)(idx_a_orig*devC_nc+i)];
-	    if (cidx == devC_params.np) // Write to position of now-deleted contact
+	    if (cidx == devC_np) // Write to position of now-deleted contact
 	      cpos = i;
 	    else if (cidx == idx_b_orig) { // Write to position of same contact
 	      cpos = i;
@@ -320,7 +320,7 @@ __global__ void topology(unsigned int* dev_cellStart,
 {
   // Thread index equals index of particle A
   unsigned int idx_a = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx_a < devC_params.np) {
+  if (idx_a < devC_np) {
     // Fetch particle data in global read
     Float4 x_a      = dev_x_sorted[idx_a];
     Float  radius_a = x_a.w;
@@ -356,13 +356,13 @@ __global__ void topology(unsigned int* dev_cellStart,
 
 
 // For a single particle:
-// If shearmodel=1:
+// If contactmodel=1:
 //   Search for neighbors to particle 'idx' inside the 27 closest cells, 
 //   and compute the resulting force and torque on it.
-// If shearmodel=2:
+// If contactmodel=2:
 //   Process contacts saved in dev_contacts by topology(), and compute
 //   the resulting force and torque on it.
-// For all shearmodels:
+// For all contactmodels:
 //   Collide with top- and bottom walls, save resulting force on upper wall.
 // Kernel is executed on device, and is callable from host only.
 // Function is called from mainGPU loop.
@@ -371,15 +371,19 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 			 unsigned int* dev_cellEnd,
 			 Float4* dev_x,
     			 Float4* dev_x_sorted,
-			 Float4* dev_vel_sorted, Float4* dev_angvel_sorted,
-			 Float4* dev_vel, Float4* dev_angvel,
-			 Float4* dev_force, Float4* dev_torque,
+			 Float4* dev_vel_sorted, 
+			 Float4* dev_angvel_sorted,
+			 Float4* dev_vel, 
+			 Float4* dev_angvel,
+			 Float4* dev_force, 
+			 Float4* dev_torque,
 			 Float* dev_es_dot, 
 			 Float* dev_ev_dot, 
 			 Float* dev_es, 
 			 Float* dev_ev, 
 			 Float* dev_p,
-			 Float4* dev_w_nx, Float4* dev_w_mvfd, 
+			 Float4* dev_w_nx, 
+			 Float4* dev_w_mvfd, 
 			 Float* dev_w_force, //uint4* dev_bonds_sorted,
 			 unsigned int* dev_contacts, 
 			 Float4* dev_distmod,
@@ -388,7 +392,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
   // Thread index equals index of particle A
   unsigned int idx_a = blockIdx.x * blockDim.x + threadIdx.x;
 
-  if (idx_a < devC_params.np) {
+  if (idx_a < devC_np) {
 
     // Fetch particle data in global read
     unsigned int idx_a_orig = dev_gridParticleIndex[idx_a];
@@ -424,7 +428,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     Float3 T = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
 
     // Apply linear elastic, frictional contact model to registered contacts
-    if (devC_params.shearmodel == 2 || devC_params.shearmodel == 3) {
+    if (devC_params.contactmodel == 2 || devC_params.contactmodel == 3) {
       unsigned int idx_b_orig, mempos;
       Float delta_n, x_ab_length, radius_b;
       Float3 x_ab;
@@ -452,11 +456,11 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	delta_n = x_ab_length - (radius_a + radius_b);
 
 
-	if (idx_b_orig != (unsigned int)devC_params.np) {
+	if (idx_b_orig != (unsigned int)devC_np) {
 
 	  // Process collision if the particles are overlapping
 	  if (delta_n < 0.0f) {
-	    if (devC_params.shearmodel == 2) {
+	    if (devC_params.contactmodel == 2) {
 	      contactLinear(&F, &T, &es_dot, &ev_dot, &p, 
 			    idx_a_orig,
 			    idx_b_orig,
@@ -468,7 +472,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 			    x_ab, x_ab_length,
 			    delta_n, dev_delta_t, 
 			    mempos);
-	    } else if (devC_params.shearmodel == 3) {
+	    } else if (devC_params.contactmodel == 3) {
 	      contactHertz(&F, &T, &es_dot, &ev_dot, &p, 
 			   idx_a_orig,
 			   idx_b_orig,
@@ -484,7 +488,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	  } else {
 	    __syncthreads();
 	    // Remove this contact (there is no particle with index=np)
-	    dev_contacts[mempos] = devC_params.np;
+	    dev_contacts[mempos] = devC_np;
 	    // Zero sum of shear displacement in this position
 	    dev_delta_t[mempos] = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	  }
@@ -498,8 +502,8 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 
 
     // Find contacts and process collisions immidiately for
-    // shearmodel 1 (visco-frictional).
-    } else if (devC_params.shearmodel == 1) {
+    // contactmodel 1 (visco-frictional).
+    } else if (devC_params.contactmodel == 1) {
 
       int3 gridPos;
       int3 targetPos;
@@ -553,7 +557,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     }
 
 
-    if (devC_params.periodic == 0) {
+    if (devC_grid.periodic == 0) {
 
       // Left wall
       delta_w = x_a.x - radius_a - origo.x;
@@ -591,7 +595,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 				 w_n, delta_w, 0.0f);
       }
 
-    } else if (devC_params.periodic == 2) {
+    } else if (devC_grid.periodic == 2) {
 
       // Front wall
       delta_w = x_a.y - radius_a - origo.y;
@@ -622,8 +626,8 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     dev_torque[orig_idx]  = MAKE_FLOAT4(T.x, T.y, T.z, 0.0f);
     dev_es_dot[orig_idx]  = es_dot;
     dev_ev_dot[orig_idx]  = ev_dot;
-    dev_es[orig_idx]     += es_dot * devC_params.dt;
-    dev_ev[orig_idx]     += ev_dot * devC_params.dt;
+    dev_es[orig_idx]     += es_dot * devC_dt;
+    dev_ev[orig_idx]     += ev_dot * devC_dt;
     dev_p[orig_idx]       = p;
     dev_w_force[orig_idx] = w_force;
   }

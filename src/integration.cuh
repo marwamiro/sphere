@@ -15,7 +15,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 {
   unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
 
-  if (idx < devC_params.np) { // Condition prevents block size error
+  if (idx < devC_np) { // Condition prevents block size error
 
     // Copy data to temporary arrays to avoid any potential read-after-write, 
     // write-after-read, or write-after-write hazards. 
@@ -35,7 +35,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     Float  radius = x.w;
 
     // Coherent read from constant memory to registers
-    Float  dt    = devC_params.dt;
+    Float  dt    = devC_dt;
     Float3 origo = MAKE_FLOAT3(devC_grid.origo[0], devC_grid.origo[1], devC_grid.origo[2]); 
     Float3 L     = MAKE_FLOAT3(devC_grid.L[0], devC_grid.L[1], devC_grid.L[2]);
     Float  rho   = devC_params.rho;
@@ -106,7 +106,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     x.w += vel.x * dt + (acc.x * dt*dt)/2.0f;
 
     // Move particle across boundary if it is periodic
-    if (devC_params.periodic == 1) {
+    if (devC_grid.periodic == 1) {
       if (x.x < origo.x)
 	x.x += L.x;
       if (x.x > L.x)
@@ -115,7 +115,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 	x.y += L.y;
       if (x.y > L.y)
 	x.y -= L.y;
-    } else if (devC_params.periodic == 2) {
+    } else if (devC_grid.periodic == 2) {
       if (x.x < origo.x)
 	x.x += L.x;
       if (x.x > L.x)
@@ -142,7 +142,7 @@ __global__ void summation(Float* in, Float *out)
   unsigned int cacheIdx = threadIdx.x;
 
   Float temp = 0.0f;
-  while (idx < devC_params.np) {
+  while (idx < devC_np) {
     temp += in[idx];
     idx += blockDim.x * gridDim.x;
   }
@@ -168,20 +168,19 @@ __global__ void summation(Float* in, Float *out)
 }
 
 // Update wall positions
-__global__ void integrateWalls(Float4* dev_w_nx, 
-    			       Float4* dev_w_mvfd,
+__global__ void integrateWalls(Walls* dev_walls, 
 			       Float* dev_w_force_partial,
 			       unsigned int blocksPerGrid)
 {
   unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
 
-  if (idx < devC_params.nw) { // Condition prevents block size error
+  if (idx < devC_nw) { // Condition prevents block size error
 
     // Copy data to temporary arrays to avoid any potential read-after-write, 
     // write-after-read, or write-after-write hazards. 
-    Float4 w_nx   = dev_w_nx[idx];
-    Float4 w_mvfd = dev_w_mvfd[idx];
-    int wmode = devC_params.wmode[idx];  // Wall BC, 0: fixed, 1: devs, 2: vel
+    Float4 w_nx   = dev_walls->nx[idx];
+    Float4 w_mvfd = dev_walls->mvfd[idx];
+    int wmode = dev_walls->wmode[idx];  // Wall BC, 0: fixed, 1: devs, 2: vel
     Float acc;
 
     if (wmode == 0) // Wall fixed: do nothing
@@ -193,7 +192,7 @@ __global__ void integrateWalls(Float4* dev_w_nx,
       w_mvfd.z += dev_w_force_partial[i];
     }
 
-    Float dt = devC_params.dt;
+    Float dt = devC_dt;
 
     // Normal load = Deviatoric stress times wall surface area,
     // directed downwards.
@@ -216,8 +215,8 @@ __global__ void integrateWalls(Float4* dev_w_nx,
     w_nx.w += w_mvfd.y * dt + (acc * dt*dt)/2.0f;
 
     // Store data in global memory
-    dev_w_nx[idx]   = w_nx;
-    dev_w_mvfd[idx] = w_mvfd;
+    dev_walls->nx[idx]   = w_nx;
+    dev_walls->mvfd[idx] = w_mvfd;
   }
 } // End of integrateWalls(...)
 

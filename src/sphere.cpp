@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 #include "typedefs.h"
 #include "datatypes.h"
@@ -9,13 +10,26 @@
 
 // Constructor: Reads an input binary, and optionally checks
 // and reports the values
-DEM::DEM(const char *inputbin, 
+DEM::DEM(char *inputbin, 
     const int verbosity,
     const int checkVals)
 : verbose(verbosity)
 {
   using std::cout;
   using std::cerr;
+
+  // Get basename from input file
+  char *name = inputbin;
+  char *sid = name;
+  while (*name) {
+    if (*name++ == '/') {
+      sid = name;
+    }
+  } // sid is now everything after the last '/' char
+  char *lastdot = strrchr(sid, '.');
+  if (lastdot != NULL)
+    *lastdot = '\0'; // Put in string-end char. at last dot
+
 
   // Initialize CUDA
   initializeGPU();

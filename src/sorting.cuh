@@ -25,7 +25,7 @@ __global__ void calcParticleCellID(unsigned int* dev_gridParticleCellID,
   //unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
   unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-  if (idx < devC_params.np) { // Condition prevents block size error
+  if (idx < devC_np) { // Condition prevents block size error
 
     //volatile Float4 x = dev_x[idx]; // Ensure coalesced read
     Float4 x = dev_x[idx]; // Ensure coalesced read
@@ -69,7 +69,7 @@ __global__ void reorderArrays(unsigned int* dev_cellStart,
   unsigned int cellID;
 
   // Read cellID data and store it in shared memory (shared_data)
-  if (idx < devC_params.np) { // Condition prevents block size error
+  if (idx < devC_np) { // Condition prevents block size error
     cellID = dev_gridParticleCellID[idx];
 
     // Load hash data into shared memory, allowing access to neighbor particle cellID values
@@ -86,7 +86,7 @@ __global__ void reorderArrays(unsigned int* dev_cellStart,
   __syncthreads();
 
   // Find lowest and highest particle index in each cell
-  if (idx < devC_params.np) { // Condition prevents block size error
+  if (idx < devC_np) { // Condition prevents block size error
     // If this particle has a different cell index to the previous particle, it's the first
     // particle in the cell -> Store the index of this particle in the cell.
     // The previous particle must be the last particle in the previous cell.
@@ -97,7 +97,7 @@ __global__ void reorderArrays(unsigned int* dev_cellStart,
     }
 
     // Check wether the thread is the last one
-    if (idx == (devC_params.np - 1)) 
+    if (idx == (devC_np - 1)) 
       dev_cellEnd[cellID] = idx + 1;
 
 
