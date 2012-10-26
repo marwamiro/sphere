@@ -74,6 +74,9 @@ class DEM {
 	const int verbosity = 1,
 	const int checkVals = 1);
 
+    // Destructor
+    ~DEM(void);
+
     // Read binary input file
     void readbin(const char *target);
 
