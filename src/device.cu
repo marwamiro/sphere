@@ -11,6 +11,7 @@
 #include "datatypes.h"
 #include "utility.cuh"
 #include "constants.cuh"
+#include "debug.h"
 
 #include "sorting.cuh"	
 #include "contactmodels.cuh"
@@ -337,10 +338,10 @@ __host__ void DEM::transferToGlobalDeviceMemory()
   cout << "  Transfering data to the device:                 ";
 
   // Copy structure data from host to global device memory
-  cudaMemcpy(k, dev_k, sizeof(k), cudaMemcpyDeviceToHost);
-  cudaMemcpy(e, dev_e, sizeof(e), cudaMemcpyDeviceToHost);
-  cudaMemcpy(time, dev_time, sizeof(time), cudaMemcpyDeviceToHost);
-  cudaMemcpy(walls, dev_walls, sizeof(walls), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&k, dev_k, sizeof(k), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&e, dev_e, sizeof(e), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&time, dev_time, sizeof(time), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&walls, dev_walls, sizeof(walls), cudaMemcpyDeviceToHost);
 
   checkForCudaErrors("End of transferFromGlobalDeviceMemory");
   if (verbose == 1)
@@ -361,8 +362,8 @@ __host__ void DEM::startTime()
 
 
   // Particle memory size
-  unsigned int memSizeF  = sizeof(Float) * np;
-  unsigned int memSizeF4 = sizeof(Float4) * np;
+  //unsigned int memSizeF  = sizeof(Float) * np;
+  //unsigned int memSizeF4 = sizeof(Float4) * np;
 
   // Allocate device memory for particle variables,
   // tied to previously declared pointers in structures
@@ -384,7 +385,7 @@ __host__ void DEM::startTime()
   // GPU workload configuration
   unsigned int threadsPerBlock = 256; 
   // Create enough blocks to accomodate the particles
-  unsigned int blocksPerGrid   = iDivUp(p.np, threadsPerBlock); 
+  unsigned int blocksPerGrid = iDivUp(np, threadsPerBlock); 
   dim3 dimGrid(blocksPerGrid, 1, 1); // Blocks arranged in 1D grid
   dim3 dimBlock(threadsPerBlock, 1, 1); // Threads arranged in 1D block
   // Shared memory per block
@@ -749,8 +750,8 @@ __host__ void DEM::startTime()
   freeGlobalDeviceMemory();
 
   // Contact info arrays
-  delete[] host_contacts;
-  delete[] host_distmod;
-  delete[] host_delta_t;
+  delete[] k.contacts;
+  delete[] k.distmod;
+  delete[] k.delta_t;
 
 } /* EOF */

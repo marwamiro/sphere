@@ -21,11 +21,11 @@ class DEM {
 
     // Structure containing individual particle kinematics
     Kinematics k;	// host
-    Kinematics dev_k;	// device
+    Kinematics *dev_k;	// device
 
     // Structure containing energy values
     Energies e;		// host
-    Energies dev_e;	// device
+    Energies *dev_e;	// device
 
     // Structure of global parameters
     Params params;	// host
@@ -34,7 +34,7 @@ class DEM {
     Grid grid;		// host
 
     // Structure containing sorting arrays
-    Sorting dev_sort;	// device
+    Sorting *dev_sort;	// device
 
     // Structure of temporal parameters
     Time time;		// host
@@ -42,7 +42,7 @@ class DEM {
 
     // Structure of wall parameters
     Walls walls;	// host
-    Walls dev_walls;	// device
+    Walls *dev_walls;	// device
 
     // GPU initialization, must be called before startTime()
     void initializeGPU(void);
