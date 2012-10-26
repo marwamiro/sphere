@@ -277,35 +277,35 @@ __host__ void DEM::freeGlobalDeviceMemory()
   if (verbose == 1)
     printf("\nLiberating device memory:                        ");
   // Particle arrays
-  cudaFree(dev_k.x);
-  cudaFree(dev_sort.x_sorted);
-  cudaFree(dev_k.vel);
-  cudaFree(dev_sort.vel_sorted);
-  cudaFree(dev_k.angvel);
-  cudaFree(dev_sort.angvel_sorted);
-  cudaFree(dev_k.acc);
-  cudaFree(dev_k.angacc);
-  cudaFree(dev_k.force);
-  cudaFree(dev_k.torque);
-  cudaFree(dev_k.angpos);
-  cudaFree(dev_e.es_dot);
-  cudaFree(dev_e.ev_dot);
-  cudaFree(dev_e.es);
-  cudaFree(dev_e.ev);
-  cudaFree(dev_e.p);
-  cudaFree(dev_k.contacts);
-  cudaFree(dev_k.distmod);
-  cudaFree(dev_k.delta_t);
+  cudaFree(dev_k->x);
+  cudaFree(dev_sort->x_sorted);
+  cudaFree(dev_k->vel);
+  cudaFree(dev_sort->vel_sorted);
+  cudaFree(dev_k->angvel);
+  cudaFree(dev_sort->angvel_sorted);
+  cudaFree(dev_k->acc);
+  cudaFree(dev_k->angacc);
+  cudaFree(dev_k->force);
+  cudaFree(dev_k->torque);
+  cudaFree(dev_k->angpos);
+  cudaFree(dev_e->es_dot);
+  cudaFree(dev_e->ev_dot);
+  cudaFree(dev_e->es);
+  cudaFree(dev_e->ev);
+  cudaFree(dev_e->p);
+  cudaFree(dev_k->contacts);
+  cudaFree(dev_k->distmod);
+  cudaFree(dev_k->delta_t);
 
   // Cell-related arrays
-  cudaFree(dev_sort.gridParticleIndex);
-  cudaFree(dev_sort.cellStart);
-  cudaFree(dev_sort.cellEnd);
+  cudaFree(dev_sort->gridParticleIndex);
+  cudaFree(dev_sort->cellStart);
+  cudaFree(dev_sort->cellEnd);
 
   // Wall arrays
-  cudaFree(dev_walls.nx);
-  cudaFree(dev_walls.mvfd);
-  cudaFree(dev_walls.force);
+  cudaFree(dev_walls->nx);
+  cudaFree(dev_walls->mvfd);
+  cudaFree(dev_walls->force);
   cudaFree(dev_w_force_partial);
 
   if (verbose == 1)
