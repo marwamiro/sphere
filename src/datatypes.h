@@ -15,13 +15,18 @@
 
 // Structure containing kinematic particle values
 struct Kinematics {
-  Float4 *x;		// Positions + radii (w)
-  Float2 *xysum;	// Horizontal distance traveled
-  Float4 *vel;		// Translational velocities + fixvels (w)
-  Float4 *force;	// Sums of forces
-  Float4 *angpos;	// Angular positions
-  Float4 *angvel;	// Angular velocities
-  Float4 *torque;	// Sums of torques
+  Float4 *x;		  // Positions + radii (w)
+  Float2 *xysum;	  // Horizontal distance traveled
+  Float4 *vel;		  // Translational velocities + fixvels (w)
+  Float4 *acc;		  // Translational accelerations
+  Float4 *force;	  // Sums of forces
+  Float4 *angpos;	  // Angular positions
+  Float4 *angvel;	  // Angular velocities
+  Float4 *angacc;	  // Angular accelerations
+  Float4 *torque;	  // Sums of torques
+  unsigned int *contacts; // List of contacts per particle
+  Float4 *distmod;	  // Distance modifiers for contacts across periodic boundaries
+  Float4 *delta_t;	  // Accumulated shear distance of contacts
 };
 
 // Structure containing individual physical particle parameters
@@ -41,6 +46,17 @@ struct Grid {
   unsigned int num[ND];	// Neighbor-search cells along each axis
   int periodic;		// Behavior of boundaries at 1st and 2nd world edge
 };
+
+struct Sorting {
+  Float4 *x_sorted;	  // Positions + radii (w) (sorted)
+  Float4 *vel_sorted;	  // Translational velocities + fixvels (w) (sorted)
+  Float4 *angvel_sorted;  // Angular velocities (sorted)
+  unsigned int *gridParticleCellID; // Hash key (cell index) from position in grid
+  unsigned int *gridParticleIndex;  // Original indexes of particles
+  unsigned int *cellStart;	    // First index of sorted idx'es in cells
+  unsigned int *cellEnd;	    // Last index of sorted idx'es in cells
+};
+ 
 
 // Structure containing time parameters
 struct Time {
@@ -76,6 +92,7 @@ struct Walls {
   int wmode[MAXWALLS];	// Wall modes
   Float4* nx;		// Wall normal and position
   Float4* mvfd;		// Wall mass, velocity, force and dev. stress
+  Float* force;		// Resulting forces on walls per particle
   Float gamma_wn;	// Wall normal viscosity
   Float gamma_wt;	// Wall tangential viscosity
   Float gamma_wr;	// Wall rolling viscosity

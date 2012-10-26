@@ -197,6 +197,7 @@ __host__ void DEM::transferToConstantDeviceMemory()
   cudaMemcpyToSymbol("devC_nd", &nd, sizeof(nd));
   cudaMemcpyToSymbol("devC_np", &np, sizeof(np));
   cudaMemcpyToSymbol("devC_nc", &NC, sizeof(int));
+  cudaMemcpyToSymbol("devC_dt", &time.dt, sizeof(Float));
   cudaMemcpyToSymbol(devC_grid, grid, sizeof(Grid));
   cudaMemcpyToSymbol(devC_params, params, sizeof(Params));
   
@@ -205,148 +206,177 @@ __host__ void DEM::transferToConstantDeviceMemory()
   if (verbose == 1)
     cout << "Done\n";
 
-  checkConstantMemory();
+  //checkConstantMemory();
 }
 
 
-//extern "C"
+// Allocate device memory for particle variables,
+// tied to previously declared pointers in structures
+__host__ void DEM::allocateGlobalDeviceMemory(void)
+{
+  // Particle memory size
+  unsigned int memSizeF  = sizeof(Float) * np;
+  unsigned int memSizeF4 = sizeof(Float4) * np;
+
+  if (verbose == 1)
+    std::cout << "  Allocating device memory:                       ";
+
+  // Particle arrays
+  cudaMalloc((void**)&dev_k.x, memSizeF4);
+  cudaMalloc((void**)&dev_sort.x_sorted, memSizeF4);
+  cudaMalloc((void**)&dev_k.vel, memSizeF4);
+  cudaMalloc((void**)&dev_sort.vel_sorted, memSizeF4);
+  cudaMalloc((void**)&dev_k.angvel, memSizeF4);
+  cudaMalloc((void**)&dev_sort.angvel_sorted, memSizeF4);
+  cudaMalloc((void**)&dev_k.acc, memSizeF4);
+  k.acc = new Float4[np];
+  cudaMalloc((void**)&dev_k.angacc, memSizeF4);
+  k.angacc = new Float4[np];
+  cudaMalloc((void**)&dev_k.force, memSizeF4);
+  cudaMalloc((void**)&dev_k.torque, memSizeF4);
+  cudaMalloc((void**)&dev_k.angpos, memSizeF4);
+  cudaMalloc((void**)&dev_e.es_dot, memSizeF);
+  cudaMalloc((void**)&dev_e.ev_dot, memSizeF);
+  cudaMalloc((void**)&dev_e.es, memSizeF);
+  cudaMalloc((void**)&dev_e.ev, memSizeF);
+  cudaMalloc((void**)&dev_e.p, memSizeF);
+
+  // Cell-related arrays
+  cudaMalloc((void**)&dev_sort.gridParticleCellID, sizeof(unsigned int)*np);
+  cudaMalloc((void**)&dev_sort.gridParticleIndex, sizeof(unsigned int)*np);
+  cudaMalloc((void**)&dev_sort.cellStart, sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
+  cudaMalloc((void**)&dev_sort.cellEnd, sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
+
+  // Particle contact bookkeeping arrays
+  cudaMalloc((void**)&dev_k.contacts, sizeof(unsigned int)*np*NC); // Max NC contacts per particle
+  cudaMalloc((void**)&dev_k.distmod, sizeof(Float4)*np*NC);
+  cudaMalloc((void**)&dev_k.delta_t, sizeof(Float4)*np*NC);
+
+  // Host contact bookkeeping arrays
+  k.contacts = new unsigned int[np*NC];
+  // Initialize contacts lists to np
+  for (unsigned int i=0; i<(np*NC); ++i)
+    k.contacts[i] = np;
+  k.distmod = new Float4[np*NC];
+  k.delta_t = new Float4[np*NC];
+
+  // Wall arrays
+  cudaMalloc((void**)&dev_walls.nx, sizeof(Float4)*walls.nw);
+  cudaMalloc((void**)&dev_walls.mvfd, sizeof(Float4)*walls.nw);
+  cudaMalloc((void**)&dev_walls.force, sizeof(Float)*walls.nw*np);
+  // dev_w_force_partial allocated later
+
+  checkForCudaErrors("End of allocateGlobalDeviceMemory");
+  if (verbose == 1)
+    std::cout << "Done\n";
+}
+
+__host__ void DEM::freeGlobalDeviceMemory()
+{
+  if (verbose == 1)
+    printf("\nLiberating device memory:                        ");
+  // Particle arrays
+  cudaFree(dev_k.x);
+  cudaFree(dev_sort.x_sorted);
+  cudaFree(dev_k.vel);
+  cudaFree(dev_sort.vel_sorted);
+  cudaFree(dev_k.angvel);
+  cudaFree(dev_sort.angvel_sorted);
+  cudaFree(dev_k.acc);
+  cudaFree(dev_k.angacc);
+  cudaFree(dev_k.force);
+  cudaFree(dev_k.torque);
+  cudaFree(dev_k.angpos);
+  cudaFree(dev_e.es_dot);
+  cudaFree(dev_e.ev_dot);
+  cudaFree(dev_e.es);
+  cudaFree(dev_e.ev);
+  cudaFree(dev_e.p);
+  cudaFree(dev_k.contacts);
+  cudaFree(dev_k.distmod);
+  cudaFree(dev_k.delta_t);
+
+  // Cell-related arrays
+  cudaFree(dev_sort.gridParticleIndex);
+  cudaFree(dev_sort.cellStart);
+  cudaFree(dev_sort.cellEnd);
+
+  // Wall arrays
+  cudaFree(dev_walls.nx);
+  cudaFree(dev_walls.mvfd);
+  cudaFree(dev_walls.force);
+  cudaFree(dev_w_force_partial);
+
+  if (verbose == 1)
+    printf("Done\n");
+}
+
+
+__host__ void DEM::transferToGlobalDeviceMemory()
+{
+  if (verbose == 1)
+    std::cout << "  Transfering data to the device:                 ";
+
+  // Copy structure data from host to global device memory
+  /*cudaMemcpy(dev_k, k, sizeof(Kinematics), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_e, e, sizeof(Energies), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_time, time, sizeof(Time), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_walls, walls, sizeof(Walls), cudaMemcpyHostToDevice);*/
+  cudaMemcpy(dev_k, k, sizeof(k), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_e, e, sizeof(e), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_time, time, sizeof(time), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_walls, walls, sizeof(walls), cudaMemcpyHostToDevice);
+
+  checkForCudaErrors("End of transferToGlobalDeviceMemory");
+  if (verbose == 1)
+    std::cout << "Done\n";
+}
+
+__host__ void DEM::transferToGlobalDeviceMemory()
+{
+  cout << "  Transfering data to the device:                 ";
+
+  // Copy structure data from host to global device memory
+  cudaMemcpy(k, dev_k, sizeof(k), cudaMemcpyDeviceToHost);
+  cudaMemcpy(e, dev_e, sizeof(e), cudaMemcpyDeviceToHost);
+  cudaMemcpy(time, dev_time, sizeof(time), cudaMemcpyDeviceToHost);
+  cudaMemcpy(walls, dev_walls, sizeof(walls), cudaMemcpyDeviceToHost);
+
+  checkForCudaErrors("End of transferFromGlobalDeviceMemory");
+  if (verbose == 1)
+    std::cout << "Done\n";
+}
+
+
+// Iterate through time by explicit time integration
 __host__ void DEM::startTime()
 {
 
-  using std::cout;	// Namespace directive
+  using std::cout; // Namespace directive
+  char file[200];  // Output filename
+  FILE *fp;
 
   // Copy data to constant global device memory
   transferToConstantDeviceMemory();
 
-  Float*  dev_w_force;	       // Resulting force on wall per particle
-  Float*  dev_w_force_partial; // Partial sum from block of threads
-
-  // Memory for sorted particle data
-  Float4* dev_x_sorted;
-  Float4* dev_vel_sorted;
-  Float4* dev_angvel_sorted;
-  Float*  dev_radius_sorted; 
-
-  // Grid-particle array pointers
-  unsigned int* dev_gridParticleCellID;
-  unsigned int* dev_gridParticleIndex;
-  unsigned int* dev_cellStart;
-  unsigned int* dev_cellEnd;
-
-  // Particle contact bookkeeping
-  unsigned int* dev_contacts;
-  unsigned int* host_contacts = new unsigned int[p.np*NC];
-  // Particle pair distance correction across periodic boundaries
-  Float4* dev_distmod;
-  Float4* host_distmod = new Float4[p.np*NC];
-  // x,y,z contains the interparticle vector, corrected if contact 
-  // is across a periodic boundary. 
-  Float4* dev_delta_t; // Accumulated shear distance of contact
-  Float4* host_delta_t = new Float4[p.np*NC];
 
   // Particle memory size
-  unsigned int memSizeF  = sizeof(Float) * p.np;
-  unsigned int memSizeF4 = sizeof(Float4) * p.np;
+  unsigned int memSizeF  = sizeof(Float) * np;
+  unsigned int memSizeF4 = sizeof(Float4) * np;
 
   // Allocate device memory for particle variables,
   // tied to previously declared pointers in structures
   allocateGlobalDeviceMemory();
-  cout << "  Allocating device memory:                       ";
-
-  // Particle arrays
-  cudaMalloc((void**)&dev_x, memSizeF4);
-  cudaMalloc((void**)&dev_x_sorted, memSizeF4);
-  cudaMalloc((void**)&dev_vel, memSizeF4);
-  cudaMalloc((void**)&dev_vel_sorted, memSizeF4);
-  cudaMalloc((void**)&dev_angvel, memSizeF4);
-  cudaMalloc((void**)&dev_angvel_sorted, memSizeF4);
-  cudaMalloc((void**)&dev_acc, memSizeF4);
-  cudaMalloc((void**)&dev_angacc, memSizeF4);
-  cudaMalloc((void**)&dev_force, memSizeF4);
-  cudaMalloc((void**)&dev_torque, memSizeF4);
-  cudaMalloc((void**)&dev_angpos, memSizeF4);
-  cudaMalloc((void**)&dev_radius, memSizeF);
-  cudaMalloc((void**)&dev_radius_sorted, memSizeF);
-  cudaMalloc((void**)&dev_es_dot, memSizeF);
-  cudaMalloc((void**)&dev_ev_dot, memSizeF);
-  cudaMalloc((void**)&dev_es, memSizeF);
-  cudaMalloc((void**)&dev_ev, memSizeF);
-  cudaMalloc((void**)&dev_p, memSizeF);
-  //cudaMalloc((void**)&dev_bonds, sizeof(uint4) * p.np);
-  //cudaMalloc((void**)&dev_bonds_sorted, sizeof(uint4) * p.np);
-
-  // Cell-related arrays
-  cudaMalloc((void**)&dev_gridParticleCellID, sizeof(unsigned int)*p.np);
-  cudaMalloc((void**)&dev_gridParticleIndex, sizeof(unsigned int)*p.np);
-  cudaMalloc((void**)&dev_cellStart, sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
-  cudaMalloc((void**)&dev_cellEnd, sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
-
-  // Particle contact bookkeeping arrays
-  cudaMalloc((void**)&dev_contacts, sizeof(unsigned int)*p.np*NC); // Max NC contacts per particle
-  cudaMalloc((void**)&dev_distmod, sizeof(Float4)*p.np*NC);
-  cudaMalloc((void**)&dev_delta_t, sizeof(Float4)*p.np*NC);
-
-  // Wall arrays
-  cudaMalloc((void**)&dev_w_nx, sizeof(Float)*params.nw*4);
-  cudaMalloc((void**)&dev_w_mvfd, sizeof(Float)*params.nw*4);
-  cudaMalloc((void**)&dev_w_force, sizeof(Float)*params.nw*p.np);
-
-  checkForCudaErrors("Post device memory allocation");
-  cout << "Done\n";
 
   // Transfer data from host to gpu device memory
-  cout << "  Transfering data to the device:                 ";
-
-  // Particle data
-  cudaMemcpy(dev_x, host_x, memSizeF4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_vel, host_vel, memSizeF4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_acc, host_acc, memSizeF4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_angvel, host_angvel, memSizeF4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_angacc, host_angacc, memSizeF4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_force, host_force, memSizeF4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_torque, host_torque, memSizeF4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_angpos, host_angpos, memSizeF4, cudaMemcpyHostToDevice);
-  //cudaMemcpy(dev_bonds, host_bonds, sizeof(uint4) * p.np, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_radius, p.radius, memSizeF, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_es_dot, p.es_dot, memSizeF, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_ev_dot, p.ev_dot, memSizeF, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_es, p.es, memSizeF, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_ev, p.ev, memSizeF, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_p, p.p, memSizeF, cudaMemcpyHostToDevice);
-
-  // Wall data (wall mass and number in constant memory)
-  cudaMemcpy(dev_w_nx, host_w_nx, sizeof(Float)*params.nw*4, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_w_mvfd, host_w_mvfd, sizeof(Float)*params.nw*4, cudaMemcpyHostToDevice);
-  
-  // Initialize contacts lists to p.np
-  unsigned int* npu = new unsigned int[p.np*NC];
-  for (unsigned int i=0; i<(p.np*NC); ++i)
-    npu[i] = p.np;
-  cudaMemcpy(dev_contacts, npu, sizeof(unsigned int)*p.np*NC, cudaMemcpyHostToDevice);
-  delete[] npu;
-
-  // Create array of 0.0 values on the host and transfer these to the distance 
-  // modifier and shear displacement arrays
-  Float4* zerosF4 = new Float4[p.np*NC];
-  for (unsigned int i=0; i<(p.np*NC); ++i)
-    zerosF4[i] = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-  cudaMemcpy(dev_distmod, zerosF4, sizeof(Float4)*p.np*NC, cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_delta_t, zerosF4, sizeof(Float4)*p.np*NC, cudaMemcpyHostToDevice);
-  delete[] zerosF4;
-
-  checkForCudaErrors("Post memcopy");
-  cout << "Done\n";
+  transferToGlobalDeviceMemory();
 
   // Synchronization point
   cudaThreadSynchronize();
-  checkForCudaErrors("Start of mainLoop()");
+  checkForCudaErrors("Start of startTime()");
 
   // Model world variables
   float tic, toc, filetimeclock, time_spent, dev_time_spent;
-
-  // File output
-  FILE* fp;
-  char file[1000];  // Complete path+filename variable
 
   // Start CPU clock
   tic = clock();
@@ -360,22 +390,25 @@ __host__ void DEM::startTime()
   // Shared memory per block
   unsigned int smemSize = sizeof(unsigned int)*(threadsPerBlock+1);
 
+  Float* dev_w_force_partial;
   cudaMalloc((void**)&dev_w_force_partial, sizeof(Float)*dimGrid.x);
 
   // Report to stdout
-  cout << "\n  Device memory allocation and transfer complete.\n"
-       << "  - Blocks per grid: "
-       << dimGrid.x << "*" << dimGrid.y << "*" << dimGrid.z << "\n"
-       << "  - Threads per block: "
-       << dimBlock.x << "*" << dimBlock.y << "*" << dimBlock.z << "\n"
-       << "  - Shared memory required per block: " << smemSize << " bytes\n";
+  if (verbose == 1) {
+    cout << "\n  Device memory allocation and transfer complete.\n"
+      << "  - Blocks per grid: "
+      << dimGrid.x << "*" << dimGrid.y << "*" << dimGrid.z << "\n"
+      << "  - Threads per block: "
+      << dimBlock.x << "*" << dimBlock.y << "*" << dimBlock.z << "\n"
+      << "  - Shared memory required per block: " << smemSize << " bytes\n";
+  }
 
   // Initialize counter variable values
   filetimeclock = 0.0;
   long iter = 0;
 
   // Create first status.dat
-  sprintf(file,"%s/output/%s.status.dat", cwd, inputbin);
+  sprintf(file,"output/%s.status.dat", inputbin);
   fp = fopen(file, "w");
   fprintf(fp,"%2.4e %2.4e %d\n", 
       	  time.current, 
@@ -384,22 +417,16 @@ __host__ void DEM::startTime()
   fclose(fp);
 
   // Write first output data file: output0.bin, thus testing writing of bin files
-  sprintf(file,"%s/output/%s.output0.bin", cwd, inputbin);
-  if (fwritebin(file, &p, host_x, host_vel, 
-		host_angvel, host_force, 
-		host_torque, host_angpos,
-		host_bonds,
-		&grid, &time, &params,
-		host_w_nx, host_w_mvfd) != 0)  {
-    std::cerr << "\n Problem during fwritebin \n";
-    exit(EXIT_FAILURE);
-  }
+  sprintf(file,"output/%s.output0.bin", inputbin);
+  writebin(file);
 
-  cout << "\n  Entering the main calculation time loop...\n\n"
-       << "  IMPORTANT: Do not close this terminal, doing so will \n"
-       << "             terminate this SPHERE process. Follow the \n"
-       << "             progress by executing:\n"
-       << "                $ ./sphere_status " << inputbin << "\n\n";
+  if (verbose == 1) {
+    cout << "\n  Entering the main calculation time loop...\n\n"
+      << "  IMPORTANT: Do not close this terminal, doing so will \n"
+      << "             terminate this SPHERE process. Follow the \n"
+      << "             progress by executing:\n"
+      << "                $ ./sphere_status " << inputbin << "\n\n";
+  }
 
 
   // Start GPU clock
@@ -447,9 +474,9 @@ __host__ void DEM::startTime()
     // in the fine, uniform and homogenous grid.
     if (PROFILING == 1)
       startTimer(&kernel_tic);
-    calcParticleCellID<<<dimGrid, dimBlock>>>(dev_gridParticleCellID, 
-					      dev_gridParticleIndex, 
-					      dev_x);
+    calcParticleCellID<<<dimGrid, dimBlock>>>(dev_sort.gridParticleCellID, 
+					      dev_sort.gridParticleIndex, 
+					      dev_k.x);
 
     // Synchronization point
     cudaThreadSynchronize();
@@ -461,19 +488,19 @@ __host__ void DEM::startTime()
     // Sort particle (key, particle ID) pairs by hash key with Thrust radix sort
     if (PROFILING == 1)
       startTimer(&kernel_tic);
-    thrust::sort_by_key(thrust::device_ptr<uint>(dev_gridParticleCellID),
-			thrust::device_ptr<uint>(dev_gridParticleCellID + p.np),
-			thrust::device_ptr<uint>(dev_gridParticleIndex));
+    thrust::sort_by_key(thrust::device_ptr<uint>(dev_sort.gridParticleCellID),
+			thrust::device_ptr<uint>(dev_sort.gridParticleCellID + np),
+			thrust::device_ptr<uint>(dev_sort.gridParticleIndex));
     cudaThreadSynchronize(); // Needed? Does thrust synchronize threads implicitly?
     if (PROFILING == 1)
       stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_thrustsort);
-    checkForCudaErrors("Post calcParticleCellID");
+    checkForCudaErrors("Post thrust::sort_by_key");
 
 
     // Zero cell array values by setting cellStart to its highest possible value,
     // specified with pointer value 0xffffffff, which for a 32 bit unsigned int
     // is 4294967295.
-    cudaMemset(dev_cellStart, 0xffffffff, 
+    cudaMemset(dev_sort.cellStart, 0xffffffff, 
 	       grid.num[0]*grid.num[1]*grid.num[2]*sizeof(unsigned int));
     cudaThreadSynchronize();
     checkForCudaErrors("Post cudaMemset");
@@ -482,18 +509,15 @@ __host__ void DEM::startTime()
     // coherent memory access. Save ordered configurations in new arrays (*_sorted).
     if (PROFILING == 1)
       startTimer(&kernel_tic);
-    reorderArrays<<<dimGrid, dimBlock, smemSize>>>(dev_cellStart, 
-						   dev_cellEnd,
-						   dev_gridParticleCellID, 
-						   dev_gridParticleIndex,
-						   dev_x, dev_vel, 
-						   dev_angvel, dev_radius, 
-						   //dev_bonds,
-						   dev_x_sorted, 
-						   dev_vel_sorted, 
-						   dev_angvel_sorted, 
-						   dev_radius_sorted);
-						   //dev_bonds_sorted);
+    reorderArrays<<<dimGrid, dimBlock, smemSize>>>(dev_sort.cellStart, 
+						   dev_sort.cellEnd,
+						   dev_sort.gridParticleCellID, 
+						   dev_sort.gridParticleIndex,
+						   dev_k.x, dev_k.vel, 
+						   dev_k.angvel,
+						   dev_sort.x_sorted, 
+						   dev_sort.vel_sorted, 
+						   dev_sort.angvel_sorted);
 
     // Synchronization point
     cudaThreadSynchronize();
@@ -504,17 +528,16 @@ __host__ void DEM::startTime()
     // The contact search in topology() is only necessary for determining
     // the accumulated shear distance needed in the linear elastic
     // and nonlinear contact force model
-    if (params.shearmodel == 2 || params.shearmodel == 3) {
+    if (params.contactmodel == 2 || params.contactmodel == 3) {
       // For each particle: Search contacts in neighbor cells
       if (PROFILING == 1)
 	startTimer(&kernel_tic);
-      topology<<<dimGrid, dimBlock>>>(dev_cellStart, 
-				      dev_cellEnd,
-				      dev_gridParticleIndex,
-				      dev_x_sorted, 
-				      dev_radius_sorted, 
-				      dev_contacts,
-				      dev_distmod);
+      topology<<<dimGrid, dimBlock>>>(dev_sort.cellStart, 
+				      dev_sort.cellEnd,
+				      dev_sort.gridParticleIndex,
+				      dev_sort.x_sorted, 
+				      dev_k.contacts,
+				      dev_k.distmod);
 
 
       // Synchronization point
@@ -528,21 +551,26 @@ __host__ void DEM::startTime()
     // For each particle: Process collisions and compute resulting forces.
     if (PROFILING == 1)
       startTimer(&kernel_tic);
-    interact<<<dimGrid, dimBlock>>>(dev_gridParticleIndex,
-				    dev_cellStart,
-				    dev_cellEnd,
-				    dev_x, dev_radius,
-				    dev_x_sorted, dev_radius_sorted,
-				    dev_vel_sorted, dev_angvel_sorted,
-				    dev_vel, dev_angvel,
-				    dev_force, dev_torque,
-				    dev_es_dot, dev_ev_dot, 
-				    dev_es, dev_ev, dev_p,
-				    dev_w_nx, dev_w_mvfd, dev_w_force,
-				    //dev_bonds_sorted,
-				    dev_contacts,
-				    dev_distmod,
-				    dev_delta_t);
+    interact<<<dimGrid, dimBlock>>>(dev_sort.gridParticleIndex,
+				    dev_sort.cellStart,
+				    dev_sort.cellEnd,
+				    dev_k.x,
+				    dev_sort.x_sorted,
+				    dev_sort.vel_sorted,
+				    dev_sort.angvel_sorted,
+				    dev_k.vel,
+				    dev_k.angvel,
+				    dev_k.force, 
+				    dev_k.torque,
+				    dev_e.es_dot,
+				    dev_e.ev_dot, 
+				    dev_e.es, dev_e.ev, dev_e.p,
+				    dev_walls.nx,
+				    dev_walls.mvfd,
+				    dev_walls.force,
+				    dev_k.contacts,
+				    dev_k.distmod,
+				    dev_k.delta_t);
 
 
     // Synchronization point
@@ -554,11 +582,16 @@ __host__ void DEM::startTime()
     // Update particle kinematics
     if (PROFILING == 1)
       startTimer(&kernel_tic);
-    integrate<<<dimGrid, dimBlock>>>(dev_x_sorted, dev_vel_sorted, 
-				     dev_angvel_sorted, dev_radius_sorted,
-				     dev_x, dev_vel, dev_angvel,
-				     dev_force, dev_torque, dev_angpos,
-				     dev_gridParticleIndex);
+    integrate<<<dimGrid, dimBlock>>>(dev_sort.x_sorted, 
+				     dev_sort.vel_sorted, 
+				     dev_sort.angvel_sorted,
+				     dev_k.x, 
+				     dev_k.vel, 
+				     dev_k.angvel,
+				     dev_k.force,
+				     dev_k.torque, 
+				     dev_k.angpos,
+				     dev_sort.gridParticleIndex);
 
     cudaThreadSynchronize();
     if (PROFILING == 1)
@@ -567,7 +600,7 @@ __host__ void DEM::startTime()
     // Summation of forces on wall
     if (PROFILING == 1)
       startTimer(&kernel_tic);
-    summation<<<dimGrid, dimBlock>>>(dev_w_force, dev_w_force_partial);
+    summation<<<dimGrid, dimBlock>>>(dev_walls.force, dev_w_force_partial);
 
     // Synchronization point
     cudaThreadSynchronize();
@@ -578,10 +611,10 @@ __host__ void DEM::startTime()
     // Update wall kinematics
     if (PROFILING == 1)
       startTimer(&kernel_tic);
-    integrateWalls<<< 1, params.nw>>>(dev_w_nx, 
-				       dev_w_mvfd,
-				       dev_w_force_partial,
-				       blocksPerGrid);
+    integrateWalls<<< 1, walls.nw>>>(dev_walls.nx, 
+				     dev_walls.mvfd,
+				     dev_w_force_partial,
+				     blocksPerGrid);
 
     // Synchronization point
     cudaThreadSynchronize();
@@ -591,12 +624,14 @@ __host__ void DEM::startTime()
 
 
     // Update timers and counters
-    time.current    += time.dt;
-    filetimeclock    += time.dt;
+    time.current  += time.dt;
+    filetimeclock += time.dt;
 
     // Report time to console
-    cout << "\r  Current simulation time: " 
-         << time.current << " s.        ";// << std::flush;
+    if (verbose == 1) {
+      cout << "\r  Current simulation time: " 
+	<< time.current << " s.        ";// << std::flush;
+    }
 
 
     // Produce output binary if the time interval 
@@ -608,52 +643,16 @@ __host__ void DEM::startTime()
       checkForCudaErrors("Beginning of file output section");
 
       //// Copy device data to host memory
-
-      // Particle data
-      cudaMemcpy(host_x, dev_x, memSizeF4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_vel, dev_vel, memSizeF4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_acc, dev_acc, memSizeF4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_angvel, dev_angvel, memSizeF4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_force, dev_force, memSizeF4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_torque, dev_torque, memSizeF4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_angpos, dev_angpos, memSizeF4, cudaMemcpyDeviceToHost);
-      //cudaMemcpy(host_bonds, dev_bonds, sizeof(uint4) * p.np, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p.es_dot, dev_es_dot, memSizeF, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p.ev_dot, dev_ev_dot, memSizeF, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p.es, dev_es, memSizeF, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p.ev, dev_ev, memSizeF, cudaMemcpyDeviceToHost);
-      cudaMemcpy(p.p, dev_p, memSizeF, cudaMemcpyDeviceToHost);
-
-      // Wall data
-      cudaMemcpy(host_w_nx, dev_w_nx, 
-	  	 sizeof(Float)*params.nw*4, cudaMemcpyDeviceToHost);
-      cudaMemcpy(host_w_mvfd, dev_w_mvfd, 
-	  	 sizeof(Float)*params.nw*4, cudaMemcpyDeviceToHost);
-
-  
-      // Contact information
-      if (CONTACTINFO == 1) {
-	cudaMemcpy(host_contacts, dev_contacts, sizeof(unsigned int)*p.np*NC, cudaMemcpyDeviceToHost);
-	cudaMemcpy(host_delta_t, dev_delta_t, memSizeF4*NC, cudaMemcpyDeviceToHost);
-	cudaMemcpy(host_distmod, dev_distmod, memSizeF4*NC, cudaMemcpyDeviceToHost);
-      }
+      transferFromGlobalDeviceMemory();
 
       // Pause the CPU thread until all CUDA calls previously issued are completed
       cudaThreadSynchronize();
 
       // Write binary output file
       time.step_count += 1;
-      sprintf(file,"%s/output/%s.output%d.bin", cwd, inputbin, time.step_count);
+      sprintf(file,"output/%s.output%d.bin", inputbin, time.step_count);
+      writebin(file);
 
-      if (fwritebin(file, &p, host_x, host_vel, 
-	    	    host_angvel, host_force, 
-		    host_torque, host_angpos,
-		    host_bonds,
-		    &grid, &time, &params,
-	    	    host_w_nx, host_w_mvfd) != 0) {
-	cout << "\n Error during fwritebin() in main loop\n";
-	exit(EXIT_FAILURE);
-      }
 
       if (CONTACTINFO == 1) {
 	// Write contact information to stdout
@@ -686,7 +685,7 @@ __host__ void DEM::startTime()
       }
 
       // Update status.dat at the interval of filetime 
-      sprintf(file,"%s/output/%s.status.dat", cwd, inputbin);
+      sprintf(file,"output/%s.status.dat", inputbin);
       fp = fopen(file, "w");
       fprintf(fp,"%2.4e %2.4e %d\n", 
 	      time.current, 
@@ -747,48 +746,11 @@ __host__ void DEM::startTime()
 
 
   // Free GPU device memory  
-  printf("\nLiberating device memory:                        ");
-
-  // Particle arrays
-  cudaFree(dev_x);
-  cudaFree(dev_x_sorted);
-  cudaFree(dev_vel);
-  cudaFree(dev_vel_sorted);
-  cudaFree(dev_angvel);
-  cudaFree(dev_angvel_sorted);
-  cudaFree(dev_acc);
-  cudaFree(dev_angacc);
-  cudaFree(dev_force);
-  cudaFree(dev_torque);
-  cudaFree(dev_angpos);
-  cudaFree(dev_radius);
-  cudaFree(dev_radius_sorted);
-  cudaFree(dev_es_dot);
-  cudaFree(dev_ev_dot);
-  cudaFree(dev_es);
-  cudaFree(dev_ev);
-  cudaFree(dev_p);
-  //cudaFree(dev_bonds);
-  //cudaFree(dev_bonds_sorted);
-  cudaFree(dev_contacts);
-  cudaFree(dev_distmod);
-  cudaFree(dev_delta_t);
-
-  // Cell-related arrays
-  cudaFree(dev_gridParticleIndex);
-  cudaFree(dev_cellStart);
-  cudaFree(dev_cellEnd);
-
-  // Wall arrays
-  cudaFree(dev_w_nx);
-  cudaFree(dev_w_mvfd);
-  cudaFree(dev_w_force);
-  cudaFree(dev_w_force_partial);
+  freeGlobalDeviceMemory();
 
   // Contact info arrays
   delete[] host_contacts;
   delete[] host_distmod;
   delete[] host_delta_t;
 
-  printf("Done\n");
 } /* EOF */

@@ -43,15 +43,16 @@ __global__ void calcParticleCellID(unsigned int* dev_gridParticleCellID,
 // Reorder particle data into sorted order, and find the start and end particle indexes
 // of each cell in the sorted hash array.
 // Kernel executed on device, and callable from host only.
-__global__ void reorderArrays(unsigned int* dev_cellStart, unsigned int* dev_cellEnd,
+__global__ void reorderArrays(unsigned int* dev_cellStart, 
+    			      unsigned int* dev_cellEnd,
 			      unsigned int* dev_gridParticleCellID, 
 			      unsigned int* dev_gridParticleIndex,
-			      Float4* dev_x, Float4* dev_vel, 
-			      Float4* dev_angvel, Float* dev_radius,
-			      //uint4* dev_bonds,
-			      Float4* dev_x_sorted, Float4* dev_vel_sorted,
-			      Float4* dev_angvel_sorted, Float* dev_radius_sorted)
-			      //uint4* dev_bonds_sorted)
+			      Float4* dev_x, 
+			      Float4* dev_vel, 
+			      Float4* dev_angvel,
+			      Float4* dev_x_sorted, 
+			      Float4* dev_vel_sorted,
+			      Float4* dev_angvel_sorted)
 { 
 
   // Create hash array in shared on-chip memory. The size of the array 
@@ -107,16 +108,12 @@ __global__ void reorderArrays(unsigned int* dev_cellStart, unsigned int* dev_cel
     Float4 x      = dev_x[sortedIndex];
     Float4 vel    = dev_vel[sortedIndex];
     Float4 angvel = dev_angvel[sortedIndex];
-    Float  radius = dev_radius[sortedIndex];
-    //uint4  bonds  = dev_bonds[sortedIndex];
 
     __syncthreads();
     // Write sorted data to global memory
     dev_x_sorted[idx]      = x;
     dev_vel_sorted[idx]    = vel;
     dev_angvel_sorted[idx] = angvel;
-    dev_radius_sorted[idx] = radius;
-    //dev_bonds_sorted[idx]  = bonds;
   }
 } // End of reorderArrays(...)
 

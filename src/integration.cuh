@@ -8,7 +8,7 @@
 // Second order integration scheme based on Taylor expansion of particle kinematics. 
 // Kernel executed on device, and callable from host only.
 __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
-			  Float4* dev_angvel_sorted, Float* dev_radius_sorted, // Input
+			  Float4* dev_angvel_sorted,
 			  Float4* dev_x, Float4* dev_vel, Float4* dev_angvel, // Output
 			  Float4* dev_force, Float4* dev_torque, Float4* dev_angpos, // Input
 			  unsigned int* dev_gridParticleIndex) // Input: Sorted-Unsorted key
@@ -32,7 +32,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     Float4 x      = dev_x_sorted[idx];
     Float4 vel    = dev_vel_sorted[idx];
     Float4 angvel = dev_angvel_sorted[idx];
-    Float  radius = dev_radius_sorted[idx];
+    Float  radius = x.w;
 
     // Coherent read from constant memory to registers
     Float  dt    = devC_params.dt;

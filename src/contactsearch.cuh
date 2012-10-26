@@ -87,7 +87,6 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
 					     Float* es_dot, Float* ev_dot,
 					     Float* p,
 					     Float4* dev_x_sorted, 
-					     Float* dev_radius_sorted,
 					     Float4* dev_vel_sorted, 
 					     Float4* dev_angvel_sorted,
 					     unsigned int* dev_cellStart, 
@@ -125,7 +124,7 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
 
 	// Fetch position and velocity of particle B.
 	Float4 x_b      = dev_x_sorted[idx_b];
-	Float  radius_b = dev_radius_sorted[idx_b];
+	Float  radius_b = x_b.w;
 	Float  kappa 	= devC_params.kappa;
 
 	// Distance between particle centers (Float4 -> Float3)
@@ -183,7 +182,6 @@ __device__ void findContactsInCell(int3 targetCell,
     			           unsigned int idx_a, 
 				   Float4 x_a, Float radius_a,
 				   Float4* dev_x_sorted, 
-				   Float* dev_radius_sorted,
 				   unsigned int* dev_cellStart, 
 				   unsigned int* dev_cellEnd,
 				   unsigned int* dev_gridParticleIndex,
@@ -226,7 +224,7 @@ __device__ void findContactsInCell(int3 targetCell,
 
 	// Fetch position and radius of particle B.
 	Float4 x_b      = dev_x_sorted[idx_b];
-	Float  radius_b = dev_radius_sorted[idx_b];
+	Float  radius_b = x_b.w;
 
 	// Read the original index of particle B
 	unsigned int idx_b_orig = dev_gridParticleIndex[idx_b];
@@ -316,7 +314,7 @@ __device__ void findContactsInCell(int3 targetCell,
 __global__ void topology(unsigned int* dev_cellStart, 
     			 unsigned int* dev_cellEnd, // Input: Particles in cell 
 			 unsigned int* dev_gridParticleIndex, // Input: Unsorted-sorted key
-			 Float4* dev_x_sorted, Float* dev_radius_sorted, 
+			 Float4* dev_x_sorted, 
 			 unsigned int* dev_contacts,
 			 Float4* dev_distmod)
 {
@@ -325,7 +323,7 @@ __global__ void topology(unsigned int* dev_cellStart,
   if (idx_a < devC_params.np) {
     // Fetch particle data in global read
     Float4 x_a      = dev_x_sorted[idx_a];
-    Float  radius_a = dev_radius_sorted[idx_a];
+    Float  radius_a = x_a.w;
 
     // Count the number of contacts in this time step
     int nc = 0;
@@ -346,7 +344,7 @@ __global__ void topology(unsigned int* dev_cellStart,
 	for (int x_dim=-1; x_dim<2; ++x_dim) { // x-axis
 	  targetPos = gridPos + make_int3(x_dim, y_dim, z_dim);
 	  findContactsInCell(targetPos, idx_a, x_a, radius_a,
-	       		     dev_x_sorted, dev_radius_sorted,
+	       		     dev_x_sorted, 
 			     dev_cellStart, dev_cellEnd,
 			     dev_gridParticleIndex,
 	    		     &nc, dev_contacts, dev_distmod);
@@ -371,8 +369,8 @@ __global__ void topology(unsigned int* dev_cellStart,
 __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted-sorted key
 			 unsigned int* dev_cellStart,
 			 unsigned int* dev_cellEnd,
-			 Float4* dev_x, Float* dev_radius,
-    			 Float4* dev_x_sorted, Float* dev_radius_sorted, 
+			 Float4* dev_x,
+    			 Float4* dev_x_sorted,
 			 Float4* dev_vel_sorted, Float4* dev_angvel_sorted,
 			 Float4* dev_vel, Float4* dev_angvel,
 			 Float4* dev_force, Float4* dev_torque,
@@ -395,7 +393,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     // Fetch particle data in global read
     unsigned int idx_a_orig = dev_gridParticleIndex[idx_a];
     Float4 x_a      = dev_x_sorted[idx_a];
-    Float  radius_a = dev_radius_sorted[idx_a];
+    Float  radius_a = x_a.w;
 
     // Fetch wall data in global read
     Float4 w_up_nx   = dev_w_nx[0];
@@ -521,7 +519,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 	    targetPos = gridPos + make_int3(x_dim, y_dim, z_dim);
 	    findAndProcessContactsInCell(targetPos, idx_a, x_a, radius_a,
 					 &F, &T, &es_dot, &ev_dot, &p,
-					 dev_x_sorted, dev_radius_sorted, 
+					 dev_x_sorted,
 					 dev_vel_sorted, dev_angvel_sorted,
 					 dev_cellStart, dev_cellEnd,
 					 dev_w_nx, dev_w_mvfd);

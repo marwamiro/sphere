@@ -20,31 +20,29 @@ class DEM {
     unsigned int np;
 
     // Structure containing individual particle kinematics
-    Kinematics k;
-    Kinematics dev_k;
+    Kinematics k;	// host
+    Kinematics dev_k;	// device
 
     // Structure containing energy values
-    Energies e;
-    Energies dev_e;
+    Energies e;		// host
+    Energies dev_e;	// device
 
     // Structure of global parameters
-    Params params;
-    Params dev_params;
+    Params params;	// host
 
     // Structure containing spatial parameters
-    Grid grid;
-    Grid dev_grid;
+    Grid grid;		// host
+
+    // Structure containing sorting arrays
+    Sorting dev_sort;	// device
 
     // Structure of temporal parameters
-    Time time;
-    Time dev_time;
+    Time time;		// host
+    Time *dev_time;	// device
 
     // Structure of wall parameters
-    Walls walls;
-    Walls dev_walls;
-
-    // Wall force arrays
-    Float* dev_w_force; 
+    Walls walls;	// host
+    Walls dev_walls;	// device
 
     // GPU initialization, must be called before startTime()
     void initializeGPU(void);
@@ -57,6 +55,9 @@ class DEM {
 
     // Allocate global device memory to hold data
     void allocateGlobalDeviceMemory(void);
+
+    // Free dynamically allocated global device memory
+    void freeGlobalDeviceMemory(void);
 
     // Copy non-constant data to global GPU memory
     void transferToGlobalDeviceMemory(void);
