@@ -17,7 +17,7 @@ class Spherebin:
   """
 
   # Constructor - Initialize arrays
-  def __init__(self, nd=3, np=1, nw=1):
+  def __init__(self, np=1, nd=3, nw=1):
     self.nd = numpy.ones(1, dtype=numpy.int32) * nd
     self.np = numpy.ones(1, dtype=numpy.uint32) * np
 
@@ -80,9 +80,71 @@ class Spherebin:
     
     # x- and y-boundary behavior
     self.gamma_wn = numpy.ones(1, dtype=numpy.float64) * 1.0e3
-    self.gamma_ws = numpy.ones(1, dtype=numpy.float64) * 1.0e3
+    self.gamma_wt = numpy.ones(1, dtype=numpy.float64) * 1.0e3
     self.gamma_wr = numpy.ones(1, dtype=numpy.float64) * 1.0e3
 
+  # Compare the values of two Spherebin objects, and check
+  # whether the values are identical
+  def __cmp__(self, other):
+    if ( (\
+	self.nd == other.nd and\
+	self.np == other.np and\
+	self.time_dt == other.time_dt and\
+	self.time_current == other.time_current and\
+	self.time_total == other.time_total and\
+	self.time_file_dt == other.time_file_dt and\
+	self.time_step_count == other.time_step_count and\
+	(self.origo == other.origo).all() and\
+	(self.L == other.L).all() and\
+	(self.num == other.num).all() and\
+	self.periodic == other.periodic and\
+	(self.x == other.x).all() and\
+	(self.radius == other.radius).all() and\
+	(self.xysum == other.xysum).all() and\
+	(self.vel == other.vel).all() and\
+	(self.fixvel == other.fixvel).all() and\
+	(self.force == other.force).all() and\
+	(self.angpos == other.angpos).all() and\
+	(self.angvel == other.angvel).all() and\
+	(self.torque == other.torque).all() and\
+	(self.es_dot == other.es_dot).all() and\
+	(self.es == other.es).all() and\
+	(self.ev_dot == other.ev_dot).all() and\
+	(self.ev == other.ev).all() and\
+	(self.p == other.p).all() and\
+	(self.g == other.g).all() and\
+	self.k_n == other.k_n and\
+	self.k_t == other.k_t and\
+	self.k_r == other.k_r and\
+	self.gamma_n == other.gamma_n and\
+	self.gamma_t == other.gamma_t and\
+	self.gamma_r == other.gamma_r and\
+	self.mu_s == other.mu_s and\
+	self.mu_d == other.mu_d and\
+	self.mu_r == other.mu_r and\
+	self.rho == other.rho and\
+	self.contactmodel == other.contactmodel and\
+	self.kappa == other.kappa and\
+	self.db == other.db and\
+	self.V_b == other.V_b and\
+	self.nw == other.nw and\
+	(self.wmode == other.wmode).all() and\
+	(self.w_n == other.w_n).all() and\
+	(self.w_x == other.w_x).all() and\
+	(self.w_m == other.w_m).all() and\
+	(self.w_vel == other.w_vel).all() and\
+	(self.w_force == other.w_force).all() and\
+	(self.w_devs == other.w_devs).all() and\
+	self.gamma_wn == other.gamma_wn and\
+	self.gamma_wt == other.gamma_wt and\
+	self.gamma_wr == other.gamma_wr\
+	).all() == True):
+      return 0 # All equal
+    else:
+      return 1
+
+
+  
 
   # Read binary data
   def readbin(self, targetbin, verbose = True):
@@ -132,17 +194,17 @@ class Spherebin:
 	self.x[i,:]    = numpy.fromfile(fh, dtype=numpy.float64, count=self.nd)
         self.radius[i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
-      self.xysum = numpy.fromfile(fh, dtype=numpy.float64, count=self.np)
+      self.xysum = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*2).reshape(self.np,2)
 
       for i in range(self.np):
 	self.vel[i,:]  = numpy.fromfile(fh, dtype=numpy.float64, count=self.nd)
 	self.fixvel[i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
-      self.force = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd)
+      self.force = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
 
-      self.angpos = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd)
-      self.angvel = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd)
-      self.torque = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd)
+      self.angpos = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
+      self.angvel = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
+      self.torque = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
  
       # Per-particle single-value parameters
       self.es_dot  = numpy.fromfile(fh, dtype=numpy.float64, count=self.np)
@@ -178,7 +240,7 @@ class Spherebin:
       self.w_force = numpy.zeros(self.nw, dtype=numpy.float64)
       self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
 
-      self.wmode   = numpy.fromfile(fh, dtype=numpy.int32, count=walls.nw)
+      self.wmode   = numpy.fromfile(fh, dtype=numpy.int32, count=self.nw)
       for i in range(self.nw):
 	self.w_n[i,:] = numpy.fromfile(fh, dtype=numpy.float64, count=self.nd)
 	self.w_x[i]   = numpy.fromfile(fh, dtype=numpy.float64, count=1)
@@ -190,7 +252,7 @@ class Spherebin:
     
       # x- and y-boundary behavior
       self.gamma_wn = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-      self.gamma_ws = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+      self.gamma_wt = numpy.fromfile(fh, dtype=numpy.float64, count=1)
       self.gamma_wr = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
       fh.close()
@@ -200,12 +262,14 @@ class Spherebin:
         fh.close()
 
   # Write binary data
-  def writebin(self, targetbin):
+  def writebin(self, targetbin, verbose = True):
     """ Reads a target SPHERE binary file and returns data.
     """
     fh = None
     try:
-      print("Output file: {0}".format(targetbin))
+      if (verbose == True):
+	print("Output file: {0}".format(targetbin))
+
       fh = open(targetbin, "wb")
 
       # Write the number of dimensions and particles
@@ -235,7 +299,6 @@ class Spherebin:
       for i in range(self.np):
 	fh.write(self.vel[i,:].astype(numpy.float64))
 	fh.write(self.fixvel[i].astype(numpy.float64))
-
 
       fh.write(self.force.astype(numpy.float64))
 
@@ -275,14 +338,14 @@ class Spherebin:
         fh.write(self.w_x[i].astype(numpy.float64))
 
       for i in range(self.nw):
-        fh.write(self.w_m[j].astype(numpy.float64))
-        fh.write(self.w_vel[j].astype(numpy.float64))
-        fh.write(self.w_force[j].astype(numpy.float64))
-        fh.write(self.w_devs[j].astype(numpy.float64))
+        fh.write(self.w_m[i].astype(numpy.float64))
+        fh.write(self.w_vel[i].astype(numpy.float64))
+        fh.write(self.w_force[i].astype(numpy.float64))
+        fh.write(self.w_devs[i].astype(numpy.float64))
     
       # x- and y-boundary behavior
       fh.write(self.gamma_wn.astype(numpy.float64))
-      fh.write(self.gamma_ws.astype(numpy.float64))
+      fh.write(self.gamma_wt.astype(numpy.float64))
       fh.write(self.gamma_wr.astype(numpy.float64))
 
       fh.close()
@@ -691,7 +754,7 @@ class Spherebin:
 
     # Set wall viscosities to zero
     self.gamma_wn[0] = 0.0
-    self.gamma_ws[0] = 0.0
+    self.gamma_wt[0] = 0.0
     self.gamma_wr[0] = 0.0
 
 
@@ -728,56 +791,52 @@ class Spherebin:
 			  gamma_t = 0,
 			  gamma_r = 0,
 			  gamma_wn = 1e3,
-			  gamma_ws = 1e3,
+			  gamma_wt = 1e3,
 			  gamma_wr = 2e3,
 			  capillaryCohesion = 0):
     """ Initialize particle parameters to default values.
         Radii must be set prior to calling this function.
     """
     # Particle material density, kg/m^3
-    self.rho = numpy.ones(self.np, dtype=numpy.float64) * rho
+    self.rho = numpy.ones(1, dtype=numpy.float64) * rho
 
     
     ### Dry granular material parameters
 
     # Contact normal elastic stiffness, N/m
-    self.k_n = numpy.ones(self.np, dtype=numpy.float64) * k_n
+    self.k_n = numpy.ones(1, dtype=numpy.float64) * k_n
 
     # Contact shear elastic stiffness (for contactmodel = 2), N/m
-    self.k_t = numpy.ones(self.np, dtype=numpy.float64) * k_t
+    self.k_t = numpy.ones(1, dtype=numpy.float64) * k_t
 
     # Contact rolling elastic stiffness (for contactmodel = 2), N/m
-    self.k_r = numpy.ones(self.np, dtype=numpy.float64) * k_r
+    self.k_r = numpy.ones(1, dtype=numpy.float64) * k_r
 
     # Contact normal viscosity. Critical damping: 2*sqrt(m*k_n).
     # Normal force component elastic if nu = 0.0.
     #self.gamma_n = numpy.ones(self.np, dtype=numpy.float64) \
     #	      * nu_frac * 2.0 * math.sqrt(4.0/3.0 * math.pi * numpy.amin(self.radius)**3 \
     #	      * self.rho[0] * self.k_n[0])
-    self.gamma_n = numpy.ones(self.np, dtype=numpy.float64) * gamma_n
+    self.gamma_n = numpy.ones(1, dtype=numpy.float64) * gamma_n
 		      
     # Contact shear viscosity, Ns/m
-    self.gamma_t = numpy.ones(self.np, dtype=numpy.float64) * gamma_t
+    self.gamma_t = numpy.ones(1, dtype=numpy.float64) * gamma_t
 
     # Contact rolling viscosity, Ns/m?
-    self.gamma_r = numpy.ones(self.np, dtype=numpy.float64) * gamma_r
+    self.gamma_r = numpy.ones(1, dtype=numpy.float64) * gamma_r
 
     # Contact static shear friction coefficient
-    self.mu_s = numpy.ones(self.np, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_s))
+    self.mu_s = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_s))
 
     # Contact dynamic shear friction coefficient
-    self.mu_d = numpy.ones(self.np, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_d))
+    self.mu_d = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_d))
 
     # Contact rolling friction coefficient
-    self.mu_r = numpy.ones(self.np, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_r))
-
-    # Global parameters
-    # if 1 = all particles have the same values for the physical parameters
-    self.globalparams[0] = 1
+    self.mu_r = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_r))
 
     # Wall viscosities
     self.gamma_wn[0] = gamma_wn # normal
-    self.gamma_ws[0] = gamma_ws # sliding
+    self.gamma_wt[0] = gamma_wt # sliding
     self.gamma_wr[0] = gamma_wr # rolling
 
 
