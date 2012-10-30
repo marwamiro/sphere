@@ -1285,13 +1285,17 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
     else:
       plt.show()
 
-def run(project):
+def run(project, verbose=True, hideinputfile=False):
   """ Execute sphere with target project
   """
-  subprocess.call("cd ..; ./sphere_*_X86_64 " + project, shell=True)
+  quiet = ""
+  stdout = ""
+  if (verbose == False):
+    quiet = "-q "
+  if (hideinputfile == True):
+    stdout = " > /dev/null"
+  subprocess.call("cd ..; ./sphere_*_X86_64 "+ quiet + project + stdout, shell=True)
   
-  
-
 def status(project):
   """ Check the status.dat file for the target project,
       and return the last file numer.

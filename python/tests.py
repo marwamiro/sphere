@@ -3,9 +3,9 @@ from sphere import *
 
 def compare(first, second, string):
   if (first == second):
-    print(string + ":\tPassed")
+    print(string + "\tPassed")
   else:
-    print(string + ":\tFailed")
+    print(string + "\tFailed")
 
 
 #### Input/output tests ####
@@ -28,12 +28,12 @@ orig.writebin("orig.bin", verbose=False)
 # Test Python IO routines
 py = Spherebin()
 py.readbin("orig.bin", verbose=False)
-compare(orig, py, "Python IO")
+compare(orig, py, "Python IO:")
 
 # Test C++ IO routines
-run("python/orig.bin")
+run("python/orig.bin", verbose=False, hideinputfile=True)
 cpp = Spherebin()
 cpp.readbin("../output/orig.output0.bin", verbose=False)
-compare(orig, cpp, "C++ IO   ")
+compare(orig, cpp, "C++ IO:   ")
 
 

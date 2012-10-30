@@ -46,22 +46,26 @@ __host__ void DEM::initializeGPU(void)
     std::cerr << "\nERROR: No CUDA-enabled devices availible. Bye.\n";
     exit(EXIT_FAILURE);
   } else if (devicecount == 1) {
-    cout << "\nSystem contains 1 CUDA compatible device.\n";
+    if (verbose == 1)
+      cout << "\nSystem contains 1 CUDA compatible device.\n";
   } else {
-    cout << "\nSystem contains " << devicecount << " CUDA compatible devices.\n";
+    if (verbose == 1)
+      cout << "\nSystem contains " << devicecount << " CUDA compatible devices.\n";
   }
 
   cudaGetDeviceProperties(&prop, cudadevice);
   cudaDriverGetVersion(&cudaDriverVersion);
   cudaRuntimeGetVersion(&cudaRuntimeVersion);
 
-  cout << "Using CUDA device ID: " << cudadevice << "\n";
-  cout << "  - Name: " <<  prop.name << ", compute capability: " 
-    << prop.major << "." << prop.minor << ".\n";
-  cout << "  - CUDA Driver version: " << cudaDriverVersion/1000 
-    << "." <<  cudaDriverVersion%100 
-    << ", runtime version " << cudaRuntimeVersion/1000 << "." 
-    << cudaRuntimeVersion%100 << "\n\n";
+  if (verbose == 1) {
+    cout << "Using CUDA device ID: " << cudadevice << "\n";
+    cout << "  - Name: " <<  prop.name << ", compute capability: " 
+      << prop.major << "." << prop.minor << ".\n";
+    cout << "  - CUDA Driver version: " << cudaDriverVersion/1000 
+      << "." <<  cudaDriverVersion%100 
+      << ", runtime version " << cudaRuntimeVersion/1000 << "." 
+      << cudaRuntimeVersion%100 << "\n\n";
+  }
 
   // Comment following line when using a system only containing exclusive mode GPUs
   cudaChooseDevice(&cudadevice, &prop); 

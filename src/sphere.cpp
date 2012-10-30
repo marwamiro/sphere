@@ -12,7 +12,8 @@
 // and reports the values
 DEM::DEM(const std::string inputbin, 
     const int verbosity,
-    const int checkVals)
+    const int checkVals,
+    const int render)
 : verbose(verbosity)
 {
   using std::cout;
