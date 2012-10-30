@@ -13,8 +13,9 @@
 typedef Float Float;
 typedef Float3 Float3;
 typedef Float4 Float4;
-#define MAKE_FLOAT3(x, y, z) make_Float3(x, y, z)
-#define MAKE_FLOAT4(x, y, z, w) make_Float4(x, y, z, w)
+#define MAKE_FLOAT2(x, y) make_float2(x, y)
+#define MAKE_FLOAT3(x, y, z) make_float3(x, y, z)
+#define MAKE_FLOAT4(x, y, z, w) make_float4(x, y, z, w)
 */
 
 
@@ -27,6 +28,7 @@ typedef double Float;
 typedef double2 Float2;
 typedef double3 Float3;
 typedef double4 Float4;
+#define MAKE_FLOAT2(x, y) make_double2(x, y)
 #define MAKE_FLOAT3(x, y, z) make_double3(x, y, z)
 #define MAKE_FLOAT4(x, y, z, w) make_double4(x, y, z, w)
 //*/

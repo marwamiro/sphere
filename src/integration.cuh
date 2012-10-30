@@ -11,6 +11,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 			  Float4* dev_angvel_sorted,
 			  Float4* dev_x, Float4* dev_vel, Float4* dev_angvel, // Output
 			  Float4* dev_force, Float4* dev_torque, Float4* dev_angpos, // Input
+			  Float2* dev_xysum,
 			  unsigned int* dev_gridParticleIndex) // Input: Sorted-Unsorted key
 {
   unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
@@ -23,6 +24,8 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     Float4 force  = dev_force[orig_idx];
     Float4 torque = dev_torque[orig_idx];
     Float4 angpos = dev_angpos[orig_idx];
+
+    Float2 xysum  = MAKE_FLOAT2(0.0f, 0.0f);
 
     // Initialize acceleration vectors to zero
     Float4 acc    = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -103,7 +106,10 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 
     // Add x-displacement for this time step to 
     // sum of x-displacements
-    x.w += vel.x * dt + (acc.x * dt*dt)/2.0f;
+    //x.w += vel.x * dt + (acc.x * dt*dt)/2.0f;
+    xysum.x += vel.x * dt + (acc.x * dt*dt)/2.0f;
+    xysum.y += vel.y * dt + (acc.y * dt*dt)/2.0f;
+
 
     // Move particle across boundary if it is periodic
     if (devC_grid.periodic == 1) {
@@ -126,6 +132,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     __syncthreads();
 
     // Store data in global memory at original, pre-sort positions
+    dev_xysum[orig_idx] += xysum;
     dev_angvel[orig_idx] = angvel;
     dev_vel[orig_idx]    = vel;
     dev_angpos[orig_idx] = angpos;

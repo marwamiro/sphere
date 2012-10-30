@@ -11,6 +11,7 @@
 
 // Including library files
 #include <iostream>
+#include <string>
 
 // Including user files
 #include "constants.h"
@@ -23,16 +24,17 @@
 //////////////////
 // The main loop returns the value 0 to the shell, if the program terminated
 // successfully, and 1 if an error occured which caused the program to crash.
-int main(int argc, char *argv[]) 
+int main(const int argc, const char *argv[]) 
 {
 
   // LOCAL VARIABLE DECLARATIONS
   if(!argv[1] || argc != 2) {
     std::cerr << "Error: Specify input binary file, e.g. "
-      << argv[0] << " input/test.bin\n";
+      << argv[0] << " input/test.bin" << std::endl;
     return 1; // Return unsuccessful exit status
   }
-  char *inputbin = argv[1]; // Input binary file read from command line argument
+  //char *inputbin = argv[1]; // Input binary file read from command line argument
+  std::string inputbin = argv[1];
 
   int verbose = 1;
   int checkVals = 1;
@@ -51,13 +53,12 @@ int main(int argc, char *argv[])
       << "`-------------------------------------´\n";
   }
 
-  std::cout << "Input file: " << inputbin << "\n";
+  std::cout << "Input file: " << inputbin << std::endl;
   
   // Create DEM class, read data from input binary, check values
   DEM dem(inputbin, verbose, checkVals);
 
   // Start iterating through time
-  std::cout << "\nStarting time loop...\n";
   dem.startTime();
 
   // Terminate execution

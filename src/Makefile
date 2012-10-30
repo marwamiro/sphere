@@ -27,8 +27,8 @@ NVCCFLAGS=--use_fast_math -O3 -m64 -gencode=arch=compute_20,code=\"sm_20,compute
 
 # Debugable code? Beware that enabling this option will 
 # considerably slow down the execution.
-#CCFLAGS+=-g
-#NVCCFLAGS+=-g -G
+CCFLAGS=-g -O0 -Wall
+NVCCFLAGS=-g -G -O0 -m64 -gencode=arch=compute_20,code=\"sm_20,compute_20\" -Xcompiler "-O0 -g"
 
 DATE=`date +'%Y.%m.%d-%H:%M:%S'`
 	BACKUPNAME=sphere.$(DATE).tar.gz
@@ -38,6 +38,9 @@ CUFILES=device.cu utility.cu
 CCOBJECTS=$(CCFILES:.cpp=.o)
 CUOBJECTS=$(CUFILES:.cu=.o)
 OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
+
+# If a header-file changes, update all objects
+DEPS=*.h *.cuh
 
 # Detect OS
 OSUPPER=$(shell uname -s 2>/dev/null | tr [:lower:] [:upper:])
@@ -75,16 +78,16 @@ $(EXECUTABLE): $(OBJECTS)
 utility.o: utility.cu
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
 
-file_io.o: file_io.cpp datatypes.h
+file_io.o: file_io.cpp $(DEPS)
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
-device.o: device.cu datatypes.h *.cuh
+device.o: device.cu $(DEPS)
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
 
-main.o: main.cpp datatypes.h
+main.o: main.cpp $(DEPS)
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
-sphere.o: sphere.cpp sphere.h
+sphere.o: sphere.cpp $(DEPS)
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
 ../sphere_status: sphere_status.cpp

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <cstdio>
 #include <cstdlib>
 
@@ -7,34 +8,42 @@
 #include "constants.h"
 #include "sphere.h"
 
+// Get the address of the first byte of an object's representation
+// See Stroustrup (2008) p. 388
+template<class T>
+char* as_bytes(T& i)	// treat a T as a sequence of bytes
+{
+  // get the address of the first byte of memory used
+  // to store the object
+  void* addr = &i;
+
+  // treat the object as bytes
+  return static_cast<char*>(addr);
+}
+
 // Read DEM data from binary file
+// Note: Static-size arrays can be bulk-read with e.g.
+//   ifs.read(as_bytes(grid.L), sizeof(grid.L))
+// while dynamic, and vector arrays (e.g. Float4) must
+// be read one value at a time.
 void DEM::readbin(const char *target)
 {
   using std::cout;  // stdout
   using std::cerr;  // stderr
   using std::endl;  // endline. Implicitly flushes buffer
-
-  if (verbose == 1)
-    std::cout << "reading binary: " << target << '\n';
-
-  int err = 0;
+  unsigned int i;
 
   // Open input file
-  FILE *fp;
-  ++err;
-  if ((fp = fopen(target, "rb")) == NULL) {
+  // if target is string: std::ifstream ifs(target.c_str(), std::ios_base::binary);
+  std::ifstream ifs(target, std::ios_base::binary);
+  if (!ifs) {
     cerr << "Could not read input binary file '"
       << target << endl;
-    exit(err);
+    exit(1);
   }
 
-  // Read data
-  ++err;
-  if(fread(&nd, sizeof(nd), 1, fp) != 1) {
-    cerr << "nd" << endl; exit(err); } // Return unsuccessful exit status
-  ++err;
-  if (fread(&np, sizeof(np), 1, fp) != 1) {
-    cerr << "np" << endl; exit(err); } // Return unsuccessful exit status
+  ifs.read(as_bytes(nd), sizeof(nd));
+  ifs.read(as_bytes(np), sizeof(np));
   if (verbose == 1) {
     cout << "  - Number of dimensions: nd = " << nd << "\n"
       << "  - Number of particles:  np = " << np << "\n";
@@ -59,27 +68,17 @@ void DEM::readbin(const char *target)
       cout << "double";
   } else {
     cerr << "Error! Chosen precision not available. Check datatypes.h\n";
-    exit(err);
+    exit(1);
   }
   if (verbose == 1)
     cout << " precision\n";
 
   // Read time parameters
-  ++err;
-  if (fread(&time.dt, sizeof(time.dt), 1, fp) != 1) {
-    cerr << "time.dt" << endl; exit(err); }
-  ++err;
-  if (fread(&time.current, sizeof(time.current), 1, fp) != 1) {
-    cerr << "time.current" << endl; exit(err); }
-  ++err;
-  if (fread(&time.total, sizeof(time.total), 1, fp) != 1) {
-    cerr << "time.total" << endl; exit(err); }
-  ++err;
-  if (fread(&time.file_dt, sizeof(time.file_dt), 1, fp) != 1) {
-    cerr << "time.file_dt" << endl; exit(err); }
-  ++err;
-  if (fread(&time.step_count, sizeof(time.step_count), 1, fp) != 1) {
-    cerr << "time.step_count" << endl; exit(err); }
+  ifs.read(as_bytes(time.dt), sizeof(time.dt));
+  ifs.read(as_bytes(time.current), sizeof(time.current));
+  ifs.read(as_bytes(time.total), sizeof(time.total));
+  ifs.read(as_bytes(time.file_dt), sizeof(time.file_dt));
+  ifs.read(as_bytes(time.step_count), sizeof(time.step_count));
 
   // Output display parameters to screen
   if (verbose == 1) {
@@ -124,143 +123,118 @@ void DEM::readbin(const char *target)
     cout << "  Reading remaining data from input binary:       ";
 
   // Read grid parameters
-  ++err;
-  if (fread(&grid.origo, sizeof(grid.origo[0]), nd, fp) != nd) {
-    cerr << "grid.origo" << endl; exit(err); }
-  ++err;
-  if (fread(&grid.L, sizeof(grid.L[0]), nd, fp) != nd) {
-    cerr << "grid.L" << endl; exit(err); }
-  ++err;
-  if (fread(&grid.num, sizeof(grid.num[0]), nd, fp) != nd) {
-    cerr << "grid.num" << endl; exit(err); }
-  ++err;
-  if (fread(&grid.periodic, sizeof(grid.periodic), 1, fp) != 1) {
-    cerr << "grid.periodic" << endl; exit(err); }
+  ifs.read(as_bytes(grid.origo), sizeof(grid.origo));
+  ifs.read(as_bytes(grid.L), sizeof(grid.L));
+  ifs.read(as_bytes(grid.num), sizeof(grid.num));
+  ifs.read(as_bytes(grid.periodic), sizeof(grid.periodic));
 
   // Read kinematic values
-  ++err;
-  if (fread(&k.x, sizeof(Float4), np, fp) != np) {
-    cerr << "k.x" << endl; exit(err); }
-  ++err;
-  if (fread(&k.xysum, sizeof(Float2), np, fp) != np) {
-    cerr << "k.xysum" << endl; exit(err); }
-  ++err;
-  if (fread(&k.vel, sizeof(Float4), np, fp) != np) {
-    cerr << "k.vel" << endl; exit(err); }
-  ++err;
-  if (fread(&k.force, sizeof(Float4), np, fp) != np) {
-    cerr << "k.force" << endl; exit(err); }
-  ++err;
-  if (fread(&k.angpos, sizeof(Float4), np, fp) != np) {
-    cerr << "k.angpos" << endl; exit(err); }
-  ++err;
-  if (fread(&k.angvel, sizeof(Float4), np, fp) != np) {
-    cerr << "k.angvel" << endl; exit(err); }
-  ++err;
-  if (fread(&k.torque, sizeof(Float4), np, fp) != np) {
-    cerr << "k.torque" << endl; exit(err); }
-  // mass (m) and inertia (I) are calculated on device
+  for (i = 0; i<np; ++i) {
+    ifs.read(as_bytes(k.x[i].x), sizeof(Float));
+    ifs.read(as_bytes(k.x[i].y), sizeof(Float));
+    ifs.read(as_bytes(k.x[i].z), sizeof(Float));
+    ifs.read(as_bytes(k.x[i].w), sizeof(Float));
+  }
+  for (i = 0; i<np; ++i) {
+    ifs.read(as_bytes(k.xysum[i].x), sizeof(Float));
+    ifs.read(as_bytes(k.xysum[i].y), sizeof(Float));
+  }
+  for (i = 0; i<np; ++i) {
+    ifs.read(as_bytes(k.vel[i].x), sizeof(Float));
+    ifs.read(as_bytes(k.vel[i].y), sizeof(Float));
+    ifs.read(as_bytes(k.vel[i].z), sizeof(Float));
+    ifs.read(as_bytes(k.vel[i].w), sizeof(Float));
+  }
+  for (i = 0; i<np; ++i) {
+    ifs.read(as_bytes(k.force[i].x), sizeof(Float));
+    ifs.read(as_bytes(k.force[i].y), sizeof(Float));
+    ifs.read(as_bytes(k.force[i].z), sizeof(Float));
+    //ifs.read(as_bytes(k.force[i].w), sizeof(Float));
+  }
+  for (i = 0; i<np; ++i) {
+    ifs.read(as_bytes(k.angpos[i].x), sizeof(Float));
+    ifs.read(as_bytes(k.angpos[i].y), sizeof(Float));
+    ifs.read(as_bytes(k.angpos[i].z), sizeof(Float));
+    //ifs.read(as_bytes(k.angpos[i].w), sizeof(Float));
+  }
+  for (i = 0; i<np; ++i) {
+    ifs.read(as_bytes(k.angvel[i].x), sizeof(Float));
+    ifs.read(as_bytes(k.angvel[i].y), sizeof(Float));
+    ifs.read(as_bytes(k.angvel[i].z), sizeof(Float));
+    //ifs.read(as_bytes(k.angvel[i].w), sizeof(Float));
+  }
+  for (i = 0; i<np; ++i) {
+    ifs.read(as_bytes(k.torque[i].x), sizeof(Float));
+    ifs.read(as_bytes(k.torque[i].y), sizeof(Float));
+    ifs.read(as_bytes(k.torque[i].z), sizeof(Float));
+    //ifs.read(as_bytes(k.torque[i].w), sizeof(Float));
+  }
 
   // Read energies
-  ++err;
-  if (fread(&e.es_dot, sizeof(e.es_dot[0]), np, fp) != np) {
-    cerr << "e.es_dot" << endl; exit(err); }
-  ++err;
-  if (fread(&e.es, sizeof(e.es[0]), np, fp) != np) {
-    cerr << "e.es" << endl; exit(err); }
-  ++err;
-  if (fread(&e.ev_dot, sizeof(e.ev_dot[0]), np, fp) != np) {
-    cerr << "e.ev_dot" << endl; exit(err); }
-  ++err;
-  if (fread(&e.ev, sizeof(e.ev[0]), np, fp) != np) {
-    cerr << "e.ev" << endl; exit(err); }
-  ++err;
-  if (fread(&e.p, sizeof(e.p[0]), np, fp) != np) {
-    cerr << "e.p" << endl; exit(err); }
+  for (i = 0; i<np; ++i)
+    ifs.read(as_bytes(e.es_dot[i]), sizeof(Float));
+  for (i = 0; i<np; ++i)
+    ifs.read(as_bytes(e.es[i]), sizeof(Float));
+  for (i = 0; i<np; ++i)
+    ifs.read(as_bytes(e.ev_dot[i]), sizeof(Float));
+  for (i = 0; i<np; ++i)
+    ifs.read(as_bytes(e.ev[i]), sizeof(Float));
+  for (i = 0; i<np; ++i)
+    ifs.read(as_bytes(e.p[i]), sizeof(Float));
 
-  // Read constant, global physical parameters
-  ++err;
-  if (fread(&params.g, sizeof(params.g[0]), nd, fp) != nd) {
-    cerr << "params.g" << endl; exit(err); }
-  ++err;
-  if (fread(&params.k_n, sizeof(params.k_n), 1, fp) != 1) {
-    cerr << "params.k_n" << endl; exit(err); }
-  ++err;
-  if (fread(&params.k_t, sizeof(params.k_t), 1, fp) != 1) {
-    cerr << "params.k_t" << endl; exit(err); }
-  ++err;
-  if (fread(&params.k_r, sizeof(params.k_r), 1, fp) != 1) {
-    cerr << "params.k_r" << endl; exit(err); }
-  ++err;
-  if (fread(&params.gamma_n, sizeof(params.gamma_n), 1, fp) != 1) {
-    cerr << "params.gamma_n" << endl; exit(err); }
-  ++err;
-  if (fread(&params.gamma_t, sizeof(params.gamma_t), 1, fp) != 1) {
-    cerr << "params.gamma_t" << endl; exit(err); }
-  ++err;
-  if (fread(&params.gamma_r, sizeof(params.gamma_r), 1, fp) != 1) {
-    cerr << "params.gamma_r" << endl; exit(err); }
-  ++err;
-  if (fread(&params.mu_s, sizeof(params.mu_s), 1, fp) != 1) {
-    cerr << "params.mu_s" << endl; exit(err); }
-  ++err;
-  if (fread(&params.mu_d, sizeof(params.mu_d), 1, fp) != 1) {
-    cerr << "params.mu_d" << endl; exit(err); }
-  ++err;
-  if (fread(&params.mu_r, sizeof(params.mu_r), 1, fp) != 1) {
-    cerr << "params.mu_r" << endl; exit(err); }
-  ++err;
-  if (fread(&params.rho, sizeof(params.rho), 1, fp) != 1) {
-    cerr << "params.rho" << endl; exit(err); }
-  ++err;
-  if (fread(&params.contactmodel, sizeof(params.contactmodel), 1, fp) != 1) {
-    cerr << "params.contactmodel" << endl; exit(err); }
-  ++err;
-  if (fread(&params.kappa, sizeof(params.kappa), 1, fp) != 1) {
-    cerr << "params.kappa" << endl; exit(err); }
-  ++err;
-  if (fread(&params.db, sizeof(params.db), 1, fp) != 1) {
-    cerr << "params.db" << endl; exit(err); }
-  ++err;
-  if (fread(&params.V_b, sizeof(params.V_b), 1, fp) != 1) {
-  cerr << "params.V_b" << endl; exit(err); }
+  // Read constant parameters
+  ifs.read(as_bytes(params.g), sizeof(params.g));
+  ifs.read(as_bytes(params.k_n), sizeof(params.k_n));
+  ifs.read(as_bytes(params.k_t), sizeof(params.k_t));
+  ifs.read(as_bytes(params.k_r), sizeof(params.k_r));
+  ifs.read(as_bytes(params.gamma_n), sizeof(params.gamma_n));
+  ifs.read(as_bytes(params.gamma_t), sizeof(params.gamma_t));
+  ifs.read(as_bytes(params.gamma_r), sizeof(params.gamma_r));
+  ifs.read(as_bytes(params.mu_s), sizeof(params.mu_s));
+  ifs.read(as_bytes(params.mu_d), sizeof(params.mu_d));
+  ifs.read(as_bytes(params.mu_r), sizeof(params.mu_r));
+  ifs.read(as_bytes(params.rho), sizeof(params.rho));
+  ifs.read(as_bytes(params.contactmodel), sizeof(params.contactmodel));
+  ifs.read(as_bytes(params.kappa), sizeof(params.kappa));
+  ifs.read(as_bytes(params.db), sizeof(params.db));
+  ifs.read(as_bytes(params.V_b), sizeof(params.V_b));
 
   // Read wall parameters
-  ++err;
-  if (fread(&walls.nw, sizeof(walls.nw), 1, fp) != 1) {
-    cerr << "walls.nw" << endl; exit(err); }
-  // Allocate host memory for walls
-  // Wall normal (x,y,z), w: wall position on axis parallel to wall normal
-  // Wall mass (x), velocity (y), force (z), and deviatoric stress (w)
-  walls.nx   = new Float4[walls.nw];
-  walls.mvfd = new Float4[walls.nw]; 
-
-  ++err;
-  if (fread(&walls.wmode, sizeof(walls.wmode[0]), walls.nw, fp) != walls.nw) {
-    cerr << "walls.wmode" << endl; exit(err); }
-  ++err;
-  if (fread(&walls.nx, sizeof(Float4), walls.nw, fp) != 1) {
-    cerr << "walls.nx" << endl; exit(err); }
-  ++err;
-  if (fread(&walls.mvfd, sizeof(Float4), walls.nw, fp) != 1) {
-    cerr << "walls.mvfd" << endl; exit(err); }
-  ++err;
-  if (fread(&walls.gamma_wn, sizeof(walls.gamma_wn), 1, fp) != 1) {
-    cerr << "walls.gamma_wn" << endl; exit(err); }
-  ++err;
-  if (fread(&walls.gamma_wt, sizeof(walls.gamma_wt), 1, fp) != 1) {
-    cerr << "walls.gamma_wt" << endl; exit(err); }
-  ++err;
-  if (fread(&walls.gamma_wr, sizeof(walls.gamma_wr), 1, fp) != 1) {
-    cerr << "walls.gamma_wr" << endl; exit(err); }
-
+  ifs.read(as_bytes(walls.nw), sizeof(walls.nw));
   if (walls.nw > MAXWALLS) {
     cerr << "Error; MAXWALLS (" << MAXWALLS << ") in datatypes.h "
       << "is smaller than the number of walls specified in the "
       << "input file (" << walls.nw << ").\n";
+    exit(1);
   }
 
-  fclose(fp);
+  // Allocate host memory for walls
+  // Wall normal (x,y,z), w: wall position on axis parallel to wall normal
+  // Wall mass (x), velocity (y), force (z), and deviatoric stress (w)
+  walls.nx    = new Float4[walls.nw];
+  walls.mvfd  = new Float4[walls.nw];
+  walls.force = new Float[walls.nw*np];
+
+  ifs.read(as_bytes(walls.wmode), sizeof(walls.wmode));
+  for (i = 0; i<walls.nw; ++i) {
+    ifs.read(as_bytes(walls.nx[i].x), sizeof(Float));
+    ifs.read(as_bytes(walls.nx[i].y), sizeof(Float));
+    ifs.read(as_bytes(walls.nx[i].z), sizeof(Float));
+    ifs.read(as_bytes(walls.nx[i].w), sizeof(Float));
+  }
+  for (i = 0; i<walls.nw; ++i) {
+    ifs.read(as_bytes(walls.mvfd[i].x), sizeof(Float));
+    ifs.read(as_bytes(walls.mvfd[i].y), sizeof(Float));
+    ifs.read(as_bytes(walls.mvfd[i].z), sizeof(Float));
+    ifs.read(as_bytes(walls.mvfd[i].w), sizeof(Float));
+  }
+  ifs.read(as_bytes(walls.gamma_wn), sizeof(walls.gamma_wn));
+  ifs.read(as_bytes(walls.gamma_wt), sizeof(walls.gamma_wt));
+  ifs.read(as_bytes(walls.gamma_wr), sizeof(walls.gamma_wr));
+
+  // Close file if it is still open
+  if (ifs.is_open())
+    ifs.close();
 
   if (verbose == 1)
     cout << "Done\n";
@@ -270,162 +244,128 @@ void DEM::readbin(const char *target)
 // Write DEM data to binary file
 void DEM::writebin(const char *target)
 {
-  int err = 0;
+  unsigned int i;
 
   // Open output file
-  FILE *fp;
-  if ((fp = fopen(target, "wb")) == NULL) {
+  std::ofstream ofs(target, std::ios_base::binary);
+  if (!ofs) {
     std::cerr << "could create output binary file '"
-      << target << "'.\n";
-    exit(err); // Return unsuccessful exit status
+      << target << std::endl;
+    exit(1); // Return unsuccessful exit status
   }
 
   // If double precision: Values can be written directly
   if (sizeof(Float) == sizeof(double)) {
 
-    fwrite(&nd, sizeof(nd), 1, fp);
-    fwrite(&np, sizeof(np), 1, fp);
+    ofs.write(as_bytes(nd), sizeof(nd));
+    ofs.write(as_bytes(np), sizeof(np));
 
-    // Write temporal parameters
-    ++err;
-    if (fwrite(&time.dt, sizeof(time.dt), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&time.current, sizeof(time.current), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&time.total, sizeof(time.total), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&time.file_dt, sizeof(time.file_dt), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&time.step_count, sizeof(time.step_count), 1, fp) != 1)
-      exit(err);
+    // Write time parameters
+    ofs.write(as_bytes(time.dt), sizeof(time.dt));
+    ofs.write(as_bytes(time.current), sizeof(time.current));
+    ofs.write(as_bytes(time.total), sizeof(time.total));
+    ofs.write(as_bytes(time.file_dt), sizeof(time.file_dt));
+    ofs.write(as_bytes(time.step_count), sizeof(time.step_count));
 
     // Write grid parameters
-    ++err;
-    if (fwrite(&grid.origo, sizeof(grid.origo[0]), nd, fp) != nd)
-      exit(err);
-    ++err;
-    if (fwrite(&grid.L, sizeof(grid.L[0]), nd, fp) != nd)
-      exit(err);
-    ++err;
-    if (fwrite(&grid.num, sizeof(grid.num[0]), nd, fp) != nd)
-      exit(err);
-    ++err;
-    if (fwrite(&grid.periodic, sizeof(grid.periodic), 1, fp) != 1)
-      exit(err);
+    ofs.write(as_bytes(grid.origo), sizeof(grid.origo));
+    ofs.write(as_bytes(grid.L), sizeof(grid.L));
+    ofs.write(as_bytes(grid.num), sizeof(grid.num));
+    ofs.write(as_bytes(grid.periodic), sizeof(grid.periodic));
 
     // Write kinematic values
-    ++err;
-    if (fwrite(&k.x, sizeof(Float4), np, fp) != np)
-      exit(err);
-    ++err;
-    if (fwrite(&k.xysum, sizeof(Float2), np, fp) != np)
-      exit(err);
-    ++err;
-    if (fwrite(&k.vel, sizeof(Float4), np, fp) != np)
-      exit(err);
-    ++err;
-    if (fwrite(&k.force, sizeof(Float4), np, fp) != np)
-      exit(err);
-    ++err;
-    if (fwrite(&k.angpos, sizeof(Float4), np, fp) != np)
-      exit(err);
-    ++err;
-    if (fwrite(&k.angvel, sizeof(Float4), np, fp) != np)
-      exit(err);
-    ++err;
-    if (fwrite(&k.torque, sizeof(Float4), np, fp) != np)
-      exit(err);
+    for (i = 0; i<np; ++i) {
+      ofs.write(as_bytes(k.x[i].x), sizeof(Float));
+      ofs.write(as_bytes(k.x[i].y), sizeof(Float));
+      ofs.write(as_bytes(k.x[i].z), sizeof(Float));
+      ofs.write(as_bytes(k.x[i].w), sizeof(Float));
+    }
+    for (i = 0; i<np; ++i) {
+      ofs.write(as_bytes(k.xysum[i].x), sizeof(Float));
+      ofs.write(as_bytes(k.xysum[i].y), sizeof(Float));
+    }
+    for (i = 0; i<np; ++i) {
+      ofs.write(as_bytes(k.vel[i].x), sizeof(Float));
+      ofs.write(as_bytes(k.vel[i].y), sizeof(Float));
+      ofs.write(as_bytes(k.vel[i].z), sizeof(Float));
+      ofs.write(as_bytes(k.vel[i].w), sizeof(Float));
+    }
+    for (i = 0; i<np; ++i) {
+      ofs.write(as_bytes(k.force[i].x), sizeof(Float));
+      ofs.write(as_bytes(k.force[i].y), sizeof(Float));
+      ofs.write(as_bytes(k.force[i].z), sizeof(Float));
+      //ofs.write(as_bytes(k.force[i].w), sizeof(Float));
+    }
+    for (i = 0; i<np; ++i) {
+      ofs.write(as_bytes(k.angpos[i].x), sizeof(Float));
+      ofs.write(as_bytes(k.angpos[i].y), sizeof(Float));
+      ofs.write(as_bytes(k.angpos[i].z), sizeof(Float));
+      //ofs.write(as_bytes(k.angpos[i].w), sizeof(Float));
+    }
+    for (i = 0; i<np; ++i) {
+      ofs.write(as_bytes(k.angvel[i].x), sizeof(Float));
+      ofs.write(as_bytes(k.angvel[i].y), sizeof(Float));
+      ofs.write(as_bytes(k.angvel[i].z), sizeof(Float));
+      //ofs.write(as_bytes(k.angvel[i].w), sizeof(Float));
+    }
+    for (i = 0; i<np; ++i) {
+      ofs.write(as_bytes(k.torque[i].x), sizeof(Float));
+      ofs.write(as_bytes(k.torque[i].y), sizeof(Float));
+      ofs.write(as_bytes(k.torque[i].z), sizeof(Float));
+      //ofs.write(as_bytes(k.torque[i].w), sizeof(Float));
+    }
 
     // Write energies
-    ++err;
-    if (fwrite(&e.es_dot, sizeof(e.es_dot[0]), np, fp) != np)
-      exit(err);
-    ++err;
-    if (fwrite(&e.es, sizeof(e.es[0]), np, fp) != np)
-      exit(err);
-    ++err;
-    if (fwrite(&e.ev_dot, sizeof(e.ev_dot[0]), np, fp) != np)
-      exit(err);
-    ++err;
-    if (fwrite(&e.ev, sizeof(e.ev[0]), np, fp) != np)
-      exit(err);
-    ++err;
-    if (fwrite(&e.p, sizeof(e.p[0]), np, fp) != np)
-      exit(err);
+    for (i = 0; i<np; ++i)
+      ofs.write(as_bytes(e.es_dot[i]), sizeof(Float));
+    for (i = 0; i<np; ++i)
+      ofs.write(as_bytes(e.es[i]), sizeof(Float));
+    for (i = 0; i<np; ++i)
+      ofs.write(as_bytes(e.ev_dot[i]), sizeof(Float));
+    for (i = 0; i<np; ++i)
+      ofs.write(as_bytes(e.ev[i]), sizeof(Float));
+    for (i = 0; i<np; ++i)
+      ofs.write(as_bytes(e.p[i]), sizeof(Float));
 
-    // Write constant, global physical parameters
-    ++err;
-    if (fwrite(&params.g, sizeof(params.g[0]), nd, fp) != nd)
-      exit(err);
-    ++err;
-    if (fwrite(&params.k_n, sizeof(params.k_n), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.k_t, sizeof(params.k_t), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.k_r, sizeof(params.k_r), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.gamma_n, sizeof(params.gamma_n), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.gamma_t, sizeof(params.gamma_t), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.gamma_r, sizeof(params.gamma_r), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.mu_s, sizeof(params.mu_s), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.mu_d, sizeof(params.mu_d), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.mu_r, sizeof(params.mu_r), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.rho, sizeof(params.rho), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.contactmodel, sizeof(params.contactmodel), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.kappa, sizeof(params.kappa), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.db, sizeof(params.db), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&params.V_b, sizeof(params.V_b), 1, fp) != 1)
-      exit(err);
+    // Write constant parameters
+    ofs.write(as_bytes(params.g), sizeof(params.g));
+    ofs.write(as_bytes(params.k_n), sizeof(params.k_n));
+    ofs.write(as_bytes(params.k_t), sizeof(params.k_t));
+    ofs.write(as_bytes(params.k_r), sizeof(params.k_r));
+    ofs.write(as_bytes(params.gamma_n), sizeof(params.gamma_n));
+    ofs.write(as_bytes(params.gamma_t), sizeof(params.gamma_t));
+    ofs.write(as_bytes(params.gamma_r), sizeof(params.gamma_r));
+    ofs.write(as_bytes(params.mu_s), sizeof(params.mu_s));
+    ofs.write(as_bytes(params.mu_d), sizeof(params.mu_d));
+    ofs.write(as_bytes(params.mu_r), sizeof(params.mu_r));
+    ofs.write(as_bytes(params.rho), sizeof(params.rho));
+    ofs.write(as_bytes(params.contactmodel), sizeof(params.contactmodel));
+    ofs.write(as_bytes(params.kappa), sizeof(params.kappa));
+    ofs.write(as_bytes(params.db), sizeof(params.db));
+    ofs.write(as_bytes(params.V_b), sizeof(params.V_b));
 
-    // Write walls parameters
-    ++err;
-    if (fwrite(&walls.nw, sizeof(walls.nw), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&walls.wmode, sizeof(walls.wmode[0]), walls.nw, fp) != walls.nw)
-      exit(err);
-    ++err;
-    if (fwrite(&walls.nx, sizeof(Float4), walls.nw, fp) != walls.nw)
-      exit(err);
-    ++err;
-    if (fwrite(&walls.mvfd, sizeof(Float4), walls.nw, fp) != walls.nw)
-      exit(err);
-    ++err;
-    if (fwrite(&walls.gamma_wn, sizeof(walls.gamma_wn), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&walls.gamma_wt, sizeof(walls.gamma_wt), 1, fp) != 1)
-      exit(err);
-    ++err;
-    if (fwrite(&walls.gamma_wr, sizeof(walls.gamma_wr), 1, fp) != 1)
-      exit(err);
+    // Write wall parameters
+    ofs.write(as_bytes(walls.nw), sizeof(walls.nw));
+    ofs.write(as_bytes(walls.wmode), sizeof(walls.wmode));
+    for (i = 0; i<walls.nw; ++i) {
+      ofs.write(as_bytes(walls.nx[i].x), sizeof(Float));
+      ofs.write(as_bytes(walls.nx[i].y), sizeof(Float));
+      ofs.write(as_bytes(walls.nx[i].z), sizeof(Float));
+      ofs.write(as_bytes(walls.nx[i].w), sizeof(Float));
+    }
+    for (i = 0; i<walls.nw; ++i) {
+      ofs.write(as_bytes(walls.mvfd[i].x), sizeof(Float));
+      ofs.write(as_bytes(walls.mvfd[i].y), sizeof(Float));
+      ofs.write(as_bytes(walls.mvfd[i].z), sizeof(Float));
+      ofs.write(as_bytes(walls.mvfd[i].w), sizeof(Float));
+    }
+    ofs.write(as_bytes(walls.gamma_wn), sizeof(walls.gamma_wn));
+    ofs.write(as_bytes(walls.gamma_wt), sizeof(walls.gamma_wt));
+    ofs.write(as_bytes(walls.gamma_wr), sizeof(walls.gamma_wr));
+
+    // Close file if it is still open
+    if (ofs.is_open())
+      ofs.close();
 
   } else {
     std::cerr << "Can't write output when in single precision mode.\n";

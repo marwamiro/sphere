@@ -140,7 +140,10 @@ inline __host__ __device__ void operator+=(uint2 &a, uint b)
     a.x += b; a.y += b;
 }
 
-
+inline __host__ __device__ void operator+=(Float2 &a, Float2 b)
+{
+    a.x += b.x; a.y += b.y;
+}
 inline __host__ __device__ Float3 operator+(Float3 a, Float3 b)
 {
     return MAKE_FLOAT3(a.x + b.x, a.y + b.y, a.z + b.z);

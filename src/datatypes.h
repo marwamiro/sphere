@@ -36,7 +36,6 @@ struct Energies {
   Float *ev_dot;	// Viscous dissipation rates
   Float *ev;		// Viscous dissipations
   Float *p;		// Pressures
-  //uint4 *bonds;		// Cohesive bonds
 };
 
 // Structure containing grid parameters
@@ -90,12 +89,12 @@ struct Params {
 struct Walls {
   unsigned int nw;	// Number of walls (<= MAXWALLS)
   int wmode[MAXWALLS];	// Wall modes
-  Float4* nx;		// Wall normal and position
-  Float4* mvfd;		// Wall mass, velocity, force and dev. stress
-  Float* force;		// Resulting forces on walls per particle
   Float gamma_wn;	// Wall normal viscosity
   Float gamma_wt;	// Wall tangential viscosity
   Float gamma_wr;	// Wall rolling viscosity
+  Float4* nx;		// Wall normal and position
+  Float4* mvfd;		// Wall mass, velocity, force and dev. stress
+  Float* force;		// Resulting forces on walls per particle
 };
 
 #endif

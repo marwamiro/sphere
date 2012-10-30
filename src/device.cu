@@ -1,5 +1,6 @@
 // device.cu -- GPU specific operations utilizing the CUDA API.
 #include <iostream>
+#include <string>
 #include <cstdio>
 #include <cuda.h>
 
@@ -311,15 +312,15 @@ __host__ void DEM::transferToGlobalDeviceMemory()
   if (verbose == 1)
     std::cout << "  Transfering data to the device:                 ";
 
-  // Copy structure data from host to global device memory
-  /*cudaMemcpy(dev_k, k, sizeof(Kinematics), cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_e, e, sizeof(Energies), cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_time, time, sizeof(Time), cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_walls, walls, sizeof(Walls), cudaMemcpyHostToDevice);*/
-  cudaMemcpy(dev_k, &k, sizeof(k), cudaMemcpyHostToDevice);
+  // Copy structure data from host to global device memoryj
+  cudaMemcpy(dev_k, &k, sizeof(Kinematics), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_e, &e, sizeof(Energies), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_time, &time, sizeof(Time), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_walls, &walls, sizeof(Walls), cudaMemcpyHostToDevice);
+  /*cudaMemcpy(dev_k, &k, sizeof(k), cudaMemcpyHostToDevice);
   cudaMemcpy(dev_e, &e, sizeof(e), cudaMemcpyHostToDevice);
   cudaMemcpy(dev_time, &time, sizeof(time), cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_walls, &walls, sizeof(walls), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_walls, &walls, sizeof(walls), cudaMemcpyHostToDevice);*/
 
   checkForCudaErrors("End of transferToGlobalDeviceMemory");
   if (verbose == 1)
@@ -331,10 +332,14 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
   std::cout << "  Transfering data to the device:                 ";
 
   // Copy structure data from host to global device memory
-  cudaMemcpy(&k, dev_k, sizeof(k), cudaMemcpyDeviceToHost);
+  /*cudaMemcpy(&k, dev_k, sizeof(k), cudaMemcpyDeviceToHost);
   cudaMemcpy(&e, dev_e, sizeof(e), cudaMemcpyDeviceToHost);
   cudaMemcpy(&time, dev_time, sizeof(time), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&walls, dev_walls, sizeof(walls), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&walls, dev_walls, sizeof(walls), cudaMemcpyDeviceToHost);*/
+  cudaMemcpy(&k, dev_k, sizeof(Kinematics), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&e, dev_e, sizeof(Energies), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&time, dev_time, sizeof(Time), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&walls, dev_walls, sizeof(Walls), cudaMemcpyDeviceToHost);
 
   checkForCudaErrors("End of transferFromGlobalDeviceMemory");
   if (verbose == 1)
@@ -347,7 +352,8 @@ __host__ void DEM::startTime()
 {
 
   using std::cout; // Namespace directive
-  char file[200];  // Output filename
+  std::string outfile;
+  char file[200];
   FILE *fp;
 
   // Copy data to constant global device memory
@@ -402,8 +408,9 @@ __host__ void DEM::startTime()
   long iter = 0;
 
   // Create first status.dat
-  sprintf(file,"output/%s.status.dat", sid);
-  fp = fopen(file, "w");
+  //sprintf(file,"output/%s.status.dat", sid);
+  outfile = "output/" + sid + ".status.dat";
+  fp = fopen(outfile.c_str(), "w");
   fprintf(fp,"%2.4e %2.4e %d\n", 
       	  time.current, 
 	  100.0*time.current/time.total, 
@@ -411,8 +418,9 @@ __host__ void DEM::startTime()
   fclose(fp);
 
   // Write first output data file: output0.bin, thus testing writing of bin files
-  sprintf(file,"output/%s.output0.bin", sid);
-  writebin(file);
+  outfile = "output/" + sid + ".output0.bin";
+  //sprintf(file,"output/%s.output0.bin", sid);
+  writebin(outfile.c_str());
 
   if (verbose == 1) {
     cout << "\n  Entering the main calculation time loop...\n\n"
@@ -587,6 +595,7 @@ __host__ void DEM::startTime()
 				     dev_k->force,
 				     dev_k->torque, 
 				     dev_k->angpos,
+				     dev_k->xysum,
 				     dev_sort->gridParticleIndex);
 
     cudaThreadSynchronize();
@@ -645,43 +654,43 @@ __host__ void DEM::startTime()
 
       // Write binary output file
       time.step_count += 1;
-      sprintf(file,"output/%s.output%d.bin", sid, time.step_count);
+      sprintf(file,"output/%s.output%d.bin", sid.c_str(), time.step_count);
       writebin(file);
 
 
       if (CONTACTINFO == 1) {
 	// Write contact information to stdout
-	/*cout << "\n\n---------------------------\n"
+	cout << "\n\n---------------------------\n"
 	     << "t = " << time.current << " s.\n"
 	     << "---------------------------\n";
 
-	for (int n = 0; n < p.np; ++n) {
+	for (int n = 0; n < np; ++n) {
 	  cout << "\n## Particle " << n << " ##\n";
 
 	  cout  << "- contacts:\n";
 	  for (int nc = 0; nc < NC; ++nc) 
-	    cout << "[" << nc << "]=" << host_contacts[nc+NC*n] << '\n';
+	    cout << "[" << nc << "]=" << k.contacts[nc+NC*n] << '\n';
 
 	  cout << "\n- delta_t:\n";
 	  for (int nc = 0; nc < NC; ++nc) 
-	    cout << host_delta_t[nc+NC*n].x << '\t'
-		 << host_delta_t[nc+NC*n].y << '\t'
-		 << host_delta_t[nc+NC*n].z << '\t'
-		 << host_delta_t[nc+NC*n].w << '\n';
+	    cout << k.delta_t[nc+NC*n].x << '\t'
+		 << k.delta_t[nc+NC*n].y << '\t'
+		 << k.delta_t[nc+NC*n].z << '\t'
+		 << k.delta_t[nc+NC*n].w << '\n';
 
 	  cout << "\n- distmod:\n";
 	  for (int nc = 0; nc < NC; ++nc) 
-	    cout << host_distmod[nc+NC*n].x << '\t'
-		 << host_distmod[nc+NC*n].y << '\t'
-		 << host_distmod[nc+NC*n].z << '\t'
-		 << host_distmod[nc+NC*n].w << '\n';
+	    cout << k.distmod[nc+NC*n].x << '\t'
+		 << k.distmod[nc+NC*n].y << '\t'
+		 << k.distmod[nc+NC*n].z << '\t'
+		 << k.distmod[nc+NC*n].w << '\n';
 	}
-	cout << '\n';*/
+	cout << '\n';
       }
 
       // Update status.dat at the interval of filetime 
-      sprintf(file,"output/%s.status.dat", sid);
-      fp = fopen(file, "w");
+      outfile = "output/" + sid + ".status.dat";
+      fp = fopen(outfile.c_str(), "w");
       fprintf(fp,"%2.4e %2.4e %d\n", 
 	      time.current, 
 	      100.0*time.current/time.total,
