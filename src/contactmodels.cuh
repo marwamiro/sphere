@@ -44,7 +44,7 @@ __device__ Float contactLinear_wall(Float3* F, Float3* T, Float* es_dot,
   //Float3 f_n = -devC_params.k_n * delta * n;
 
   // Normal force component: Elastic - viscous damping
-  Float3 f_n = (-devC_params.k_n * delta - devC_params.gamma_n * vel_n) * n;
+  Float3 f_n = (-devC_params.k_n * delta - devC_params.gamma_wn * vel_n) * n;
 
   // Make sure the viscous damping doesn't exceed the elastic component,
   // i.e. the damping factor doesn't exceed the critical damping, 2*sqrt(m*k_n)
@@ -61,8 +61,15 @@ __device__ Float contactLinear_wall(Float3* F, Float3* T, Float* es_dot,
   // divide by zero (producing a NaN)
   if (vel_t_length > 0.f) {
 
-    Float f_t_visc  = devC_params.gamma_t * vel_t_length; // Tangential force by viscous model
-    Float f_t_limit = devC_params.mu_s * f_n_length;      // Max. friction
+    Float f_t_visc  = devC_params.gamma_wt * vel_t_length; // Tangential force by viscous model
+
+    // Determine max. friction
+    Float f_t_limit;
+    if (vel_t_length > 0.001f) { // Dynamic
+      f_t_limit = devC_params.mu_rd * f_n_length;
+    } else { // Static
+      f_t_limit = devC_params.mu_rs * f_n_length;
+    }
 
     // If the shear force component exceeds the friction,
     // the particle slips and energy is dissipated
