@@ -66,9 +66,9 @@ __device__ Float contactLinear_wall(Float3* F, Float3* T, Float* es_dot,
     // Determine max. friction
     Float f_t_limit;
     if (vel_t_length > 0.001f) { // Dynamic
-      f_t_limit = devC_params.mu_rd * f_n_length;
+      f_t_limit = devC_params.mu_wd * f_n_length;
     } else { // Static
-      f_t_limit = devC_params.mu_rs * f_n_length;
+      f_t_limit = devC_params.mu_ws * f_n_length;
     }
 
     // If the shear force component exceeds the friction,
