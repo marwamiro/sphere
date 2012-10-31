@@ -378,28 +378,70 @@ __host__ void DEM::transferToGlobalDeviceMemory()
 
 __host__ void DEM::transferFromGlobalDeviceMemory()
 {
-  std::cout << "  Transfering data to the device:                 ";
+  //std::cout << "  Transfering data from the device:               ";
 
-  // Copy structure data from host to global device memory
-  /*cudaMemcpy(&k, dev_k, sizeof(k), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&e, dev_e, sizeof(e), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&time, dev_time, sizeof(time), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&walls, dev_walls, sizeof(walls), cudaMemcpyDeviceToHost);*/
-  cudaMemcpy(&k, dev_k, sizeof(Kinematics), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&e, dev_e, sizeof(Energies), cudaMemcpyDeviceToHost);
+  // Commonly-used memory sizes
+  unsigned int memSizeF  = sizeof(Float) * np;
+  unsigned int memSizeF4 = sizeof(Float4) * np;
+
+  // Copy static-size structure data from host to global device memory
   cudaMemcpy(&time, dev_time, sizeof(Time), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&walls, dev_walls, sizeof(Walls), cudaMemcpyDeviceToHost);
+
+  // Kinematic particle values
+  cudaMemcpy( k.x, dev_k->x,
+      memSizeF4, cudaMemcpyDeviceToHost);
+  cudaMemcpy( k.xysum, dev_k->xysum,
+      sizeof(Float2)*np, cudaMemcpyDeviceToHost);
+  cudaMemcpy( k.vel, dev_k->vel,
+      memSizeF4, cudaMemcpyDeviceToHost);
+  cudaMemcpy( k.acc, dev_k->acc,
+      memSizeF4, cudaMemcpyDeviceToHost);
+  cudaMemcpy( k.force, dev_k->force,
+      memSizeF4, cudaMemcpyDeviceToHost);
+  cudaMemcpy( k.angpos, dev_k->angpos,
+      memSizeF4, cudaMemcpyDeviceToHost);
+  cudaMemcpy( k.angvel, dev_k->angvel,
+      memSizeF4, cudaMemcpyDeviceToHost);
+  cudaMemcpy( k.angacc, dev_k->angacc,
+      memSizeF4, cudaMemcpyDeviceToHost);
+  cudaMemcpy( k.torque, dev_k->torque,
+      memSizeF4, cudaMemcpyDeviceToHost);
+  cudaMemcpy( k.contacts, dev_k->contacts,
+      sizeof(unsigned int)*np*NC, cudaMemcpyDeviceToHost);
+  cudaMemcpy( k.distmod, dev_k->distmod,
+      memSizeF4*NC, cudaMemcpyDeviceToHost);
+  cudaMemcpy( k.delta_t, dev_k->delta_t,
+      memSizeF4*NC, cudaMemcpyDeviceToHost);
+
+  // Individual particle energy values
+  cudaMemcpy( e.es_dot, dev_e->es_dot,
+      memSizeF, cudaMemcpyDeviceToHost);
+  cudaMemcpy( e.es, dev_e->es,
+      memSizeF, cudaMemcpyDeviceToHost);
+  cudaMemcpy( e.ev_dot, dev_e->ev_dot,
+      memSizeF, cudaMemcpyDeviceToHost);
+  cudaMemcpy( e.ev, dev_e->ev,
+      memSizeF, cudaMemcpyDeviceToHost);
+  cudaMemcpy( e.p, dev_e->p,
+      memSizeF, cudaMemcpyDeviceToHost);
+
+  // Wall parameters
+  cudaMemcpy( walls.wmode, dev_walls->wmode,
+      sizeof(int)*walls.nw, cudaMemcpyDeviceToHost);
+  cudaMemcpy( walls.nx, dev_walls->nx,
+      sizeof(Float4)*walls.nw, cudaMemcpyDeviceToHost);
+  cudaMemcpy( walls.mvfd, dev_walls->mvfd,
+      sizeof(Float4)*walls.nw, cudaMemcpyDeviceToHost);
+  cudaMemcpy( walls.force, dev_walls->force,
+      memSizeF*walls.nw, cudaMemcpyDeviceToHost);
 
   checkForCudaErrors("End of transferFromGlobalDeviceMemory");
-  if (verbose == 1)
-    std::cout << "Done\n";
 }
 
 
 // Iterate through time by explicit time integration
 __host__ void DEM::startTime()
 {
-
   using std::cout; // Namespace directive
   std::string outfile;
   char file[200];

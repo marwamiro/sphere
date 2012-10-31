@@ -93,6 +93,9 @@ class DEM {
     // Check numeric values of selected parameters
     void checkValues(void);
 
+    // Report key parameter values to stdout
+    void reportValues(void);
+
     // Iterate through time, using temporal limits
     // described in "time" struct.
     void startTime(void);

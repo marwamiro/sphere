@@ -44,10 +44,6 @@ void DEM::readbin(const char *target)
 
   ifs.read(as_bytes(nd), sizeof(nd));
   ifs.read(as_bytes(np), sizeof(np));
-  if (verbose == 1) {
-    cout << "  - Number of dimensions: nd = " << nd << "\n"
-      << "  - Number of particles:  np = " << np << "\n";
-  }
 
   if (nd != ND) {
     cerr << "Dimensionality mismatch between dataset and this SPHERE program.\n"
@@ -58,20 +54,10 @@ void DEM::readbin(const char *target)
   }
 
   // Check precision choice
-  if (verbose == 1)
-    cout << "  - Compiled for ";
-  if (sizeof(Float) == sizeof(float)) {
-    if (verbose == 1)
-      cout << "single";
-  } else if (sizeof(Float) == sizeof(double)) {
-    if (verbose == 1)
-      cout << "double";
-  } else {
+  if (sizeof(Float) != sizeof(double) && sizeof(Float) != sizeof(float)) {
     cerr << "Error! Chosen precision not available. Check datatypes.h\n";
     exit(1);
   }
-  if (verbose == 1)
-    cout << " precision\n";
 
   // Read time parameters
   ifs.read(as_bytes(time.dt), sizeof(time.dt));
@@ -80,27 +66,13 @@ void DEM::readbin(const char *target)
   ifs.read(as_bytes(time.file_dt), sizeof(time.file_dt));
   ifs.read(as_bytes(time.step_count), sizeof(time.step_count));
 
-  // Output display parameters to screen
-  if (verbose == 1) {
-    cout << "  - Timestep length:      time.dt         = " 
-      << time.dt << " s\n"
-      << "  - Start at time:        time.current    = " 
-      << time.current << " s\n"
-      << "  - Total sim. time:      time.total      = " 
-      << time.total << " s\n"
-      << "  - File output interval: time.file_dt    = " 
-      << time.file_dt << " s\n"
-      << "  - Start at step count:  time.step_count = " 
-      << time.step_count << endl;
-  }
-
   // For spatial vectors an array of Float4 vectors is chosen for best fit with 
   // GPU memory handling. Vector variable structure: ( x, y, z, <empty>).
   // Indexing starts from 0.
 
   // Allocate host arrays
   if (verbose == 1)
-    cout << "\n  Allocating host memory:                         ";
+    cout << "  Allocating host memory:                         ";
   // Allocate more host arrays
   k.x	   = new Float4[np];
   k.xysum  = new Float2[np];

@@ -84,7 +84,7 @@ int main(const int argc, const char *argv[])
       DEM dem(argvi, verbose, checkConstantVals, render);
 
       // Start iterating through time, unless user chose to render image
-      if (render != 0)
+      if (render == 0)
 	dem.startTime();
     }
   }
