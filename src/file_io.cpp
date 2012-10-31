@@ -193,6 +193,10 @@ void DEM::readbin(const char *target)
   ifs.read(as_bytes(params.mu_s), sizeof(params.mu_s));
   ifs.read(as_bytes(params.mu_d), sizeof(params.mu_d));
   ifs.read(as_bytes(params.mu_r), sizeof(params.mu_r));
+  ifs.read(as_bytes(params.gamma_wn), sizeof(params.gamma_wn));
+  ifs.read(as_bytes(params.gamma_wt), sizeof(params.gamma_wt));
+  ifs.read(as_bytes(params.mu_ws), sizeof(params.mu_s));
+  ifs.read(as_bytes(params.mu_wd), sizeof(params.mu_d));
   ifs.read(as_bytes(params.rho), sizeof(params.rho));
   ifs.read(as_bytes(params.contactmodel), sizeof(params.contactmodel));
   ifs.read(as_bytes(params.kappa), sizeof(params.kappa));
@@ -228,9 +232,6 @@ void DEM::readbin(const char *target)
     ifs.read(as_bytes(walls.mvfd[i].z), sizeof(Float));
     ifs.read(as_bytes(walls.mvfd[i].w), sizeof(Float));
   }
-  ifs.read(as_bytes(walls.gamma_wn), sizeof(walls.gamma_wn));
-  ifs.read(as_bytes(walls.gamma_wt), sizeof(walls.gamma_wt));
-  ifs.read(as_bytes(walls.gamma_wr), sizeof(walls.gamma_wr));
 
   // Close file if it is still open
   if (ifs.is_open())
@@ -338,6 +339,10 @@ void DEM::writebin(const char *target)
     ofs.write(as_bytes(params.mu_s), sizeof(params.mu_s));
     ofs.write(as_bytes(params.mu_d), sizeof(params.mu_d));
     ofs.write(as_bytes(params.mu_r), sizeof(params.mu_r));
+    ofs.write(as_bytes(params.gamma_wn), sizeof(params.gamma_wn));
+    ofs.write(as_bytes(params.gamma_wt), sizeof(params.gamma_wt));
+    ofs.write(as_bytes(params.mu_ws), sizeof(params.mu_ws));
+    ofs.write(as_bytes(params.mu_wd), sizeof(params.mu_wd));
     ofs.write(as_bytes(params.rho), sizeof(params.rho));
     ofs.write(as_bytes(params.contactmodel), sizeof(params.contactmodel));
     ofs.write(as_bytes(params.kappa), sizeof(params.kappa));
@@ -359,9 +364,6 @@ void DEM::writebin(const char *target)
       ofs.write(as_bytes(walls.mvfd[i].z), sizeof(Float));
       ofs.write(as_bytes(walls.mvfd[i].w), sizeof(Float));
     }
-    ofs.write(as_bytes(walls.gamma_wn), sizeof(walls.gamma_wn));
-    ofs.write(as_bytes(walls.gamma_wt), sizeof(walls.gamma_wt));
-    ofs.write(as_bytes(walls.gamma_wr), sizeof(walls.gamma_wr));
 
     // Close file if it is still open
     if (ofs.is_open())

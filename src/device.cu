@@ -218,7 +218,7 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
   unsigned int memSizeF4 = sizeof(Float4) * np;
 
   if (verbose == 1)
-    std::cout << "  Allocating device memory:                       ";
+    std::cout << "  Allocating global device memory:                ";
 
   // Particle arrays
   cudaMalloc((void**)&dev_k->x, memSizeF4);
@@ -316,15 +316,60 @@ __host__ void DEM::transferToGlobalDeviceMemory()
   if (verbose == 1)
     std::cout << "  Transfering data to the device:                 ";
 
-  // Copy structure data from host to global device memoryj
-  cudaMemcpy(dev_k, &k, sizeof(Kinematics), cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_e, &e, sizeof(Energies), cudaMemcpyHostToDevice);
+  // Commonly-used memory sizes
+  unsigned int memSizeF  = sizeof(Float) * np;
+  unsigned int memSizeF4 = sizeof(Float4) * np;
+
+  // Copy static-size structure data from host to global device memory
   cudaMemcpy(dev_time, &time, sizeof(Time), cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_walls, &walls, sizeof(Walls), cudaMemcpyHostToDevice);
-  /*cudaMemcpy(dev_k, &k, sizeof(k), cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_e, &e, sizeof(e), cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_time, &time, sizeof(time), cudaMemcpyHostToDevice);
-  cudaMemcpy(dev_walls, &walls, sizeof(walls), cudaMemcpyHostToDevice);*/
+
+  // Kinematic particle values
+  cudaMemcpy( dev_k->x,	       k.x,	   
+      memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_k->xysum,    k.xysum,
+      sizeof(Float2)*np, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_k->vel,      k.vel,
+      memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_k->acc,      k.acc, 
+      memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_k->force,    k.force,
+      memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_k->angpos,   k.angpos,
+      memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_k->angvel,   k.angvel,
+      memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_k->angacc,   k.angacc,
+      memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_k->torque,   k.torque,
+      memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_k->contacts, k.contacts,
+      sizeof(unsigned int)*np*NC, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_k->distmod, k.distmod,
+      memSizeF4*NC, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_k->delta_t, k.delta_t,
+      memSizeF4*NC, cudaMemcpyHostToDevice);
+
+  // Individual particle energy values
+  cudaMemcpy( dev_e->es_dot, e.es_dot,
+      memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_e->es,     e.es,
+      memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_e->ev_dot, e.ev_dot,
+      memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_e->ev,     e.ev,
+      memSizeF, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_e->p, e.p,
+      memSizeF, cudaMemcpyHostToDevice);
+
+  // Wall parameters
+  cudaMemcpy( dev_walls->wmode, walls.wmode,
+      sizeof(int)*walls.nw, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_walls->nx,    walls.nx,
+      sizeof(Float4)*walls.nw, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_walls->mvfd,  walls.mvfd,
+      sizeof(Float4)*walls.nw, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_walls->force, walls.force,
+      memSizeF*walls.nw, cudaMemcpyHostToDevice);
 
   checkForCudaErrors("End of transferToGlobalDeviceMemory");
   if (verbose == 1)
@@ -363,12 +408,7 @@ __host__ void DEM::startTime()
   // Copy data to constant global device memory
   transferToConstantDeviceMemory();
 
-
-  // Particle memory size
-  //unsigned int memSizeF  = sizeof(Float) * np;
-  //unsigned int memSizeF4 = sizeof(Float4) * np;
-
-  // Allocate device memory for particle variables,
+    // Allocate device memory for particle variables,
   // tied to previously declared pointers in structures
   allocateGlobalDeviceMemory();
 

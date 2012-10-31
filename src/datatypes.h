@@ -29,7 +29,7 @@ struct Kinematics {
   Float4 *delta_t;	  // Accumulated shear distance of contacts
 };
 
-// Structure containing individual physical particle parameters
+// Structure containing individual particle energies
 struct Energies {
   Float *es_dot;	// Frictional dissipation rates
   Float *es;		// Frictional dissipations
@@ -75,6 +75,10 @@ struct Params {
   Float gamma_n;	// Normal viscosity
   Float gamma_t;	// Tangential viscosity
   Float gamma_r;	// Rotational viscosity
+  Float mu_ws; 		// Wall static friction coefficient
+  Float mu_wd;		// Wall dynamic friction coefficient
+  Float gamma_wn;	// Wall normal viscosity
+  Float gamma_wt;	// Wall tangential viscosity
   Float mu_s; 		// Static friction coefficient
   Float mu_d;		// Dynamic friction coefficient
   Float mu_r;		// Rotational friction coefficient
@@ -89,9 +93,6 @@ struct Params {
 struct Walls {
   unsigned int nw;	// Number of walls (<= MAXWALLS)
   int wmode[MAXWALLS];	// Wall modes
-  Float gamma_wn;	// Wall normal viscosity
-  Float gamma_wt;	// Wall tangential viscosity
-  Float gamma_wr;	// Wall rolling viscosity
   Float4* nx;		// Wall normal and position
   Float4* mvfd;		// Wall mass, velocity, force and dev. stress
   Float* force;		// Resulting forces on walls per particle
