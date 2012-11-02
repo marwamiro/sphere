@@ -12,17 +12,13 @@ def compare(first, second, string):
 print("### Input/output tests ###")
 
 # Generate data in python
-orig = Spherebin(100)
+orig = Spherebin(np = 100, nw = 0)
 orig.generateRadii()
 orig.defaultParams()
-orig.initRandomGridPos()
-orig.initTemporal(total = 0.0, current = 0.0)
-orig.xysum = numpy.ones(orig.np*2, dtype=numpy.float64).reshape(orig.np, 2) * 1
-orig.vel = numpy.ones(orig.np*orig.nd, dtype=numpy.float64).reshape(orig.np, orig.nd) * 2
-orig.force = numpy.ones(orig.np*orig.nd, dtype=numpy.float64).reshape(orig.np, orig.nd) * 3
-orig.angpos = numpy.ones(orig.np*orig.nd, dtype=numpy.float64).reshape(orig.np, orig.nd) * 4
-orig.angvel = numpy.ones(orig.np*orig.nd, dtype=numpy.float64).reshape(orig.np, orig.nd) * 5
-orig.torque = numpy.ones(orig.np*orig.nd, dtype=numpy.float64).reshape(orig.np, orig.nd) * 6
+orig.initRandomGridPos(g = numpy.zeros(orig.nd))
+orig.initTemporal(current = 0.0, total = 0.0)
+orig.time_total = 2.0*orig.time_dt;
+orig.time_file_dt = orig.time_dt;
 orig.writebin("orig.bin", verbose=False)
 
 # Test Python IO routines
@@ -36,4 +32,10 @@ cpp = Spherebin()
 cpp.readbin("../output/orig.output0.bin", verbose=False)
 compare(orig, cpp, "C++ IO:   ")
 
+# Test CUDA IO routines
+cuda = Spherebin()
+cuda.readbin("../output/orig.output1.bin", verbose=False)
+cuda.time_current = orig.time_current
+cuda.time_step_count = orig.time_step_count
+compare(orig, cuda, "CUDA IO:  ")
 

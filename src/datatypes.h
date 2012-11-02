@@ -95,7 +95,6 @@ struct Walls {
   int wmode[MAXWALLS];	// Wall modes
   Float4* nx;		// Wall normal and position
   Float4* mvfd;		// Wall mass, velocity, force and dev. stress
-  Float* force;		// Resulting forces on walls per particle
 };
 
 #endif

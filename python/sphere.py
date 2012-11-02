@@ -51,17 +51,21 @@ class Spherebin:
     self.ev	 = numpy.zeros(self.np, dtype=numpy.float64)
     self.p	 = numpy.zeros(self.np, dtype=numpy.float64)
 
-    self.g            = numpy.array([0.0, 0.0, 0.0], dtype=numpy.float64)
-    self.k_n     = numpy.ones(1, dtype=numpy.float64) * 1.16e9
-    self.k_t     = numpy.ones(1, dtype=numpy.float64) * 1.16e9
-    self.k_r	 = numpy.zeros(1, dtype=numpy.float64)
-    self.gamma_n = numpy.zeros(1, dtype=numpy.float64)
-    self.gamma_t = numpy.zeros(1, dtype=numpy.float64)
-    self.gamma_r = numpy.zeros(1, dtype=numpy.float64)
-    self.mu_s    = numpy.ones(1, dtype=numpy.float64)
-    self.mu_d    = numpy.ones(1, dtype=numpy.float64)
-    self.mu_r    = numpy.zeros(1, dtype=numpy.float64)
-    self.rho     = numpy.ones(1, dtype=numpy.float64) * 2600.0
+    self.g        = numpy.array([0.0, 0.0, 0.0], dtype=numpy.float64)
+    self.k_n      = numpy.ones(1, dtype=numpy.float64) * 1.16e9
+    self.k_t      = numpy.ones(1, dtype=numpy.float64) * 1.16e9
+    self.k_r	  = numpy.zeros(1, dtype=numpy.float64)
+    self.gamma_n  = numpy.zeros(1, dtype=numpy.float64)
+    self.gamma_t  = numpy.zeros(1, dtype=numpy.float64)
+    self.gamma_r  = numpy.zeros(1, dtype=numpy.float64)
+    self.mu_s     = numpy.ones(1, dtype=numpy.float64)
+    self.mu_d     = numpy.ones(1, dtype=numpy.float64)
+    self.mu_r     = numpy.zeros(1, dtype=numpy.float64)
+    self.gamma_wn = numpy.ones(1, dtype=numpy.float64) * 1.0e3
+    self.gamma_wt = numpy.ones(1, dtype=numpy.float64) * 1.0e3
+    self.mu_ws    = numpy.ones(1, dtype=numpy.float64)
+    self.mu_wd    = numpy.ones(1, dtype=numpy.float64)
+    self.rho      = numpy.ones(1, dtype=numpy.float64) * 2600.0
     self.contactmodel   = numpy.ones(1, dtype=numpy.uint32) * 2    # contactLinear default
     self.kappa        = numpy.zeros(1, dtype=numpy.float64)
     self.db           = numpy.zeros(1, dtype=numpy.float64)
@@ -70,19 +74,16 @@ class Spherebin:
     # Wall data
     self.nw 	 = numpy.ones(1, dtype=numpy.uint32) * nw
     self.wmode   = numpy.zeros(self.nw, dtype=numpy.int32)
+
     self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
-    self.w_n[nw-1,nd-1] = -1.0
+    if (self.nw > 0):
+      self.w_n[0,2] = -1.0
     self.w_x     = numpy.ones(self.nw, dtype=numpy.float64)
     self.w_m     = numpy.zeros(self.nw, dtype=numpy.float64)
     self.w_vel   = numpy.zeros(self.nw, dtype=numpy.float64)
     self.w_force = numpy.zeros(self.nw, dtype=numpy.float64)
     self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
     
-    # x- and y-boundary behavior
-    self.gamma_wn = numpy.ones(1, dtype=numpy.float64) * 1.0e3
-    self.gamma_wt = numpy.ones(1, dtype=numpy.float64) * 1.0e3
-    self.gamma_wr = numpy.ones(1, dtype=numpy.float64) * 1.0e3
-
   # Compare the values of two Spherebin objects, and check
   # whether the values are identical
   def __cmp__(self, other):
@@ -136,8 +137,7 @@ class Spherebin:
 	(self.w_force == other.w_force).all() and\
 	(self.w_devs == other.w_devs).all() and\
 	self.gamma_wn == other.gamma_wn and\
-	self.gamma_wt == other.gamma_wt and\
-	self.gamma_wr == other.gamma_wr\
+	self.gamma_wt == other.gamma_wt\
 	).all() == True):
       return 0 # All equal
     else:
@@ -224,6 +224,10 @@ class Spherebin:
       self.mu_s         = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
       self.mu_d         = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
       self.mu_r         = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+      self.gamma_wn     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+      self.gamma_wt     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+      self.mu_ws        = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
+      self.mu_wd        = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
       self.rho          = numpy.fromfile(fh, dtype=numpy.float64, count=1)
       self.contactmodel = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
       self.kappa        = numpy.fromfile(fh, dtype=numpy.float64, count=1)
@@ -250,10 +254,6 @@ class Spherebin:
 	self.w_force = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 	self.w_devs  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
     
-      # x- and y-boundary behavior
-      self.gamma_wn = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-      self.gamma_wt = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-      self.gamma_wr = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
       fh.close()
       
@@ -325,6 +325,10 @@ class Spherebin:
       fh.write(self.mu_s.astype(numpy.float64))
       fh.write(self.mu_d.astype(numpy.float64))
       fh.write(self.mu_r.astype(numpy.float64))
+      fh.write(self.gamma_wn.astype(numpy.float64))
+      fh.write(self.gamma_wt.astype(numpy.float64))
+      fh.write(self.mu_ws.astype(numpy.float64))
+      fh.write(self.mu_wd.astype(numpy.float64))
       fh.write(self.rho.astype(numpy.float64))
       fh.write(self.contactmodel.astype(numpy.uint32))
       fh.write(self.kappa.astype(numpy.float64))
@@ -343,11 +347,6 @@ class Spherebin:
         fh.write(self.w_force[i].astype(numpy.float64))
         fh.write(self.w_devs[i].astype(numpy.float64))
     
-      # x- and y-boundary behavior
-      fh.write(self.gamma_wn.astype(numpy.float64))
-      fh.write(self.gamma_wt.astype(numpy.float64))
-      fh.write(self.gamma_wr.astype(numpy.float64))
-
       fh.close()
       
     finally:
@@ -633,14 +632,15 @@ class Spherebin:
     self.L = self.num * cellsize
 
     # Initialize upper wall
-    self.wmode[0] = 0
-    self.w_n[0,2] = -1.0
-    self.w_x[0] = self.L[2]
-    self.w_m[0] = self.rho[0] * self.np * math.pi * r_max**3
-    self.w_vel[0] = 0.0
-    self.w_force[0] = 0.0
-    self.w_devs[0] = 0.0
-    self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
+    if (self.nw > 0):
+      self.wmode[0] = 0
+      self.w_n[0,2] = -1.0
+      self.w_x[0] = self.L[2]
+      self.w_m[0] = self.rho[0] * self.np * math.pi * r_max**3
+      self.w_vel[0] = 0.0
+      self.w_force[0] = 0.0
+      self.w_devs[0] = 0.0
+      self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
 
   # Adjust grid and upper wall for consolidation under deviatoric stress
   def consolidate(self, deviatoric_stress = 10e3, 
@@ -755,8 +755,6 @@ class Spherebin:
     # Set wall viscosities to zero
     self.gamma_wn[0] = 0.0
     self.gamma_wt[0] = 0.0
-    self.gamma_wr[0] = 0.0
-
 
  
   def initTemporal(self, total,
@@ -792,7 +790,6 @@ class Spherebin:
 			  gamma_r = 0,
 			  gamma_wn = 1e3,
 			  gamma_wt = 1e3,
-			  gamma_wr = 2e3,
 			  capillaryCohesion = 0):
     """ Initialize particle parameters to default values.
         Radii must be set prior to calling this function.
@@ -837,8 +834,6 @@ class Spherebin:
     # Wall viscosities
     self.gamma_wn[0] = gamma_wn # normal
     self.gamma_wt[0] = gamma_wt # sliding
-    self.gamma_wr[0] = gamma_wr # rolling
-
 
     ### Parameters related to capillary bonds
 

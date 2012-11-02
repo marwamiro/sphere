@@ -189,7 +189,6 @@ void DEM::readbin(const char *target)
   // Wall mass (x), velocity (y), force (z), and deviatoric stress (w)
   walls.nx    = new Float4[walls.nw];
   walls.mvfd  = new Float4[walls.nw];
-  walls.force = new Float[walls.nw*np];
 
   ifs.read(as_bytes(walls.wmode), sizeof(walls.wmode));
   for (i = 0; i<walls.nw; ++i) {

@@ -207,16 +207,18 @@ void DEM::reportValues()
   else
     cout << "  - 1st and 2nd dim. boundaries: Visco-frictional walls\n";
 
-  cout << "  - Top BC: ";
-  if (walls.wmode[0] == 0)
-    cout << "Fixed\n";
-  else if (walls.wmode[0] == 1)
-    cout << "Deviatoric stress\n";
-  else if (walls.wmode[0] == 2)
-    cout << "Velocity\n";
-  else {
-    cerr << "Top BC not recognized!\n";
-    exit(1);
+  if (walls.nw > 0) {
+    cout << "  - Top BC: ";
+    if (walls.wmode[0] == 0)
+      cout << "Fixed\n";
+    else if (walls.wmode[0] == 1)
+      cout << "Deviatoric stress\n";
+    else if (walls.wmode[0] == 2)
+      cout << "Velocity\n";
+    else {
+      cerr << "Top BC not recognized!\n";
+      exit(1);
+    }
   }
 
   cout << "  - Grid: ";

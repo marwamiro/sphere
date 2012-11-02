@@ -91,8 +91,8 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
 					     Float4* dev_angvel_sorted,
 					     unsigned int* dev_cellStart, 
 					     unsigned int* dev_cellEnd,
-					     Float4* dev_w_nx, 
-					     Float4* dev_w_mvfd)
+					     Float4* dev_walls_nx, 
+					     Float4* dev_walls_mvfd)
 //uint4 bonds)
 {
 
@@ -382,9 +382,9 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 			 Float* dev_es, 
 			 Float* dev_ev, 
 			 Float* dev_p,
-			 Float4* dev_w_nx, 
-			 Float4* dev_w_mvfd, 
-			 Float* dev_w_force, //uint4* dev_bonds_sorted,
+			 Float4* dev_walls_nx, 
+			 Float4* dev_walls_mvfd, 
+			 Float* dev_walls_force_pp, //uint4* dev_bonds_sorted,
 			 unsigned int* dev_contacts, 
 			 Float4* dev_distmod,
 			 Float4* dev_delta_t)
@@ -399,9 +399,6 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     Float4 x_a      = dev_x_sorted[idx_a];
     Float  radius_a = x_a.w;
 
-    // Fetch wall data in global read
-    Float4 w_up_nx   = dev_w_nx[0];
-    Float4 w_up_mvfd = dev_w_mvfd[0];
 
     // Fetch world dimensions in constant memory read
     Float3 origo = MAKE_FLOAT3(devC_grid.origo[0], 
@@ -410,6 +407,17 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     Float3 L = MAKE_FLOAT3(devC_grid.L[0], 
 			   devC_grid.L[1], 
 			   devC_grid.L[2]);
+
+    // Fetch wall data in global read
+    Float4 w_up_nx;
+    Float4 w_up_mvfd;
+    if (devC_nw > 0) {
+      w_up_nx   = dev_walls_nx[0];
+      w_up_mvfd = dev_walls_mvfd[0];
+    } else {
+      w_up_nx   = MAKE_FLOAT4(0.0f, 0.0f, -1.0f, L.z);
+      w_up_mvfd = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+    }
 
     // Index of particle which is bonded to particle A.
     // The index is equal to the particle no (p.np)
@@ -526,7 +534,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
 					 dev_x_sorted,
 					 dev_vel_sorted, dev_angvel_sorted,
 					 dev_cellStart, dev_cellEnd,
-					 dev_w_nx, dev_w_mvfd);
+					 dev_walls_nx, dev_walls_mvfd);
 	  }
 	}
       }
@@ -629,7 +637,8 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     dev_es[orig_idx]     += es_dot * devC_dt;
     dev_ev[orig_idx]     += ev_dot * devC_dt;
     dev_p[orig_idx]       = p;
-    dev_w_force[orig_idx] = w_force;
+    if (devC_nw > 0)
+      dev_walls_force_pp[orig_idx] = w_force;
   }
 } // End of interact(...)
 

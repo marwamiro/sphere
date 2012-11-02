@@ -175,8 +175,10 @@ __global__ void summation(Float* in, Float *out)
 }
 
 // Update wall positions
-__global__ void integrateWalls(Walls* dev_walls, 
-			       Float* dev_w_force_partial,
+__global__ void integrateWalls(Float4* dev_walls_nx,
+    			       Float4* dev_walls_mvfd,
+			       int* dev_walls_wmode,
+			       Float* dev_walls_force_partial,
 			       unsigned int blocksPerGrid)
 {
   unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
@@ -185,9 +187,9 @@ __global__ void integrateWalls(Walls* dev_walls,
 
     // Copy data to temporary arrays to avoid any potential read-after-write, 
     // write-after-read, or write-after-write hazards. 
-    Float4 w_nx   = dev_walls->nx[idx];
-    Float4 w_mvfd = dev_walls->mvfd[idx];
-    int wmode = dev_walls->wmode[idx];  // Wall BC, 0: fixed, 1: devs, 2: vel
+    Float4 w_nx   = dev_walls_nx[idx];
+    Float4 w_mvfd = dev_walls_mvfd[idx];
+    int wmode = dev_walls_wmode[idx];  // Wall BC, 0: fixed, 1: devs, 2: vel
     Float acc;
 
     if (wmode == 0) // Wall fixed: do nothing
@@ -196,7 +198,7 @@ __global__ void integrateWalls(Walls* dev_walls,
     // Find the final sum of forces on wall
     w_mvfd.z = 0.0f;
     for (int i=0; i<blocksPerGrid; ++i) {
-      w_mvfd.z += dev_w_force_partial[i];
+      w_mvfd.z += dev_walls_force_partial[i];
     }
 
     Float dt = devC_dt;
@@ -222,8 +224,8 @@ __global__ void integrateWalls(Walls* dev_walls,
     w_nx.w += w_mvfd.y * dt + (acc * dt*dt)/2.0f;
 
     // Store data in global memory
-    dev_walls->nx[idx]   = w_nx;
-    dev_walls->mvfd[idx] = w_mvfd;
+    dev_walls_nx[idx]   = w_nx;
+    dev_walls_mvfd[idx] = w_mvfd;
   }
 } // End of integrateWalls(...)
 

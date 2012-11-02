@@ -27,8 +27,8 @@ NVCCFLAGS=--use_fast_math -O3 -m64 -gencode=arch=compute_20,code=\"sm_20,compute
 
 # Debugable code? Beware that enabling this option will 
 # considerably slow down the execution.
-CCFLAGS=-g -O0 -Wall
-NVCCFLAGS=-g -G -O0 -m64 -gencode=arch=compute_20,code=\"sm_20,compute_20\" -Xcompiler "-O0 -g"
+#CCFLAGS=-g -O0 -Wall
+#NVCCFLAGS=-g -G -O0 -m64 -gencode=arch=compute_20,code=\"sm_20,compute_20\" -Xcompiler "-O0 -g"
 
 DATE=`date +'%Y.%m.%d-%H:%M:%S'`
 	BACKUPNAME=sphere.$(DATE).tar.gz

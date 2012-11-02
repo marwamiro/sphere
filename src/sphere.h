@@ -25,13 +25,14 @@ class DEM {
     // Number of particles
     unsigned int np;
 
+    // HOST STRUCTURES
     // Structure containing individual particle kinematics
     Kinematics k;	// host
-    Kinematics *dev_k;	// device
+    //Kinematics *dev_k;	// device
 
     // Structure containing energy values
     Energies e;		// host
-    Energies *dev_e;	// device
+    //Energies *dev_e;	// device
 
     // Structure of global parameters
     Params params;	// host
@@ -40,15 +41,46 @@ class DEM {
     Grid grid;		// host
 
     // Structure containing sorting arrays
-    Sorting *dev_sort;	// device
+    //Sorting *dev_sort;	// device
 
     // Structure of temporal parameters
     Time time;		// host
-    Time *dev_time;	// device
+    //Time *dev_time;	// device
 
     // Structure of wall parameters
     Walls walls;	// host
-    Walls *dev_walls;	// device
+    //Walls *dev_walls;	// device
+
+    // DEVICE ARRAYS
+    Float4 *dev_x;
+    Float2 *dev_xysum;
+    Float4 *dev_vel;
+    Float4 *dev_acc;
+    Float4 *dev_force;
+    Float4 *dev_angpos;
+    Float4 *dev_angvel;
+    Float4 *dev_angacc;
+    Float4 *dev_torque;
+    unsigned int *dev_contacts;
+    Float4 *dev_distmod;
+    Float4 *dev_delta_t;
+    Float *dev_es_dot;
+    Float *dev_es;
+    Float *dev_ev_dot;
+    Float *dev_ev;
+    Float *dev_p;
+    Float4 *dev_x_sorted;
+    Float4 *dev_vel_sorted;
+    Float4 *dev_angvel_sorted;
+    unsigned int *dev_gridParticleCellID;
+    unsigned int *dev_gridParticleIndex;
+    unsigned int *dev_cellStart;
+    unsigned int *dev_cellEnd;
+    int *dev_walls_wmode;
+    Float4 *dev_walls_nx; // normal, pos.
+    Float4 *dev_walls_mvfd; // Mass, velocity, force, dev. stress
+    Float *dev_walls_force_partial; // Pre-sum per wall
+    Float *dev_walls_force_pp; // Force per particle per wall
 
     // GPU initialization, must be called before startTime()
     void initializeGPU(void);
@@ -101,10 +133,11 @@ class DEM {
     void startTime(void);
 
     // Render particles using raytracing
-    // render(const char *target,
-    //        Float3 lookat,
-    //        Float3 eye,
-    //        Float  focalLength);
+    void render(const char *target,
+	const Float3 lookat,
+	const Float3 eye,
+	const Float focalLength = 1.0,
+	const int method = 1);
 
 };
 
