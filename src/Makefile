@@ -34,7 +34,7 @@ DATE=`date +'%Y.%m.%d-%H:%M:%S'`
 	BACKUPNAME=sphere.$(DATE).tar.gz
 
 CCFILES=main.cpp file_io.cpp sphere.cpp
-CUFILES=device.cu utility.cu
+CUFILES=device.cu utility.cu raytracer.cu
 CCOBJECTS=$(CCFILES:.cpp=.o)
 CUOBJECTS=$(CUFILES:.cu=.o)
 OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
@@ -67,10 +67,11 @@ LDFLAGS+=-L$(CUDA_INSTALL_PATH)/lib
 LDFLAGS+=-L$(SDKPATH)/../../shared/lib -L$(SDKPATH)/../lib 
 LDFLAGS+=-lcutil_x86_64 -lcuda -lcudart
 
-all: $(CCFILES) $(CUFILES) $(EXECUTABLE) raytracer
+#all: $(CCFILES) $(CUFILES) $(EXECUTABLE) raytracer
+all: $(CCFILES) $(CUFILES) $(EXECUTABLE)
 
-raytracer: 
-	$(MAKE) -C ../raytracer/
+#raytracer: 
+#	$(MAKE) -C ../raytracer/
 
 $(EXECUTABLE): $(OBJECTS)
 	$(LINKER) $(OBJECTS) $(LDFLAGS) -o $@
@@ -90,6 +91,9 @@ main.o: main.cpp $(DEPS)
 sphere.o: sphere.cpp $(DEPS)
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
+raytracer.o: raytracer.cu $(DEPS)
+	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
+
 ../sphere_status: sphere_status.cpp
 	$(CC) $(CCFLAGS) sphere_status.cpp -o ../sphere_status
 
@@ -103,7 +107,7 @@ backup:
 clean:
 	$(RM) $(OBJECTS)
 	$(RM) ../sphere_*
-	$(MAKE) -C ../raytracer clean
+#	$(MAKE) -C ../raytracer clean
 
 clear:
 	# Remove all output data and images

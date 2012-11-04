@@ -97,4 +97,12 @@ struct Walls {
   Float4* mvfd;		// Wall mass, velocity, force and dev. stress
 };
 
+// Image structure
+struct rgba {
+  unsigned char r;	// Red
+  unsigned char g;	// Green
+  unsigned char b;	// Blue
+  unsigned char a;	// Alpha
+};
+
 #endif

@@ -345,3 +345,26 @@ void DEM::writebin(const char *target)
   }
 }
 
+// Write image structure to PPM file
+void DEM::writePPM(const char *target)
+{
+  // Open output file
+  std::ofstream ofs(target);
+  if (!ofs) {
+    std::cerr << "could create output PPM file '"
+      << target << std::endl;
+    exit(1); // Return unsuccessful exit status
+  }
+
+  // Write PPM header
+  ofs << "P6 " << width << " " << height << " 255\n";
+
+  // Write pixel array to ppm image file
+  for (unsigned int i=0; i<height*width; ++i)
+    ofs << img[i].r << img[i].g << img[i].b;
+
+  // Close file if it is still open
+  if (ofs.is_open())
+    ofs.close();
+}
+

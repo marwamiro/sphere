@@ -28,28 +28,27 @@ class DEM {
     // HOST STRUCTURES
     // Structure containing individual particle kinematics
     Kinematics k;	// host
-    //Kinematics *dev_k;	// device
 
     // Structure containing energy values
-    Energies e;		// host
-    //Energies *dev_e;	// device
+    Energies e;
 
     // Structure of global parameters
-    Params params;	// host
+    Params params;
 
     // Structure containing spatial parameters
-    Grid grid;		// host
-
-    // Structure containing sorting arrays
-    //Sorting *dev_sort;	// device
+    Grid grid;
 
     // Structure of temporal parameters
-    Time time;		// host
-    //Time *dev_time;	// device
+    Time time;
 
     // Structure of wall parameters
-    Walls walls;	// host
-    //Walls *dev_walls;	// device
+    Walls walls;
+
+    // Image structure (red, green, blue, alpa)
+    rgba* img;
+    unsigned int width;
+    unsigned int height;
+
 
     // DEVICE ARRAYS
     Float4 *dev_x;
@@ -81,28 +80,42 @@ class DEM {
     Float4 *dev_walls_mvfd; // Mass, velocity, force, dev. stress
     Float *dev_walls_force_partial; // Pre-sum per wall
     Float *dev_walls_force_pp; // Force per particle per wall
+    unsigned char *dev_img;
+    float4 *dev_ray_origo;	// Ray data always single precision
+    float4 *dev_ray_direction;
+
 
     // GPU initialization, must be called before startTime()
     void initializeGPU(void);
 
     // Copy all constant data to constant device memory
     void transferToConstantDeviceMemory(void);
+    void rt_transferToConstantDeviceMemory(void);
 
     // Check values stored in constant device memory
     void checkConstantMemory(void);
 
+    // Initialize camera values and transfer to constant device memory
+    void cameraInit(float3 eye, float3 lookat, 
+		    float imgw, float hw_ratio,
+		    float focalLength);
+
     // Allocate global device memory to hold data
     void allocateGlobalDeviceMemory(void);
+    void rt_allocateGlobalDeviceMemory(void);
 
     // Free dynamically allocated global device memory
     void freeGlobalDeviceMemory(void);
+    void rt_freeGlobalDeviceMemory(void);
 
     // Copy non-constant data to global GPU memory
     void transferToGlobalDeviceMemory(void);
 
     // Copy non-constant data from global GPU memory to host RAM
     void transferFromGlobalDeviceMemory(void);
+    void rt_transferFromGlobalDeviceMemory(void);
 
+    
 
   // Values and functions accessible from the outside
   public:
@@ -137,7 +150,13 @@ class DEM {
 	const Float3 lookat,
 	const Float3 eye,
 	const Float focalLength = 1.0,
-	const int method = 1);
+	const int method = 1,
+	const Float maxval = 1.0e3,
+	const unsigned int img_width = 800,
+	const unsigned int img_height = 800);
+
+    // Write image data to PPM file
+    void writePPM(const char *target);
 
 };
 
