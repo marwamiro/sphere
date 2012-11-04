@@ -3,8 +3,10 @@
 #include <string>
 #include <cstdio>
 #include <cuda.h>
+#include <cutil_math.h>
 
-#include "vector_arithmetic.h"
+#include "vector_arithmetic.h"	// for arbitrary prec. vectors
+//#include <vector_functions.h>	// for single prec. vectors
 #include "thrust/device_ptr.h"
 #include "thrust/sort.h"
 
@@ -19,6 +21,7 @@
 #include "cohesion.cuh"
 #include "contactsearch.cuh"
 #include "integration.cuh"
+#include "raytracer.cuh"
 
 //#include "cuPrintf.cu"
 

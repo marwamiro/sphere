@@ -96,9 +96,10 @@ class DEM {
     void checkConstantMemory(void);
 
     // Initialize camera values and transfer to constant device memory
-    void cameraInit(float3 eye, float3 lookat, 
-		    float imgw, float hw_ratio,
-		    float focalLength);
+    void cameraInit(const float3 eye,
+		    const float3 lookat, 
+		    const float imgw,
+		    const float focalLength);
 
     // Allocate global device memory to hold data
     void allocateGlobalDeviceMemory(void);
@@ -146,12 +147,11 @@ class DEM {
     void startTime(void);
 
     // Render particles using raytracing
-    void render(const char *target,
-	const Float3 lookat,
-	const Float3 eye,
-	const Float focalLength = 1.0,
+    void render(//const char *target,
+	const float3 eye,
+	const float focalLength = 1.0,
 	const int method = 1,
-	const Float maxval = 1.0e3,
+	const float maxval = 1.0e3,
 	const unsigned int img_width = 800,
 	const unsigned int img_height = 800);
 

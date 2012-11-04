@@ -34,7 +34,7 @@ DATE=`date +'%Y.%m.%d-%H:%M:%S'`
 	BACKUPNAME=sphere.$(DATE).tar.gz
 
 CCFILES=main.cpp file_io.cpp sphere.cpp
-CUFILES=device.cu utility.cu raytracer.cu
+CUFILES=device.cu utility.cu
 CCOBJECTS=$(CCFILES:.cpp=.o)
 CUOBJECTS=$(CUFILES:.cu=.o)
 OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
@@ -90,9 +90,6 @@ main.o: main.cpp $(DEPS)
 
 sphere.o: sphere.cpp $(DEPS)
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
-
-raytracer.o: raytracer.cu $(DEPS)
-	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
 
 ../sphere_status: sphere_status.cpp
 	$(CC) $(CCFLAGS) sphere_status.cpp -o ../sphere_status

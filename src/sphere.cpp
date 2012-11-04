@@ -13,7 +13,7 @@
 DEM::DEM(const std::string inputbin, 
     const int verbosity,
     const int checkVals,
-    const int render)
+    const int render_img)
 : verbose(verbosity)
 {
   using std::cout;
@@ -44,6 +44,15 @@ DEM::DEM(const std::string inputbin,
 
   // Initialize CUDA
   initializeGPU();
+
+  // Render image using raytracer if requested
+  if (render_img == 1) {
+    float3 eye = make_float3(0.6f * grid.L[0],
+			     -2.5f * grid.L[1],
+			     0.52f * grid.L[2]);
+    //float focalLength = 0.8f*grid.L[0];
+    render(eye);
+  }
 
 }
 
