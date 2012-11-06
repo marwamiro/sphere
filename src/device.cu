@@ -46,14 +46,15 @@ __host__ void DEM::initializeGPU(void)
   cudaGetDeviceCount(&devicecount);
 
   if(devicecount == 0) {
-    std::cerr << "\nERROR: No CUDA-enabled devices availible. Bye.\n";
+    std::cerr << "\nERROR: No CUDA-enabled devices availible. Bye."
+      << std::endl;
     exit(EXIT_FAILURE);
   } else if (devicecount == 1) {
     if (verbose == 1)
-      cout << "\nSystem contains 1 CUDA compatible device.\n";
+      cout << "  System contains 1 CUDA compatible device.\n";
   } else {
     if (verbose == 1)
-      cout << "\nSystem contains " << devicecount << " CUDA compatible devices.\n";
+      cout << "  System contains " << devicecount << " CUDA compatible devices.\n";
   }
 
   cudaGetDeviceProperties(&prop, cudadevice);
@@ -61,13 +62,13 @@ __host__ void DEM::initializeGPU(void)
   cudaRuntimeGetVersion(&cudaRuntimeVersion);
 
   if (verbose == 1) {
-    cout << "Using CUDA device ID: " << cudadevice << "\n";
+    cout << "  Using CUDA device ID: " << cudadevice << "\n";
     cout << "  - Name: " <<  prop.name << ", compute capability: " 
       << prop.major << "." << prop.minor << ".\n";
     cout << "  - CUDA Driver version: " << cudaDriverVersion/1000 
       << "." <<  cudaDriverVersion%100 
       << ", runtime version " << cudaRuntimeVersion/1000 << "." 
-      << cudaRuntimeVersion%100 << "\n\n";
+      << cudaRuntimeVersion%100 << std::endl;
   }
 
   // Comment following line when using a system only containing exclusive mode GPUs
@@ -456,16 +457,6 @@ __host__ void DEM::startTime()
   std::string outfile;
   char file[200];
   FILE *fp;
-
-  // Copy data to constant global device memory
-  transferToConstantDeviceMemory();
-
-    // Allocate device memory for particle variables,
-  // tied to previously declared pointers in structures
-  allocateGlobalDeviceMemory();
-
-  // Transfer data from host to gpu device memory
-  transferToGlobalDeviceMemory();
 
   // Synchronization point
   cudaThreadSynchronize();

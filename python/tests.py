@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from sphere import *
+import subprocess
 
 def compare(first, second, string):
   if (first == second):
@@ -13,7 +14,7 @@ print("### Input/output tests ###")
 
 # Generate data in python
 orig = Spherebin(np = 100, nw = 0)
-orig.generateRadii()
+orig.generateRadii(histogram = False)
 orig.defaultParams()
 orig.initRandomGridPos(g = numpy.zeros(orig.nd))
 orig.initTemporal(current = 0.0, total = 0.0)
@@ -38,4 +39,7 @@ cuda.readbin("../output/orig.output1.bin", verbose=False)
 cuda.time_current = orig.time_current
 cuda.time_step_count = orig.time_step_count
 compare(orig, cuda, "CUDA IO:  ")
+
+# Remove temporary files
+subprocess.call("rm orig.bin; rm ../output/orig*.bin", shell=True)
 

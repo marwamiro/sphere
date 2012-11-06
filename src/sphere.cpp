@@ -45,12 +45,23 @@ DEM::DEM(const std::string inputbin,
   // Initialize CUDA
   initializeGPU();
 
+  // Copy constant data to constant device memory
+  transferToConstantDeviceMemory();
+  
+  // Allocate device memory for particle variables,
+  // tied to previously declared pointers in structures
+  allocateGlobalDeviceMemory();
+
+  // Transfer data from host to gpu device memory
+  transferToGlobalDeviceMemory();
+
   // Render image using raytracer if requested
   if (render_img == 1) {
-    float3 eye = make_float3(0.6f * grid.L[0],
-			     -2.5f * grid.L[1],
-			     0.52f * grid.L[2]);
+    float3 eye = make_float3( 2.5f * grid.L[0],
+			     -5.0f * grid.L[1],
+			      0.5f * grid.L[2]);
     //float focalLength = 0.8f*grid.L[0];
+    //float3 eye = make_float3(0.0f, 0.0f, 0.0f);
     render(eye);
   }
 

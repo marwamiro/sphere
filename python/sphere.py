@@ -356,7 +356,7 @@ class Spherebin:
   def generateRadii(self, psd = 'logn',
       			  radius_mean = 440e-6,
 			  radius_variance = 8.8e-9,
-			  histogram = 1):
+			  histogram = True):
     """ Draw random particle radii from the selected probability distribution.
     	Specify mean radius and variance. The variance should be kept at a
 	very low value.
@@ -372,7 +372,7 @@ class Spherebin:
       self.radius = numpy.random.uniform(radius_min, radius_max, self.np)
 
     # Show radii as histogram
-    if histogram == 1:
+    if (histogram == True):
       fig = plt.figure(figsize=(15,10), dpi=300)
       figtitle = 'Particle size distribution, {0} particles'.format(self.np[0])
       fig.text(0.5,0.95,figtitle,horizontalalignment='center',fontproperties=FontProperties(size=18))
@@ -431,17 +431,6 @@ class Spherebin:
    
     print " "
     self.contactmodel[0] = contactmodel
-
-    # Initialize upper wall
-    self.wmode[0] = 0	# 0: fixed, 1: devs, 2: vel
-    self.w_n[0,2] = -1.0
-    self.w_x[0] = self.L[2]
-    self.w_m[0] = self.rho[0] * self.np * math.pi * r_max**3
-    self.w_vel[0] = 0.0
-    self.w_force[0] = 0.0
-    self.w_devs[0] = 0.0
-    #self.nw[0] = numpy.ones(1, dtype=numpy.uint32) * 1
-    self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
 
     
   # Generate grid based on particle positions
@@ -566,16 +555,6 @@ class Spherebin:
       self.num[0] += 1
       self.num[1] += 1
 
-    # Initialize upper wall
-    self.wmode[0] = 0
-    self.w_n[0,2] = -1.0
-    self.w_x[0] = self.L[2]
-    self.w_m[0] = self.rho[0] * self.np * math.pi * r_max**3
-    self.w_vel[0] = 0.0
-    self.w_force[0] = 0.0
-    self.w_devs[0] = 0.0
-    self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
-
 
   # Initialize particle positions to non-overlapping configuration
   # in grid, with a certain element of randomness
@@ -631,16 +610,6 @@ class Spherebin:
     self.num[2] = numpy.ceil(z_max/cellsize)
     self.L = self.num * cellsize
 
-    # Initialize upper wall
-    if (self.nw > 0):
-      self.wmode[0] = 0
-      self.w_n[0,2] = -1.0
-      self.w_x[0] = self.L[2]
-      self.w_m[0] = self.rho[0] * self.np * math.pi * r_max**3
-      self.w_vel[0] = 0.0
-      self.w_force[0] = 0.0
-      self.w_devs[0] = 0.0
-      self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
 
   # Adjust grid and upper wall for consolidation under deviatoric stress
   def consolidate(self, deviatoric_stress = 10e3, 
@@ -663,14 +632,15 @@ class Spherebin:
     self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
 
     # Initialize upper wall
-    self.wmode[0] = 1 # devs
+    self.nw = numpy.array([1], dtype=numpy.uint32)
+    self.wmode = numpy.array([1]) # devs BC
+    self.w_n = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
     self.w_n[0,2] = -1.0
-    self.w_x[0] = self.L[2]
-    self.w_m[0] = self.rho[0] * self.np * math.pi * (cellsize/2.0)**3
-    self.w_vel[0] = 0.0
-    self.w_force[0] = 0.0
-    self.w_devs[0] = deviatoric_stress
-    self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
+    self.w_x = numpy.array([self.L[2]])
+    self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
+    self.w_vel = numpy.array([0.0])
+    self.w_force = numpy.array([0.0])
+    self.w_devs = numpy.array([deviatoric_stress])
 
   # Adjust grid and upper wall for consolidation under fixed upper wall velocity
   def uniaxialStrainRate(self, wvel = -0.001,
@@ -693,13 +663,15 @@ class Spherebin:
     self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
 
     # Initialize upper wall
-    self.wmode[0] = 2 # strain rate controlled
+    self.nw = numpy.array([1], dtype=numpy.uint32)
+    self.wmode = numpy.array([2]) # strain rate BC
+    self.w_n = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
     self.w_n[0,2] = -1.0
-    self.w_x[0] = self.L[2]
-    self.w_m[0] = self.rho[0] * self.np * math.pi * (cellsize/2.0)**3
-    self.w_vel[0] = wvel
-    self.w_force[0] = 0.0
-    self.nw = numpy.ones(1, dtype=numpy.uint32) * 1
+    self.w_x = numpy.array([self.L[2]])
+    self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
+    self.w_vel = numpy.array([0.0])
+    self.w_force = numpy.array([0.0])
+    self.w_devs = numpy.array([0.0])
 
 
   # Adjust grid and upper wall for shear, and fix boundary particle velocities
@@ -978,60 +950,35 @@ class Spherebin:
 
     return porosity_grid
 
+def convert(graphicsformat = "png",
+    	    folder = "../img_out"):
+  """ Converts all PPM images in img_out to graphicsformat,
+      using ImageMagick """
+  # Convert images
+  subprocess.call("for F in " + folder + "/*.ppm ; do BASE=`basename $F`; convert $F $F." + graphicsformat + " > /dev/null ; done", shell=True)
+
+  # Remove PPM files
+  subprocess.call("rm " + folder + "/*.ppm", shell=True)
+
 
 def render(binary,
-           out = '../img_out/out',
-	   graphicsformat = 'jpg',
-	   resolution = numpy.array([800, 800]),
-	   workhorse = 'GPU',
-	   method = 'pressure',
-	   max_val = 4e3,
-	   rt_bin = '../raytracer/rt',
+	   graphicsformat = 'png',
 	   verbose=True):
   """ Render target binary using the sphere raytracer.
   """
 
-  stdout = ""
+  quiet = ""
   if (verbose == False):
-    stdout = " > /dev/null"
+    quiet = "-q"
 
-  # Use raytracer to render the scene into a temporary PPM file
-  if workhorse == 'GPU':
-    subprocess.call(rt_bin + " GPU {0} {1} {2} {3}.ppm {4} {5}"\
-	.format(binary, resolution[0], resolution[1], out, method, max_val) + stdout, shell=True)
-  if workhorse == 'CPU':
-    subprocess.call(rt_bin + " CPU {0} {1} {2} {3}.ppm"\
-	.format(binary, resolution[0], resolution[1], out) + stdout, shell=True)
-
-  # Use ImageMagick's convert command to change the graphics format
-  subprocess.call("convert {0}.ppm {0}.{1}"\
-      .format(out, graphicsformat), shell=True)
-
-  # Delete temporary PPM file
-  subprocess.call("rm {0}.ppm".format(out), shell=True)
+  # Render images using sphere raytracer
+  subprocess.call("cd ..; ./sphere_* " + quiet + " -r " + binary, shell=True)
   
-def renderAll(project,
-	      method = "pressure",
-	      max_val = 10e3,
-	      out_folder = "../img_out",
-	      graphics_format = "png",
-	      workhorse = "GPU",
-	      resolution = numpy.array([800, 800]),
-    	      rt_bin = "~/code/sphere/raytracer/rt",
-	      verbose = False):
 
-  lastfile = status(project)
+  # Convert images to compressed format
+  convert()
 
-  for i in range(lastfile+1):
-    # Input binary filename
-    fn = "../output/{0}.output{1}.bin".format(project, i)
-
-    # Output image name (without extension)
-    out = out_folder + "/{0}.output{1}".format(project, i)
-    
-    # Call raytracer, also converts to format
-    render(fn, out, graphics_format, resolution, workhorse, method, max_val, rt_bin, verbose)
-
+  
 def video(project,
     	  out_folder = "./",
     	  video_format = "mp4",
@@ -1286,10 +1233,10 @@ def run(project, verbose=True, hideinputfile=False):
   quiet = ""
   stdout = ""
   if (verbose == False):
-    quiet = "-q "
+    quiet = "-q"
   if (hideinputfile == True):
     stdout = " > /dev/null"
-  subprocess.call("cd ..; ./sphere_*_X86_64 "+ quiet + project + stdout, shell=True)
+  subprocess.call("cd ..; ./sphere_* " + quiet + " input/" + project + ".bin" + stdout, shell=True)
   
 def status(project):
   """ Check the status.dat file for the target project,

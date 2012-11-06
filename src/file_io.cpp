@@ -38,7 +38,7 @@ void DEM::readbin(const char *target)
   std::ifstream ifs(target, std::ios_base::binary);
   if (!ifs) {
     cerr << "Could not read input binary file '"
-      << target << endl;
+      << target << "'" << endl;
     exit(1);
   }
 
@@ -351,10 +351,13 @@ void DEM::writePPM(const char *target)
   // Open output file
   std::ofstream ofs(target);
   if (!ofs) {
-    std::cerr << "could create output PPM file '"
+    std::cerr << "Could not create output PPM file '"
       << target << std::endl;
     exit(1); // Return unsuccessful exit status
   }
+
+  if (verbose == 1)
+    std::cout << "  Saving image: " << target << std::endl;
 
   // Write PPM header
   ofs << "P6 " << width << " " << height << " 255\n";
