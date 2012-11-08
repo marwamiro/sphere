@@ -75,13 +75,13 @@ struct Params {
   Float gamma_n;	// Normal viscosity
   Float gamma_t;	// Tangential viscosity
   Float gamma_r;	// Rotational viscosity
-  Float mu_ws; 		// Wall static friction coefficient
-  Float mu_wd;		// Wall dynamic friction coefficient
-  Float gamma_wn;	// Wall normal viscosity
-  Float gamma_wt;	// Wall tangential viscosity
   Float mu_s; 		// Static friction coefficient
   Float mu_d;		// Dynamic friction coefficient
   Float mu_r;		// Rotational friction coefficient
+  Float gamma_wn;	// Wall normal viscosity
+  Float gamma_wt;	// Wall tangential viscosity
+  Float mu_ws; 		// Wall static friction coefficient
+  Float mu_wd;		// Wall dynamic friction coefficient
   Float rho;		// Material density
   unsigned int contactmodel; // Inter-particle contact model
   Float kappa;		// Capillary bond prefactor
