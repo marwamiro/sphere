@@ -40,7 +40,7 @@ DEM::DEM(const std::string inputbin,
     reportValues();
     
   // Write initial data to output/<sid>.output0.bin
-  writebin(("output/" + sid + ".output0.bin").c_str());
+  writebin(("output/" + sid + ".output0000.bin").c_str());
 
   // Initialize CUDA
   initializeGPU();
@@ -214,7 +214,7 @@ void DEM::reportValues()
   else if (params.contactmodel == 3)
     cout << "  - Contact model: Nonlinear-elastic-visco-frictional\n";
   else {
-    cerr << "Error: Contact model value not understood.\n";
+    cerr << "Error: Contact model value (" << params.contactmodel << ") not understood.\n";
     exit(1);
   }
 
