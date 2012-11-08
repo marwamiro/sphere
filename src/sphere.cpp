@@ -39,8 +39,8 @@ DEM::DEM(const std::string inputbin,
   if (verbose == 1)
     reportValues();
     
-  // Write initial data to output/<sid>.output0.bin
-  writebin(("output/" + sid + ".output0000.bin").c_str());
+  // Write initial data to output/<sid>.output00000.bin
+  writebin(("output/" + sid + ".output00000.bin").c_str());
 
   // Initialize CUDA
   initializeGPU();
