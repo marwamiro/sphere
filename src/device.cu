@@ -184,7 +184,8 @@ __host__ void DEM::checkConstantMemory()
               << "seem to be correct (" << *equal << ").\n";
     exit(1);
   } else {
-    std::cout << "  Constant values ok (" << *equal << ").\n";
+    if (verbose == 1)
+      std::cout << "  Constant values ok (" << *equal << ").\n";
   }
 }
 
@@ -505,9 +506,9 @@ __host__ void DEM::startTime()
   fclose(fp);
 
   // Write first output data file: output0.bin, thus testing writing of bin files
-  outfile = "output/" + sid + ".output0.bin";
+  //outfile = "output/" + sid + ".output0.bin";
   //sprintf(file,"output/%s.output0.bin", sid);
-  writebin(outfile.c_str());
+  //writebin(outfile.c_str());
 
   if (verbose == 1) {
     cout << "\n  Entering the main calculation time loop...\n\n"
@@ -541,7 +542,8 @@ __host__ void DEM::startTime()
     cudaEventCreate(&kernel_toc);
   }
 
-  cout << "  Current simulation time: " << time.current << " s.";
+  if (verbose == 1)
+    cout << "  Current simulation time: " << time.current << " s.";
 
 
   // MAIN CALCULATION TIME LOOP
@@ -750,7 +752,7 @@ __host__ void DEM::startTime()
 
       // Write binary output file
       time.step_count += 1;
-      sprintf(file,"output/%s.output%d.bin", sid.c_str(), time.step_count);
+      sprintf(file,"output/%s.output%05d.bin", sid.c_str(), time.step_count);
       writebin(file);
 
 
@@ -805,15 +807,18 @@ __host__ void DEM::startTime()
   time_spent = (toc - tic)/(CLOCKS_PER_SEC);
   cudaEventElapsedTime(&dev_time_spent, dev_tic, dev_toc);
 
-  cout << "\nSimulation ended. Statistics:\n"
-       << "  - Last output file number: " 
-       << time.step_count << "\n"
-       << "  - GPU time spent: "
-       << dev_time_spent/1000.0f << " s\n"
-       << "  - CPU time spent: "
-       << time_spent << " s\n"
-       << "  - Mean duration of iteration:\n"
-       << "      " << dev_time_spent/((double)iter*1000.0f) << " s\n"; 
+  if (verbose == 1) {
+    cout << "\nSimulation ended. Statistics:\n"
+      << "  - Last output file number: " 
+      << time.step_count << "\n"
+      << "  - GPU time spent: "
+      << dev_time_spent/1000.0f << " s\n"
+      << "  - CPU time spent: "
+      << time_spent << " s\n"
+      << "  - Mean duration of iteration:\n"
+      << "      " << dev_time_spent/((double)iter*1000.0f) << " s"
+      << std::endl; 
+  }
 
   cudaEventDestroy(dev_tic);
   cudaEventDestroy(dev_toc);
@@ -822,7 +827,7 @@ __host__ void DEM::startTime()
   cudaEventDestroy(kernel_toc);
 
   // Report time spent on each kernel
-  if (PROFILING == 1) {
+  if (PROFILING == 1 && verbose == 1) {
     double t_sum = t_calcParticleCellID + t_thrustsort + t_reorderArrays
                  + t_topology + t_interact + t_summation + t_integrateWalls;
     cout << "\nKernel profiling statistics:\n"
