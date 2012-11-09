@@ -52,7 +52,7 @@ int main(const int argc, const char *argv[])
 	<< "-dcv, --dpnt-check-values\t\tdon't check values before running\n" 
 	<< "Raytracer (-r) specific options:\n"
 	<< "-m <method> <maxval>, --method <method> <maxval>\tcolor visualization method, possible values:\n"
-	<< "\t\t\t\tpres, vel\n"
+	<< "\t\t\t\tpres, vel, angvel, xdisp, angpos\n"
 	<< std::endl;
       return 0; // Exit with success
     }
@@ -82,9 +82,25 @@ int main(const int argc, const char *argv[])
       checkVals = 0;
 
     else if (argvi == "-m" || argvi == "--method") {
+
+      // Find out which
       if (std::string(argv[i+1]) == "pres")
 	method = 1;
-      //max_val = std::strtof(argv[i+2]);
+      else if (std::string(argv[i+1]) == "vel")
+	method = 2;
+      else if (std::string(argv[i+1]) == "angvel")
+	method = 3;
+      else if (std::string(argv[i+1]) == "xdisp")
+	method = 4;
+      else if (std::string(argv[i+1]) == "angpos")
+	method = 5;
+      else {
+	std::cerr << "Visualization method not understood. See `"
+	  << argv[0] << " --help` for more information." << std::endl;
+	exit(1);
+      }
+
+      // Read max. value of colorbar as next argument
       max_val = atof(argv[i+2]);
       i += 2; // skip ahead
     }
