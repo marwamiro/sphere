@@ -69,7 +69,7 @@ LDFLAGS+=-lcutil_x86_64 -lcuda -lcudart
 LDFLAGS+=-fopenmp
 
 #all: $(CCFILES) $(CUFILES) $(EXECUTABLE) raytracer
-all: $(CCFILES) $(CUFILES) $(EXECUTABLE)
+all: $(CCFILES) $(CUFILES) $(EXECUTABLE) folders
 
 #raytracer: 
 #	$(MAKE) -C ../raytracer/
@@ -94,6 +94,14 @@ sphere.o: sphere.cpp $(DEPS)
 
 ../sphere_status: sphere_status.cpp
 	$(CC) $(CCFLAGS) sphere_status.cpp -o ../sphere_status
+
+folders: ../output ../img_out
+
+../output:
+	mkdir $@
+
+../img_out:
+	mkdir $@
 
 edit:
 	$(EDITOR) Makefile $(CCFILES) $(CUFILES) *.h *.cuh 
