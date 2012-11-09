@@ -195,7 +195,7 @@ __host__ void DEM::transferToConstantDeviceMemory()
   using std::cout;
 
   if (verbose == 1)
-    cout << "\n  Transfering data to constant device memory:     ";
+    cout << "  Transfering data to constant device memory:     ";
 
   cudaMemcpyToSymbol("devC_nd", &nd, sizeof(nd));
   cudaMemcpyToSymbol("devC_np", &np, sizeof(np));
@@ -462,6 +462,9 @@ __host__ void DEM::startTime()
   // Synchronization point
   cudaThreadSynchronize();
   checkForCudaErrors("Start of startTime()");
+
+  // Write initial data to output/<sid>.output00000.bin
+  writebin(("output/" + sid + ".output00000.bin").c_str());
 
   // Model world variables
   float tic, toc, filetimeclock, time_spent, dev_time_spent;

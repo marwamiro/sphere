@@ -2,6 +2,7 @@
 #include <string>
 #include <cstdio>
 #include <cstdlib>
+#include <cmath>
 
 #include "typedefs.h"
 #include "datatypes.h"
@@ -12,8 +13,7 @@
 // and reports the values
 DEM::DEM(const std::string inputbin, 
     const int verbosity,
-    const int checkVals,
-    const int render_img)
+    const int checkVals)
 : verbose(verbosity)
 {
   using std::cout;
@@ -39,9 +39,6 @@ DEM::DEM(const std::string inputbin,
   if (verbose == 1)
     reportValues();
     
-  // Write initial data to output/<sid>.output00000.bin
-  writebin(("output/" + sid + ".output00000.bin").c_str());
-
   // Initialize CUDA
   initializeGPU();
 
@@ -54,16 +51,6 @@ DEM::DEM(const std::string inputbin,
 
   // Transfer data from host to gpu device memory
   transferToGlobalDeviceMemory();
-
-  // Render image using raytracer if requested
-  if (render_img == 1) {
-    float3 eye = make_float3( 2.5f * grid.L[0],
-			     -5.0f * grid.L[1],
-			      0.5f * grid.L[2]);
-    //float focalLength = 0.8f*grid.L[0];
-    //float3 eye = make_float3(0.0f, 0.0f, 0.0f);
-    render(eye);
-  }
 
 }
 
@@ -116,7 +103,7 @@ void DEM::checkValues(void)
   }
 
   // Check that the current time
-  if (time.current < time.total || time.current < 0.0) {
+  if (time.current > time.total || time.current < 0.0) {
     cerr << "Error: time.current = " << time.current
       << " s, time.total = " << time.total << " s\n";
     exit(1);

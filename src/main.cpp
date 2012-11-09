@@ -12,6 +12,7 @@
 // Including library files
 #include <iostream>
 #include <string>
+#include <cstdlib>
 
 // Including user files
 #include "constants.h"
@@ -28,9 +29,11 @@ int main(const int argc, const char *argv[])
 {
   // Default values
   int verbose = 1;
-  int checkConstantVals = 0;
-  int render = 0;
+  int checkVals = 1;
+  int render = 0; // whether to render an image
+  int method = 0; // visualization method
   int nfiles = 0; // number of input files
+  float max_val = 0.0f;
 
   // Process input parameters
   int i;
@@ -46,7 +49,11 @@ int main(const int argc, const char *argv[])
 	<< "-V, --version\t\tprint version information and exit\n"
 	<< "-q, --quiet\t\tsuppress status messages to stdout\n"
 	<< "-r, --render\t\trender input files instead of simulating temporal evolution\n"
-	<< "-cc, --check-constants\t\tcheck values in constant GPU memory" << std::endl;
+	<< "-dcv, --dpnt-check-values\t\tdon't check values before running\n" 
+	<< "Raytracer (-r) specific options:\n"
+	<< "-m <method> <maxval>, --method <method> <maxval>\tcolor visualization method, possible values:\n"
+	<< "\t\t\t\tpres, vel\n"
+	<< std::endl;
       return 0; // Exit with success
     }
 
@@ -71,8 +78,17 @@ int main(const int argc, const char *argv[])
     else if (argvi == "-r" || argvi == "--render")
       render = 1;
 
-    else if (argvi == "-cc" || argvi == "--check-constants")
-      checkConstantVals = 1;
+    else if (argvi == "-dcv" || argvi == "--dont-check-values")
+      checkVals = 0;
+
+    else if (argvi == "-m" || argvi == "--method") {
+      if (std::string(argv[i+1]) == "pres")
+	method = 1;
+      //max_val = std::strtof(argv[i+2]);
+      max_val = atof(argv[i+2]);
+      i += 2; // skip ahead
+    }
+
 
     // The rest of the values must be input binary files
     else {
@@ -81,10 +97,14 @@ int main(const int argc, const char *argv[])
       std::cout << argv[0] << ": processing input file: " << argvi << std::endl;
 
       // Create DEM class, read data from input binary, check values
-      DEM dem(argvi, verbose, checkConstantVals, render);
+      DEM dem(argvi, verbose, checkVals);
 
-      // Start iterating through time, unless user chose to render image
-      if (render == 0)
+      // Render image if requested
+      if (render == 1)
+	dem.render(method, max_val);
+
+      // Otherwise, start iterating through time
+      else
 	dem.startTime();
     }
   }

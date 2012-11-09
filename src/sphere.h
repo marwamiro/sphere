@@ -116,6 +116,8 @@ class DEM {
     void transferFromGlobalDeviceMemory(void);
     void rt_transferFromGlobalDeviceMemory(void);
 
+    // Find and return the max. position of any particle in each dimension
+    float3 maxPos(void);
     
 
   // Values and functions accessible from the outside
@@ -124,8 +126,7 @@ class DEM {
     // Constructor, some parameters with default values
     DEM(std::string inputbin, 
 	const int verbosity = 1,
-	const int checkVals = 1,
-	const int render = 0);
+	const int checkVals = 1);
 
     // Destructor
     ~DEM(void);
@@ -148,10 +149,9 @@ class DEM {
 
     // Render particles using raytracing
     void render(//const char *target,
-	const float3 eye,
-	const float focalLength = 1.0,
 	const int method = 1,
 	const float maxval = 1.0e3,
+	const float focalLength = 1.0,
 	const unsigned int img_width = 800,
 	const unsigned int img_height = 800);
 
