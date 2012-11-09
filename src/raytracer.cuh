@@ -413,7 +413,7 @@ __host__ void DEM::render(
       make_float4(eye.x, eye.y, eye.z, 0.0f), width, height);
   cudaThreadSynchronize();
 
-  float* linarr;     // Linear array to use for color visualization
+  Float* linarr;     // Linear array to use for color visualization
   std::string desc;  // Description of parameter visualized
   std::string unit;  // Unit of parameter values visualized
   unsigned int i;
@@ -502,6 +502,7 @@ __host__ void DEM::render(
 
   // Free dynamically allocated global device memory
   rt_freeGlobalDeviceMemory();
+  delete[] linarr;
 
   //cudaPrintfDisplay(stdout, true);
 
