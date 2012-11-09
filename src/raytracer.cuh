@@ -417,6 +417,7 @@ __host__ void DEM::render(
   std::string desc;  // Description of parameter visualized
   std::string unit;  // Unit of parameter values visualized
   unsigned int i;
+  int transfer = 0;  // If changed to 1, linarr will be copied to dev_linarr
 
   // Visualize spheres without color scale overlay
   if (method == 0) {
@@ -439,6 +440,7 @@ __host__ void DEM::render(
 	    + k.vel[i].y*k.vel[i].y 
 	    + k.vel[i].z*k.vel[i].z);
       }
+      transfer = 1;
       desc = "Linear velocity";
       unit = "m/s";
 
@@ -451,6 +453,7 @@ __host__ void DEM::render(
 	    + k.angvel[i].y*k.angvel[i].y 
 	    + k.angvel[i].z*k.angvel[i].z);
       }
+      transfer = 1;
       desc = "Angular velocity";
       unit = "rad/s";
 
@@ -461,6 +464,7 @@ __host__ void DEM::render(
       for (i = 0; i<np; ++i) {
 	linarr[i] = k.xysum[i].x;
       }
+      transfer = 1;
       desc = "X-axis displacement";
       unit = "m";
 
@@ -473,6 +477,7 @@ __host__ void DEM::render(
 	    + k.angpos[i].y*k.angpos[i].y 
 	    + k.angpos[i].z*k.angpos[i].z);
       }
+      transfer = 1;
       desc = "Angular positions";
       unit = "rad";
     }
@@ -480,13 +485,17 @@ __host__ void DEM::render(
 
     // Report color visualization method and color map range
     cout << "  " << desc << " color map range: [0, " 
-      << maxval << "] " unit << endl;
+      << maxval << "] " << unit << endl;
+
+    // Copy linarr to dev_linarr if required
+    if (transfer == 1)
+      cudaMemcpy(dev_linarr, &linarr, np*sizeof(Float), cudaMemcpyDeviceToHost);
 
     // Start raytracing kernel
     rayIntersectSpheresColormap<<< blocksPerGrid, threadsPerBlock >>>(
 	dev_ray_origo, dev_ray_direction,
 	dev_x, dev_vel,
-	linarr, maxval,
+	dev_linarr, maxval,
 	dev_img);
 
   }
