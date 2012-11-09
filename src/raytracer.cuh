@@ -414,6 +414,7 @@ __host__ void DEM::render(
   cudaThreadSynchronize();
 
   Float* linarr;     // Linear array to use for color visualization
+  Float* dev_linarr; // Device linear array to use for color visualization
   std::string desc;  // Description of parameter visualized
   std::string unit;  // Unit of parameter values visualized
   unsigned int i;
@@ -427,7 +428,7 @@ __host__ void DEM::render(
   } else {
     
     if (method == 1) { // Visualize pressure
-      linarr = dev_p;
+      dev_linarr = dev_p;
       desc = "Pressure";
       unit = "Pa";
 
@@ -488,8 +489,11 @@ __host__ void DEM::render(
       << maxval << "] " << unit << endl;
 
     // Copy linarr to dev_linarr if required
-    if (transfer == 1)
-      cudaMemcpy(dev_linarr, &linarr, np*sizeof(Float), cudaMemcpyDeviceToHost);
+    if (transfer == 1) {
+      cudaMalloc((void**)&dev_linarr, np*sizeof(Float));
+      cudaMemcpy(dev_linarr, &linarr, np*sizeof(Float), cudaMemcpyHostToDevice);
+      checkForCudaErrors("Error during cudaMalloc or cudaMemcpy of linear array");
+    }
 
     // Start raytracing kernel
     rayIntersectSpheresColormap<<< blocksPerGrid, threadsPerBlock >>>(
@@ -512,6 +516,7 @@ __host__ void DEM::render(
   // Free dynamically allocated global device memory
   rt_freeGlobalDeviceMemory();
   delete[] linarr;
+  cudaFree(dev_linarr);
 
   //cudaPrintfDisplay(stdout, true);
 
