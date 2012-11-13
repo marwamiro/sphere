@@ -30,6 +30,7 @@ int main(const int argc, const char *argv[])
   // Default values
   int verbose = 1;
   int checkVals = 1;
+  int dry = 0;
   int render = 0; // whether to render an image
   int method = 0; // visualization method
   int nfiles = 0; // number of input files
@@ -48,6 +49,7 @@ int main(const int argc, const char *argv[])
 	<< "-h, --help\t\tprint help\n"
 	<< "-V, --version\t\tprint version information and exit\n"
 	<< "-q, --quiet\t\tsuppress status messages to stdout\n"
+	<< "-n, --dry\t\tshow key experiment parameters and quit\n"
 	<< "-r, --render\t\trender input files instead of simulating temporal evolution\n"
 	<< "-dcv, --dpnt-check-values\t\tdon't check values before running\n" 
 	<< "Raytracer (-r) specific options:\n"
@@ -74,6 +76,9 @@ int main(const int argc, const char *argv[])
 
     else if (argvi == "-q" || argvi == "--quiet")
       verbose = 0;
+
+    else if (argvi == "-n" || argvi == "--dry")
+      dry = 1;
 
     else if (argvi == "-r" || argvi == "--render")
       render = 1;
@@ -110,10 +115,11 @@ int main(const int argc, const char *argv[])
     else {
       nfiles++;
 
-      std::cout << argv[0] << ": processing input file: " << argvi << std::endl;
+      if (verbose == 1)
+	std::cout << argv[0] << ": processing input file: " << argvi << std::endl;
 
       // Create DEM class, read data from input binary, check values
-      DEM dem(argvi, verbose, checkVals);
+      DEM dem(argvi, verbose, checkVals, dry);
 
       // Render image if requested
       if (render == 1)

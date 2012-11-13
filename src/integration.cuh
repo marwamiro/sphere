@@ -4,13 +4,13 @@
 // integration.cuh
 // Functions responsible for temporal integration
 
-
 // Second order integration scheme based on Taylor expansion of particle kinematics. 
 // Kernel executed on device, and callable from host only.
 __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 			  Float4* dev_angvel_sorted,
 			  Float4* dev_x, Float4* dev_vel, Float4* dev_angvel, // Output
 			  Float4* dev_force, Float4* dev_torque, Float4* dev_angpos, // Input
+			  Float4* dev_acc, Float4* dev_angacc,
 			  Float2* dev_xysum,
 			  unsigned int* dev_gridParticleIndex) // Input: Sorted-Unsorted key
 {
@@ -24,18 +24,14 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     Float4 force  = dev_force[orig_idx];
     Float4 torque = dev_torque[orig_idx];
     Float4 angpos = dev_angpos[orig_idx];
-
-    Float2 xysum  = MAKE_FLOAT2(0.0f, 0.0f);
-
-    // Initialize acceleration vectors to zero
-    Float4 acc    = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-    Float4 angacc = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-
-    // Fetch particle position and velocity values from global read
+    Float4 acc    = dev_acc[orig_idx];
+    Float4 angacc = dev_angacc[orig_idx];
     Float4 x      = dev_x_sorted[idx];
     Float4 vel    = dev_vel_sorted[idx];
     Float4 angvel = dev_angvel_sorted[idx];
     Float  radius = x.w;
+
+    Float2 xysum  = MAKE_FLOAT2(0.0f, 0.0f);
 
     // Coherent read from constant memory to registers
     Float  dt    = devC_dt;
@@ -44,7 +40,48 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     Float  rho   = devC_params.rho;
 
     // Particle mass
-    Float m = 4.0f/3.0f * PI * radius*radius*radius * rho;
+    Float m = 4.0/3.0 * PI * radius*radius*radius * rho;
+
+#if 0
+    //// First-order Euler integration scheme ///
+    // Update angular position
+    angpos.x += angvel.x * dt;
+    angpos.y += angvel.y * dt;
+    angpos.z += angvel.z * dt;
+
+    // Update position
+    x.x += vel.x * dt;
+    x.y += vel.y * dt;
+    x.z += vel.z * dt;
+#else 
+    
+    /// Second-order scheme based on Taylor expansion ///
+    // Update angular position
+    angpos.x += angvel.x * dt + angacc.x * dt*dt * 0.5;
+    angpos.y += angvel.y * dt + angacc.y * dt*dt * 0.5;
+    angpos.z += angvel.z * dt + angacc.z * dt*dt * 0.5;
+
+    // Update position
+    x.x += vel.x * dt + acc.x * dt*dt * 0.5;
+    x.y += vel.y * dt + acc.y * dt*dt * 0.5;
+    x.z += vel.z * dt + acc.z * dt*dt * 0.5;
+#endif
+
+    // Update angular velocity
+    angvel.x += angacc.x * dt;
+    angvel.y += angacc.y * dt;
+    angvel.z += angacc.z * dt;
+
+    // Update linear velocity
+    vel.x += acc.x * dt;
+    vel.y += acc.y * dt;
+    vel.z += acc.z * dt;
+
+    // Add x-displacement for this time step to 
+    // sum of x-displacements
+    //x.w += vel.x * dt + (acc.x * dt*dt)/2.0f;
+    xysum.x += vel.x * dt;
+    xysum.y += vel.y * dt;// + (acc.y * dt*dt * 0.5f;
 
     // Update linear acceleration of particle
     acc.x = force.x / m;
@@ -53,9 +90,9 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 
     // Update angular acceleration of particle 
     // (angacc = (total moment)/Intertia, intertia = 2/5*m*r^2)
-    angacc.x = torque.x * 1.0f / (2.0f/5.0f * m * radius*radius);
-    angacc.y = torque.y * 1.0f / (2.0f/5.0f * m * radius*radius);
-    angacc.z = torque.z * 1.0f / (2.0f/5.0f * m * radius*radius);
+    angacc.x = torque.x * 1.0 / (2.0/5.0 * m * radius*radius);
+    angacc.y = torque.y * 1.0 / (2.0/5.0 * m * radius*radius);
+    angacc.z = torque.z * 1.0 / (2.0/5.0 * m * radius*radius);
 
     // Add gravity
     acc.x += devC_params.g[0];
@@ -69,46 +106,13 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
       // gravity to counteract segregation.
       // Particles may move in the z-dimension,
       // to allow for dilation.
-      acc.x = 0.0f;
-      acc.y = 0.0f;
+      acc.x = 0.0;
+      acc.y = 0.0;
       acc.z -= devC_params.g[2];
 
       // Zero the angular acceleration
       angacc = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
     } 
-
-    // Update angular velocity
-    angvel.x += angacc.x * dt;
-    angvel.y += angacc.y * dt;
-    angvel.z += angacc.z * dt;
-
-    // Update linear velocity
-    vel.x += acc.x * dt;
-    vel.y += acc.y * dt;
-    vel.z += acc.z * dt;
-
-    // Update position. First-order Euler's scheme:
-    //x.x += vel.x * dt;
-    //x.y += vel.y * dt;
-    //x.z += vel.z * dt;
-
-    // Update angular position. Second-order scheme based on Taylor expansion
-    // (greater accuracy than the first-order Euler's scheme)
-    angpos.x += angvel.x * dt + (angacc.x * dt*dt)/2.0f;
-    angpos.y += angvel.y * dt + (angacc.y * dt*dt)/2.0f;
-    angpos.z += angvel.z * dt + (angacc.z * dt*dt)/2.0f;
-
-    // Update position. Second-order scheme based on Taylor expansion 
-    // (greater accuracy than the first-order Euler's scheme)
-    x.x += vel.x * dt + (acc.x * dt*dt)/2.0f;
-    x.y += vel.y * dt + (acc.y * dt*dt)/2.0f;
-    x.z += vel.z * dt + (acc.z * dt*dt)/2.0f;
-
-    // Add x-displacement for this time step to 
-    // sum of x-displacements
-    //x.w += vel.x * dt + (acc.x * dt*dt)/2.0f;
-    xysum.x += vel.x * dt + (acc.x * dt*dt)/2.0f;
-    xysum.y += vel.y * dt + (acc.y * dt*dt)/2.0f;
 
 
     // Move particle across boundary if it is periodic
@@ -133,6 +137,8 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 
     // Store data in global memory at original, pre-sort positions
     dev_xysum[orig_idx] += xysum;
+    dev_acc[orig_idx]    = acc;
+    dev_angacc[orig_idx] = angacc;
     dev_angvel[orig_idx] = angvel;
     dev_vel[orig_idx]    = vel;
     dev_angpos[orig_idx] = angpos;
@@ -220,8 +226,10 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
     w_mvfd.y += acc * dt;
     
     // Update position. Second-order scheme based on Taylor expansion 
-    // (greater accuracy than the first-order Euler's scheme)
-    w_nx.w += w_mvfd.y * dt + (acc * dt*dt)/2.0f;
+    //w_nx.w += w_mvfd.y * dt + (acc * dt*dt)/2.0f;
+
+    // Update position. First-order Euler integration scheme
+    w_nx.w += w_mvfd.y * dt;
 
     // Store data in global memory
     dev_walls_nx[idx]   = w_nx;

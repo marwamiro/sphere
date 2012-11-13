@@ -2,7 +2,7 @@
 import math
 import numpy
 import matplotlib as mpl
-mpl.use('Agg')
+#mpl.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 import subprocess
@@ -17,9 +17,10 @@ class Spherebin:
   """
 
   # Constructor - Initialize arrays
-  def __init__(self, np=1, nd=3, nw=1):
+  def __init__(self, np = 1, nd = 3, nw = 1, sid = 'unnamed'):
     self.nd = numpy.ones(1, dtype=numpy.int32) * nd
     self.np = numpy.ones(1, dtype=numpy.uint32) * np
+    self.sid = sid
 
     # Time parameters
     self.time_dt         = numpy.zeros(1, dtype=numpy.float64)
@@ -66,7 +67,7 @@ class Spherebin:
     self.mu_ws    = numpy.ones(1, dtype=numpy.float64)
     self.mu_wd    = numpy.ones(1, dtype=numpy.float64)
     self.rho      = numpy.ones(1, dtype=numpy.float64) * 2600.0
-    self.contactmodel   = numpy.ones(1, dtype=numpy.uint32) * 2    # contactLinear default
+    self.contactmodel = numpy.ones(1, dtype=numpy.uint32) * 2    # contactLinear default
     self.kappa        = numpy.zeros(1, dtype=numpy.float64)
     self.db           = numpy.zeros(1, dtype=numpy.float64)
     self.V_b          = numpy.zeros(1, dtype=numpy.float64)
@@ -262,11 +263,12 @@ class Spherebin:
         fh.close()
 
   # Write binary data
-  def writebin(self, targetbin, verbose = True):
+  def writebin(self, folder = "../input/", verbose = True):
     """ Reads a target SPHERE binary file and returns data.
     """
     fh = None
     try:
+      targetbin = folder + "/" + self.sid + ".bin"
       if (verbose == True):
 	print("Output file: {0}".format(targetbin))
 
@@ -312,8 +314,6 @@ class Spherebin:
       fh.write(self.ev_dot.astype(numpy.float64))
       fh.write(self.ev.astype(numpy.float64))
       fh.write(self.p.astype(numpy.float64))
-
-
 
       fh.write(self.g.astype(numpy.float64))
       fh.write(self.k_n.astype(numpy.float64))
@@ -452,7 +452,8 @@ class Spherebin:
       print(" Grid: x={}, y={}, z={}".format(self.num[0], self.num[1], self.num[2]))
 
     # Put upper wall at top boundary
-    self.w_x[0] = self.L[0]
+    if (self.nw > 0):
+      self.w_x[0] = self.L[0]
 
 
   # Generate grid based on particle positions
@@ -760,8 +761,8 @@ class Spherebin:
 			  gamma_n = 0,
 			  gamma_t = 0,
 			  gamma_r = 0,
-			  gamma_wn = 1e3,
-			  gamma_wt = 1e3,
+			  gamma_wn = 1e4,
+			  gamma_wt = 1e4,
 			  capillaryCohesion = 0):
     """ Initialize particle parameters to default values.
         Radii must be set prior to calling this function.
@@ -950,12 +951,44 @@ class Spherebin:
 
     return porosity_grid
 
+  def run(self, verbose=True, hideinputfile=False):
+    """ Execute sphere with target project
+    """
+    quiet = ""
+    stdout = ""
+    if (verbose == False):
+      quiet = "-q"
+    if (hideinputfile == True):
+      stdout = " > /dev/null"
+    subprocess.call("cd ..; ./sphere_* " + quiet + " input/" + self.sid + ".bin " + stdout, shell=True)
+
+  def render(self,
+	     method = "pres",
+	     max_val = 1e3,
+	     graphicsformat = "png",
+	     verbose=True):
+    """ Render all output files that belong to the simulation, determined by sid.
+    """
+
+    quiet = ""
+    if (verbose == False):
+      quiet = "-q"
+
+    # Render images using sphere raytracer
+    subprocess.call("cd ..; ./sphere_* " + quiet + " --method " + method + " {}".format(max_val) + " --render output/" + self.sid + "*.bin", shell=True)
+
+    # Convert images to compressed format
+    convert()
+
+    
 def convert(graphicsformat = "png",
     	    folder = "../img_out"):
   """ Converts all PPM images in img_out to graphicsformat,
       using ImageMagick """
+  #quiet = " > /dev/null"
+  quiet = ""
   # Convert images
-  subprocess.call("for F in " + folder + "/*.ppm ; do BASE=`basename $F`; convert $F $F." + graphicsformat + " > /dev/null ; done", shell=True)
+  subprocess.call("for F in " + folder + "/*.ppm ; do BASE=`basename $F .ppm`; convert $F " + folder + "/$BASE." + graphicsformat + " " + quiet + " ; done", shell=True)
 
   # Remove PPM files
   subprocess.call("rm " + folder + "/*.ppm", shell=True)
@@ -1031,7 +1064,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
     # Read energy values from project binaries
     sb = Spherebin()
     for i in range(lastfile+1):
-      fn = "../output/{0}.output{1}.bin".format(project, i)
+      fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
       sb.readbin(fn, verbose = False)
 
       Epot[i] = sb.energy("pot")
@@ -1109,7 +1142,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
     # Read energy values from project binaries
     sb = Spherebin()
     for i in range(lastfile+1):
-      fn = "../output/{0}.output{1}.bin".format(project, i)
+      fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
       sb.readbin(fn, verbose = False)
 
       # Allocate arrays on first run
@@ -1155,7 +1188,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
     # Read stress values from project binaries
     for i in range(lastfile+1):
 
-      fn = "../output/{0}.output{1}.bin".format(project, i)
+      fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
       sb.readbin(fn, verbose = False)
 
       # First iteration: Allocate arrays and find constant values
@@ -1227,7 +1260,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
     else:
       plt.show()
 
-def run(project, verbose=True, hideinputfile=False):
+def run(binary, verbose=True, hideinputfile=False):
   """ Execute sphere with target project
   """
   quiet = ""
@@ -1236,7 +1269,7 @@ def run(project, verbose=True, hideinputfile=False):
     quiet = "-q"
   if (hideinputfile == True):
     stdout = " > /dev/null"
-  subprocess.call("cd ..; ./sphere_* " + quiet + " input/" + project + ".bin" + stdout, shell=True)
+  subprocess.call("cd ..; ./sphere_* " + quiet + " " + binary + " " + stdout, shell=True)
   
 def status(project):
   """ Check the status.dat file for the target project,

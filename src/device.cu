@@ -227,6 +227,11 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
 
   k.acc = new Float4[np];
   k.angacc = new Float4[np];
+#pragma omp parallel for if(np>100)
+  for (unsigned int i = 0; i<np; ++i) {
+    k.acc[i] = MAKE_FLOAT4(0.0, 0.0, 0.0, 0.0);
+    k.angacc[i] = MAKE_FLOAT4(0.0, 0.0, 0.0, 0.0);
+  }
 
   // Kinematics arrays
   cudaMalloc((void**)&dev_x, memSizeF4);
@@ -262,9 +267,10 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
   cudaMalloc((void**)&dev_cellStart, sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
   cudaMalloc((void**)&dev_cellEnd, sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
 
-    // Host contact bookkeeping arrays
+  // Host contact bookkeeping arrays
   k.contacts = new unsigned int[np*NC];
   // Initialize contacts lists to np
+#pragma omp parallel for if(np>100)
   for (unsigned int i=0; i<(np*NC); ++i)
     k.contacts[i] = np;
   k.distmod = new Float4[np*NC];
@@ -687,6 +693,8 @@ __host__ void DEM::startTime()
 				     dev_force,
 				     dev_torque, 
 				     dev_angpos,
+				     dev_acc,
+				     dev_angacc,
 				     dev_xysum,
 				     dev_gridParticleIndex);
     cudaThreadSynchronize();

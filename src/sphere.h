@@ -126,7 +126,8 @@ class DEM {
     // Constructor, some parameters with default values
     DEM(std::string inputbin, 
 	const int verbosity = 1,
-	const int checkVals = 1);
+	const int checkVals = 1,
+	const int dry = 0);
 
     // Destructor
     ~DEM(void);

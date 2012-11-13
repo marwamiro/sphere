@@ -13,7 +13,8 @@
 // and reports the values
 DEM::DEM(const std::string inputbin, 
     const int verbosity,
-    const int checkVals)
+    const int checkVals,
+    const int dry)
 : verbose(verbosity)
 {
   using std::cout;
@@ -36,8 +37,12 @@ DEM::DEM(const std::string inputbin,
     checkValues();
 
   // Report data values
-  if (verbose == 1)
+  if (dry == 1)
     reportValues();
+
+  // If this is a dry run, exit
+  if (dry == 1)
+    exit(1);
     
   // Initialize CUDA
   initializeGPU();

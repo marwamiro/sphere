@@ -485,8 +485,10 @@ __host__ void DEM::render(
 
 
     // Report color visualization method and color map range
-    cout << "  " << desc << " color map range: [0, " 
-      << maxval << "] " << unit << endl;
+    if (verbose == 1) {
+      cout << "  " << desc << " color map range: [0, " 
+	<< maxval << "] " << unit << endl;
+    }
 
     // Copy linarr to dev_linarr if required
     if (transfer == 1) {

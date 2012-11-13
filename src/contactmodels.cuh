@@ -183,7 +183,7 @@ __device__ void contactLinearViscous(Float3* F, Float3* T,
       } // f_n is OK! */
 
   // Normal force component: Elastic
-  //f_n = -k_n_ab * delta_ab * n_ab;
+  //f_n = -devC_params.k_n * delta_ab * n_ab;
 
   // Normal force component: Elastic - viscous damping
   f_n = (-devC_params.k_n * delta_ab - devC_params.gamma_n * vel_n_ab) * n_ab;
