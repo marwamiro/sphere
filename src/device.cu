@@ -237,10 +237,12 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
   cudaMalloc((void**)&dev_x, memSizeF4);
   cudaMalloc((void**)&dev_xysum, memSizeF4);
   cudaMalloc((void**)&dev_vel, memSizeF4);
+  cudaMalloc((void**)&dev_vel0, memSizeF4);
   cudaMalloc((void**)&dev_acc, memSizeF4);
   cudaMalloc((void**)&dev_force, memSizeF4);
   cudaMalloc((void**)&dev_angpos, memSizeF4);
   cudaMalloc((void**)&dev_angvel, memSizeF4);
+  cudaMalloc((void**)&dev_angvel0, memSizeF4);
   cudaMalloc((void**)&dev_angacc, memSizeF4);
   cudaMalloc((void**)&dev_torque, memSizeF4);
 
@@ -296,10 +298,12 @@ __host__ void DEM::freeGlobalDeviceMemory()
   cudaFree(dev_x);
   cudaFree(dev_xysum);
   cudaFree(dev_vel);
+  cudaFree(dev_vel0);
   cudaFree(dev_acc);
   cudaFree(dev_force);
   cudaFree(dev_angpos);
   cudaFree(dev_angvel);
+  cudaFree(dev_angvel0);
   cudaFree(dev_angacc);
   cudaFree(dev_torque);
 
@@ -352,6 +356,8 @@ __host__ void DEM::transferToGlobalDeviceMemory()
       sizeof(Float2)*np, cudaMemcpyHostToDevice);
   cudaMemcpy( dev_vel,      k.vel,
       memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_vel0,     k.vel,
+      memSizeF4, cudaMemcpyHostToDevice);
   cudaMemcpy( dev_acc,      k.acc, 
       memSizeF4, cudaMemcpyHostToDevice);
   cudaMemcpy( dev_force,    k.force,
@@ -359,6 +365,8 @@ __host__ void DEM::transferToGlobalDeviceMemory()
   cudaMemcpy( dev_angpos,   k.angpos,
       memSizeF4, cudaMemcpyHostToDevice);
   cudaMemcpy( dev_angvel,   k.angvel,
+      memSizeF4, cudaMemcpyHostToDevice);
+  cudaMemcpy( dev_angvel0,  k.angvel,
       memSizeF4, cudaMemcpyHostToDevice);
   cudaMemcpy( dev_angacc,   k.angacc,
       memSizeF4, cudaMemcpyHostToDevice);
@@ -695,6 +703,8 @@ __host__ void DEM::startTime()
 				     dev_angpos,
 				     dev_acc,
 				     dev_angacc,
+				     dev_vel0,
+				     dev_angvel0,
 				     dev_xysum,
 				     dev_gridParticleIndex);
     cudaThreadSynchronize();

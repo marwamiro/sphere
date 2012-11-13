@@ -11,6 +11,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 			  Float4* dev_x, Float4* dev_vel, Float4* dev_angvel, // Output
 			  Float4* dev_force, Float4* dev_torque, Float4* dev_angpos, // Input
 			  Float4* dev_acc, Float4* dev_angacc,
+			  Float4* dev_vel0, Float4* dev_angvel0,
 			  Float2* dev_xysum,
 			  unsigned int* dev_gridParticleIndex) // Input: Sorted-Unsorted key
 {
@@ -21,15 +22,17 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
     // Copy data to temporary arrays to avoid any potential read-after-write, 
     // write-after-read, or write-after-write hazards. 
     unsigned int orig_idx = dev_gridParticleIndex[idx];
-    Float4 force  = dev_force[orig_idx];
-    Float4 torque = dev_torque[orig_idx];
-    Float4 angpos = dev_angpos[orig_idx];
-    Float4 acc    = dev_acc[orig_idx];
-    Float4 angacc = dev_angacc[orig_idx];
-    Float4 x      = dev_x_sorted[idx];
-    Float4 vel    = dev_vel_sorted[idx];
-    Float4 angvel = dev_angvel_sorted[idx];
-    Float  radius = x.w;
+    Float4 force   = dev_force[orig_idx];
+    Float4 torque  = dev_torque[orig_idx];
+    Float4 angpos  = dev_angpos[orig_idx];
+    Float4 acc     = dev_acc[orig_idx];
+    Float4 angacc  = dev_angacc[orig_idx];
+    Float4 vel0    = dev_vel0[orig_idx];
+    Float4 angvel0 = dev_angvel0[orig_idx];
+    Float4 x       = dev_x_sorted[idx];
+    Float4 vel     = dev_vel_sorted[idx];
+    Float4 angvel  = dev_angvel_sorted[idx];
+    Float  radius  = x.w;
 
     Float2 xysum  = MAKE_FLOAT2(0.0f, 0.0f);
 
@@ -41,47 +44,6 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 
     // Particle mass
     Float m = 4.0/3.0 * PI * radius*radius*radius * rho;
-
-#if 0
-    //// First-order Euler integration scheme ///
-    // Update angular position
-    angpos.x += angvel.x * dt;
-    angpos.y += angvel.y * dt;
-    angpos.z += angvel.z * dt;
-
-    // Update position
-    x.x += vel.x * dt;
-    x.y += vel.y * dt;
-    x.z += vel.z * dt;
-#else 
-    
-    /// Second-order scheme based on Taylor expansion ///
-    // Update angular position
-    angpos.x += angvel.x * dt + angacc.x * dt*dt * 0.5;
-    angpos.y += angvel.y * dt + angacc.y * dt*dt * 0.5;
-    angpos.z += angvel.z * dt + angacc.z * dt*dt * 0.5;
-
-    // Update position
-    x.x += vel.x * dt + acc.x * dt*dt * 0.5;
-    x.y += vel.y * dt + acc.y * dt*dt * 0.5;
-    x.z += vel.z * dt + acc.z * dt*dt * 0.5;
-#endif
-
-    // Update angular velocity
-    angvel.x += angacc.x * dt;
-    angvel.y += angacc.y * dt;
-    angvel.z += angacc.z * dt;
-
-    // Update linear velocity
-    vel.x += acc.x * dt;
-    vel.y += acc.y * dt;
-    vel.z += acc.z * dt;
-
-    // Add x-displacement for this time step to 
-    // sum of x-displacements
-    //x.w += vel.x * dt + (acc.x * dt*dt)/2.0f;
-    xysum.x += vel.x * dt;
-    xysum.y += vel.y * dt;// + (acc.y * dt*dt * 0.5f;
 
     // Update linear acceleration of particle
     acc.x = force.x / m;
@@ -132,17 +94,95 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 	x.x -= L.x;
     }
 
+
+    //// Half-step leapfrog Verlet integration scheme ////
+    // Update half-step linear velocities
+    vel0.x += acc.x * dt;
+    vel0.y += acc.y * dt;
+    vel0.z += acc.z * dt;
+
+    // Update half-step angular velocities
+    angvel0.x += angacc.x * dt;
+    angvel0.y += angacc.y * dt;
+    angvel0.z += angacc.z * dt;
+
+    // Update positions
+    x.x += vel0.x * dt;
+    x.y += vel0.y * dt;
+    x.z += vel0.z * dt;
+
+    // Update angular positions
+    angpos.x += angvel0.x * dt;
+    angpos.y += angvel0.y * dt;
+    angpos.z += angvel0.z * dt;
+
+    // Update full-step linear velocity
+    vel.x = vel0.x + 0.5 * acc.x * dt;
+    vel.y = vel0.y + 0.5 * acc.x * dt;
+    vel.z = vel0.z + 0.5 * acc.x * dt;
+
+    // Update full-step angular velocity
+    angvel.x = angvel0.x + 0.5 * angacc.x * dt;
+    angvel.y = angvel0.y + 0.5 * angacc.x * dt;
+    angvel.z = angvel0.z + 0.5 * angacc.x * dt;
+
+    /*
+    //// First-order Euler integration scheme ///
+    // Update angular position
+    angpos.x += angvel.x * dt;
+    angpos.y += angvel.y * dt;
+    angpos.z += angvel.z * dt;
+
+    // Update position
+    x.x += vel.x * dt;
+    x.y += vel.y * dt;
+    x.z += vel.z * dt;
+    */
+
+    /*
+    /// Second-order scheme based on Taylor expansion ///
+    // Update angular position
+    angpos.x += angvel.x * dt + angacc.x * dt*dt * 0.5;
+    angpos.y += angvel.y * dt + angacc.y * dt*dt * 0.5;
+    angpos.z += angvel.z * dt + angacc.z * dt*dt * 0.5;
+
+    // Update position
+    x.x += vel.x * dt + acc.x * dt*dt * 0.5;
+    x.y += vel.y * dt + acc.y * dt*dt * 0.5;
+    x.z += vel.z * dt + acc.z * dt*dt * 0.5;
+    */
+
+    /*
+    // Update angular velocity
+    angvel.x += angacc.x * dt;
+    angvel.y += angacc.y * dt;
+    angvel.z += angacc.z * dt;
+
+    // Update linear velocity
+    vel.x += acc.x * dt;
+    vel.y += acc.y * dt;
+    vel.z += acc.z * dt;
+    */
+
+    // Add x-displacement for this time step to 
+    // sum of x-displacements
+    //x.w += vel.x * dt + (acc.x * dt*dt)/2.0f;
+    xysum.x += vel.x * dt;
+    xysum.y += vel.y * dt;// + (acc.y * dt*dt * 0.5f;
+
     // Hold threads for coalesced write
     __syncthreads();
 
     // Store data in global memory at original, pre-sort positions
-    dev_xysum[orig_idx] += xysum;
-    dev_acc[orig_idx]    = acc;
-    dev_angacc[orig_idx] = angacc;
-    dev_angvel[orig_idx] = angvel;
-    dev_vel[orig_idx]    = vel;
-    dev_angpos[orig_idx] = angpos;
-    dev_x[orig_idx]      = x;
+    dev_xysum[orig_idx]  += xysum;
+    dev_acc[orig_idx]     = acc;
+    dev_angacc[orig_idx]  = angacc;
+    dev_angvel[orig_idx]  = angvel;
+    dev_angvel0[orig_idx] = angvel0;
+    dev_vel[orig_idx]     = vel;
+    dev_vel0[orig_idx]    = vel0;
+    dev_angpos[orig_idx]  = angpos;
+    dev_x[orig_idx]       = x;
   } 
 } // End of integrate(...)
 

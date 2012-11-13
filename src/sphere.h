@@ -54,10 +54,12 @@ class DEM {
     Float4 *dev_x;
     Float2 *dev_xysum;
     Float4 *dev_vel;
+    Float4 *dev_vel0;
     Float4 *dev_acc;
     Float4 *dev_force;
     Float4 *dev_angpos;
     Float4 *dev_angvel;
+    Float4 *dev_angvel0;
     Float4 *dev_angacc;
     Float4 *dev_torque;
     unsigned int *dev_contacts;
