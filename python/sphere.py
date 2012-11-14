@@ -743,7 +743,8 @@ class Spherebin:
 
     # Computational time step (O'Sullivan et al, 2003)
     #self.time_dt[0] = 0.17 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amax([self.k_n[:], self.k_t[:]]) )
-    self.time_dt[0] = 0.12 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amax([self.k_n[:], self.k_t[:]]) )
+    # Computational time step (Zhang and Campbell, 1992)
+    self.time_dt[0] = 0.075 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amax([self.k_n[:], self.k_t[:]]) )
     
     # Time at start
     self.time_current[0] = current
