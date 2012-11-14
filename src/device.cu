@@ -41,6 +41,7 @@ __host__ void DEM::initializeGPU(void)
   int cudaDriverVersion;
   int cudaRuntimeVersion;
 
+  checkForCudaErrors("Before initializing CUDA device");
 
   // Register number of devices
   cudaGetDeviceCount(&devicecount);
@@ -72,9 +73,9 @@ __host__ void DEM::initializeGPU(void)
   }
 
   // Comment following line when using a system only containing exclusive mode GPUs
-  cudaChooseDevice(&cudadevice, &prop); 
+  //cudaChooseDevice(&cudadevice, &prop); 
 
-  checkForCudaErrors("After initializing CUDA device");
+  checkForCudaErrors("While initializing CUDA device");
 }
 
 // Start timer for kernel profiling
@@ -331,6 +332,7 @@ __host__ void DEM::freeGlobalDeviceMemory()
   cudaFree(dev_walls_mvfd);
   cudaFree(dev_walls_force_partial);
   cudaFree(dev_walls_force_pp);
+  checkForCudaErrors("During cudaFree calls");
 
   if (verbose == 1)
     printf("Done\n");

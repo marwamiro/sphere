@@ -517,8 +517,12 @@ __host__ void DEM::render(
 
   // Free dynamically allocated global device memory
   rt_freeGlobalDeviceMemory();
-  delete[] linarr;
-  cudaFree(dev_linarr);
+  checkForCudaErrors("after rt_freeGlobalDeviceMemory");
+  if (transfer == 1) {
+    delete[] linarr;
+    cudaFree(dev_linarr);
+    checkForCudaErrors("When calling cudaFree(dev_linarr)");
+  }
 
   //cudaPrintfDisplay(stdout, true);
 

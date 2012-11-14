@@ -66,7 +66,7 @@ INCLUDES+=-I. -I$(SDKPATH)/shared/inc -I$(SDKPATH)/inc -I$(CUDA_INSTALL_PATH)/in
 LDFLAGS+=-L$(CUDA_INSTALL_PATH)/lib
 LDFLAGS+=-L$(SDKPATH)/../../shared/lib -L$(SDKPATH)/../lib 
 LDFLAGS+=-lcutil_x86_64 -lcuda -lcudart
-LDFLAGS+=-fopenmp
+LDFLAGS+=-fopenmp 
 
 #all: $(CCFILES) $(CUFILES) $(EXECUTABLE) raytracer
 all: $(CCFILES) $(CUFILES) $(EXECUTABLE) folders

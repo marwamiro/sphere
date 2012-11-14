@@ -19,7 +19,6 @@
 #include "datatypes.h"
 #include "sphere.h"
 
-
 //////////////////
 // MAIN ROUTINE //
 //////////////////
@@ -128,6 +127,7 @@ int main(const int argc, const char *argv[])
       // Otherwise, start iterating through time
       else
 	dem.startTime();
+
     }
   }
 
