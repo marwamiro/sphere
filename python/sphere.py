@@ -89,58 +89,58 @@ class Spherebin:
     # whether the values are identical
     def __cmp__(self, other):
         if ( (\
-            self.nd == other.nd and\
-            self.np == other.np and\
-            self.time_dt == other.time_dt and\
-            self.time_current == other.time_current and\
-            self.time_total == other.time_total and\
-            self.time_file_dt == other.time_file_dt and\
-            self.time_step_count == other.time_step_count and\
-            (self.origo == other.origo).all() and\
-            (self.L == other.L).all() and\
-            (self.num == other.num).all() and\
-            self.periodic == other.periodic and\
-            (self.x == other.x).all() and\
-            (self.radius == other.radius).all() and\
-            (self.xysum == other.xysum).all() and\
-            (self.vel == other.vel).all() and\
-            (self.fixvel == other.fixvel).all() and\
-            (self.force == other.force).all() and\
-            (self.angpos == other.angpos).all() and\
-            (self.angvel == other.angvel).all() and\
-            (self.torque == other.torque).all() and\
-            (self.es_dot == other.es_dot).all() and\
-            (self.es == other.es).all() and\
-            (self.ev_dot == other.ev_dot).all() and\
-            (self.ev == other.ev).all() and\
-            (self.p == other.p).all() and\
-            (self.g == other.g).all() and\
-            self.k_n == other.k_n and\
-            self.k_t == other.k_t and\
-            self.k_r == other.k_r and\
-            self.gamma_n == other.gamma_n and\
-            self.gamma_t == other.gamma_t and\
-            self.gamma_r == other.gamma_r and\
-            self.mu_s == other.mu_s and\
-            self.mu_d == other.mu_d and\
-            self.mu_r == other.mu_r and\
-            self.rho == other.rho and\
-            self.contactmodel == other.contactmodel and\
-            self.kappa == other.kappa and\
-            self.db == other.db and\
-            self.V_b == other.V_b and\
-            self.nw == other.nw and\
-            (self.wmode == other.wmode).all() and\
-            (self.w_n == other.w_n).all() and\
-            (self.w_x == other.w_x).all() and\
-            (self.w_m == other.w_m).all() and\
-            (self.w_vel == other.w_vel).all() and\
-            (self.w_force == other.w_force).all() and\
-            (self.w_devs == other.w_devs).all() and\
-            self.gamma_wn == other.gamma_wn and\
-            self.gamma_wt == other.gamma_wt\
-            ).all() == True):
-                return 0 # All equal
+                self.nd == other.nd and\
+                self.np == other.np and\
+                self.time_dt == other.time_dt and\
+                self.time_current == other.time_current and\
+                self.time_total == other.time_total and\
+                self.time_file_dt == other.time_file_dt and\
+                self.time_step_count == other.time_step_count and\
+                (self.origo == other.origo).all() and\
+                (self.L == other.L).all() and\
+                (self.num == other.num).all() and\
+                self.periodic == other.periodic and\
+                (self.x == other.x).all() and\
+                (self.radius == other.radius).all() and\
+                (self.xysum == other.xysum).all() and\
+                (self.vel == other.vel).all() and\
+                (self.fixvel == other.fixvel).all() and\
+                (self.force == other.force).all() and\
+                (self.angpos == other.angpos).all() and\
+                (self.angvel == other.angvel).all() and\
+                (self.torque == other.torque).all() and\
+                (self.es_dot == other.es_dot).all() and\
+                (self.es == other.es).all() and\
+                (self.ev_dot == other.ev_dot).all() and\
+                (self.ev == other.ev).all() and\
+                (self.p == other.p).all() and\
+                (self.g == other.g).all() and\
+                self.k_n == other.k_n and\
+                self.k_t == other.k_t and\
+                self.k_r == other.k_r and\
+                self.gamma_n == other.gamma_n and\
+                self.gamma_t == other.gamma_t and\
+                self.gamma_r == other.gamma_r and\
+                self.mu_s == other.mu_s and\
+                self.mu_d == other.mu_d and\
+                self.mu_r == other.mu_r and\
+                self.rho == other.rho and\
+                self.contactmodel == other.contactmodel and\
+                self.kappa == other.kappa and\
+                self.db == other.db and\
+                self.V_b == other.V_b and\
+                self.nw == other.nw and\
+                (self.wmode == other.wmode).all() and\
+                (self.w_n == other.w_n).all() and\
+                (self.w_x == other.w_x).all() and\
+                (self.w_m == other.w_m).all() and\
+                (self.w_vel == other.w_vel).all() and\
+                (self.w_force == other.w_force).all() and\
+                (self.w_devs == other.w_devs).all() and\
+                self.gamma_wn == other.gamma_wn and\
+                self.gamma_wt == other.gamma_wt\
+                ).all() == True):
+                    return 0 # All equal
         else :
             return 1
 
@@ -182,13 +182,13 @@ class Spherebin:
             self.ev_dot  = numpy.zeros(self.np, dtype=numpy.float64)
             self.ev       = numpy.zeros(self.np, dtype=numpy.float64)
             self.p       = numpy.zeros(self.np, dtype=numpy.float64)
-  
+
             # Read remaining data from binary
             self.origo    = numpy.fromfile(fh, dtype=numpy.float64, count=self.nd)
             self.L        = numpy.fromfile(fh, dtype=numpy.float64, count=self.nd)
             self.num      = numpy.fromfile(fh, dtype=numpy.uint32, count=self.nd)
             self.periodic = numpy.fromfile(fh, dtype=numpy.int32, count=1)
-  
+
             # Per-particle vectors
             for i in range(self.np):
                 self.x[i,:]    = numpy.fromfile(fh, dtype=numpy.float64, count=self.nd)
@@ -199,7 +199,7 @@ class Spherebin:
             for i in range(self.np):
                 self.vel[i,:]  = numpy.fromfile(fh, dtype=numpy.float64, count=self.nd)
                 self.fixvel[i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-  
+
             self.force = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
 
             self.angpos = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
@@ -259,7 +259,7 @@ class Spherebin:
 
         finally:
             if fh is not None:
-                 fh.close()
+                fh.close()
 
     # Write binary data
     def writebin(self, folder = "../input/", verbose = True):
@@ -353,9 +353,9 @@ class Spherebin:
                 fh.close()
 
     def generateRadii(self, psd = 'logn',
-          radius_mean = 440e-6,
-          radius_variance = 8.8e-9,
-          histogram = True):
+            radius_mean = 440e-6,
+            radius_variance = 8.8e-9,
+            histogram = True):
         """ Draw random particle radii from the selected probability distribution.
             Specify mean radius and variance. The variance should be kept at a
             very low value.
@@ -376,10 +376,10 @@ class Spherebin:
             figtitle = 'Particle size distribution, {0} particles'.format(self.np[0])
             fig.text(0.5,0.95,figtitle,horizontalalignment='center',fontproperties=FontProperties(size=18))
             bins = 20
-            
+
             # Create histogram
             plt.hist(self.radius, bins)
-            
+
             # Plot
             plt.xlabel('Radii [m]')
             plt.ylabel('Count')
@@ -391,9 +391,9 @@ class Spherebin:
     # Initialize particle positions to completely random, non-overlapping configuration.
     # This method is very compute intensive at high particle numbers.
     def initRandomPos(self, g = numpy.array([0.0, 0.0, -9.80665]), 
-          gridnum = numpy.array([12, 12, 36]),
-          periodic = 1,
-          contactmodel = 2):
+            gridnum = numpy.array([12, 12, 36]),
+            periodic = 1,
+            contactmodel = 2):
         """ Initialize particle positions in loose, cubic configuration.
             Radii must be set beforehand.
             xynum is the number of rows in both x- and y- directions.
@@ -418,14 +418,14 @@ class Spherebin:
                 # Draw random position
                 for d in range(self.nd):
                     self.x[i,d] = (self.L[d] - self.origo[d] - 2*r_max) \
-                        * numpy.random.random_sample() \
-                        + self.origo[d] + r_max
+                            * numpy.random.random_sample() \
+                            + self.origo[d] + r_max
 
                 # Check other particles for overlaps
                 for j in range(i-1):
                     delta = self.x[i] - self.x[j]
                     delta_len = math.sqrt(numpy.dot(delta,delta)) \
-                      - (self.radius[i] + self.radius[j])
+                            - (self.radius[i] + self.radius[j])
                     if (delta_len < 0.0):
                         overlaps = True
             print "\rFinding non-overlapping particle positions, {0} % complete".format(numpy.ceil(i/self.np[0]*100)),
@@ -479,11 +479,11 @@ class Spherebin:
         self.origo = numpy.array([numpy.amin(self.x[:,0] - self.radius[:]),
             numpy.amin(self.x[:,1] - self.radius[:]),
             numpy.amin(self.x[:,2] - self.radius[:])]) \
-                - margin*r_max
+                    - margin*r_max
         self.L = numpy.array([numpy.amax(self.x[:,0] + self.radius[:]),
             numpy.amax(self.x[:,1] + self.radius[:]),
             numpy.amax(self.x[:,2] + self.radius[:])]) \
-                + margin*r_max
+                    + margin*r_max
 
         cellsize_min = 2.1 * r_max    
         self.num[0] = numpy.ceil((self.L[0]-self.origo[0])/cellsize_min)
@@ -542,7 +542,7 @@ class Spherebin:
             gridpos[0] = (i % (self.num[0]))
             gridpos[1] = numpy.floor(i/(self.num[0])) % (self.num[0])
             gridpos[2] = numpy.floor(i/((self.num[0])*(self.num[1]))) #\
-            #% ((self.num[0])*(self.num[1]))
+                    #% ((self.num[0])*(self.num[1]))
 
             for d in range(self.nd):
                 self.x[i,d] = gridpos[d] * cellsize + 0.5*cellsize
@@ -601,7 +601,7 @@ class Spherebin:
             for d in range(self.nd):
                 r = self.radius[i]*1.05
                 self.x[i,d] = gridpos[d] * cellsize \
-                    + ((cellsize-r) - r) * numpy.random.random_sample() + r
+                        + ((cellsize-r) - r) * numpy.random.random_sample() + r
 
         self.contactmodel[0] = contactmodel
 
@@ -790,8 +790,8 @@ class Spherebin:
         # Contact normal viscosity. Critical damping: 2*sqrt(m*k_n).
         # Normal force component elastic if nu = 0.0.
         #self.gamma_n = numpy.ones(self.np, dtype=numpy.float64) \
-        #          * nu_frac * 2.0 * math.sqrt(4.0/3.0 * math.pi * numpy.amin(self.radius)**3 \
-        #          * self.rho[0] * self.k_n[0])
+                #          * nu_frac * 2.0 * math.sqrt(4.0/3.0 * math.pi * numpy.amin(self.radius)**3 \
+                #          * self.rho[0] * self.k_n[0])
         self.gamma_n = numpy.ones(1, dtype=numpy.float64) * gamma_n
 
         # Contact shear viscosity, Ns/m
@@ -847,7 +847,7 @@ class Spherebin:
             esum = 0.0
             for i in range(self.np):
                 esum += 0.5 * 2.0/5.0 * m[i] * self.radius[i]**2 \
-                  * math.sqrt(numpy.dot(self.angvel[i,:],self.angvel[i,:]))**2
+                        * math.sqrt(numpy.dot(self.angvel[i,:],self.angvel[i,:]))**2
             return esum
 
         elif method == 'shear':
@@ -953,7 +953,7 @@ class Spherebin:
                                 floor(iy/precisionfactor), \
                                 floor(iz/precisionfactor) ] -= Vc_fine
 
-        return porosity_grid
+                        return porosity_grid
 
 
     def run(self, verbose=True, hideinputfile=False):
@@ -1040,14 +1040,14 @@ def video(project,
         loglevel = "error"
 
     subprocess.call(\
-          "ffmpeg -qscale {0} -r {1} -b {2} -y ".format(qscale, fps, bitrate) \
-          + "-loglevel " + loglevel + " " \
-          + "-i " + graphics_folder + project + ".output%d." + graphics_format + " " \
-          + out_folder + "/" + project + "." + video_format, shell=True)
+            "ffmpeg -qscale {0} -r {1} -b {2} -y ".format(qscale, fps, bitrate) \
+            + "-loglevel " + loglevel + " " \
+            + "-i " + graphics_folder + project + ".output%d." + graphics_format + " " \
+            + out_folder + "/" + project + "." + video_format, shell=True)
 
 
-def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
-    """ Visualize output from the target project,
+    def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
+        """ Visualize output from the target project,
     where the temporal progress is of interest.
     """
 
@@ -1251,9 +1251,9 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             for i in range(lastfile+1):
                 # format: shear distance [mm], sigma [kPa], tau [kPa], Dilation [%]
                 fh.write("{0}\t{1}\t{2}\t{3}\n".format(xdisp[i]*1000.0,
-                sigma[i]/1000.0,
-                tau[i]/1000.0,
-                dilation[i]/L*100.0))
+                    sigma[i]/1000.0,
+                    tau[i]/1000.0,
+                    dilation[i]/L*100.0))
         except (EnvironmentError, ValueError) as err:
             print("{0}: export error: {1}".format(os.path.basename(sys.argv[0]), err))
         finally :
