@@ -2,7 +2,7 @@
 import math
 import numpy
 import matplotlib as mpl
-#mpl.use('Agg')
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 import subprocess
@@ -752,9 +752,9 @@ class Spherebin:
     self.time_file_dt[0] = file_dt
     self.time_step_count[0] = 0
 
-  def defaultParams(self, ang_s = 28,
-      			  ang_d = 28,
-      			  ang_r = 0,
+  def defaultParams(self, mu_s = 0.6,
+      			  mu_d = 0.6,
+      			  mu_r = 0,
 			  rho = 2600,
 			  k_n = 1.16e9,
 			  k_t = 1.16e9,
@@ -797,13 +797,16 @@ class Spherebin:
     self.gamma_r = numpy.ones(1, dtype=numpy.float64) * gamma_r
 
     # Contact static shear friction coefficient
-    self.mu_s = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_s))
+    #self.mu_s = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_s))
+    self.mu_s = numpy.ones(1, dtype=numpy.float64) * mu_s
 
     # Contact dynamic shear friction coefficient
-    self.mu_d = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_d))
+    #self.mu_d = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_d))
+    self.mu_d = numpy.ones(1, dtype=numpy.float64) * mu_d
 
     # Contact rolling friction coefficient
-    self.mu_r = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_r))
+    #self.mu_r = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_r))
+    self.mu_r = numpy.ones(1, dtype=numpy.float64) * mu_r
 
     # Wall viscosities
     self.gamma_wn[0] = gamma_wn # normal
