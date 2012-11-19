@@ -16,6 +16,8 @@
 #include "constants.cuh"
 #include "debug.h"
 
+//#include "cuPrintf.cu"
+
 #include "sorting.cuh"	
 #include "contactmodels.cuh"
 #include "cohesion.cuh"
@@ -23,7 +25,6 @@
 #include "integration.cuh"
 #include "raytracer.cuh"
 
-//#include "cuPrintf.cu"
 
 // Wrapper function for initializing the CUDA components.
 // Called from main.cpp
@@ -148,7 +149,6 @@ __global__ void checkConstantValues(int* dev_equal,
 __host__ void DEM::checkConstantMemory()
 {
 
-  //cudaPrintfInit();
 
   // Allocate space in global device memory
   Grid* dev_grid;
@@ -177,7 +177,6 @@ __host__ void DEM::checkConstantMemory()
   cudaFree(dev_params);
   cudaFree(dev_equal);
 
-  //cudaPrintfDisplay(stdout, true);
 
   // Are the values equal?
   if (*equal != 0) {
@@ -657,6 +656,7 @@ __host__ void DEM::startTime()
       checkForCudaErrors("Post topology: One or more particles moved outside the grid.\nThis could possibly be caused by a numerical instability.\nIs the computational time step too large?", iter);
     }
 
+    //cudaPrintfInit();
 
     // For each particle: Process collisions and compute resulting forces.
     if (PROFILING == 1)
@@ -687,9 +687,11 @@ __host__ void DEM::startTime()
 
     // Synchronization point
     cudaThreadSynchronize();
+    //cudaPrintfDisplay(stdout, true);
     if (PROFILING == 1)
       stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_interact);
     checkForCudaErrors("Post interact - often caused if particles move outside the grid", iter);
+
 
     // Update particle kinematics
     if (PROFILING == 1)

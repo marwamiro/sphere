@@ -118,13 +118,13 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
 
     // Update full-step linear velocity
     vel.x = vel0.x + 0.5 * acc.x * dt;
-    vel.y = vel0.y + 0.5 * acc.x * dt;
-    vel.z = vel0.z + 0.5 * acc.x * dt;
+    vel.y = vel0.y + 0.5 * acc.y * dt;
+    vel.z = vel0.z + 0.5 * acc.z * dt;
 
     // Update full-step angular velocity
     angvel.x = angvel0.x + 0.5 * angacc.x * dt;
-    angvel.y = angvel0.y + 0.5 * angacc.x * dt;
-    angvel.z = angvel0.z + 0.5 * angacc.x * dt;
+    angvel.y = angvel0.y + 0.5 * angacc.y * dt;
+    angvel.z = angvel0.z + 0.5 * angacc.z * dt;
 
     /*
     //// First-order Euler integration scheme ///
