@@ -254,6 +254,32 @@ __device__ void contactLinearViscous(Float3* F, Float3* T,
 
 
 // Linear elastic contact model for particle-particle interactions
+/*__device__ void contactLinear_bck(Float3* F, Float3* T, 
+    			      Float* es_dot, Float* ev_dot, Float* p,
+			      unsigned int idx_a_orig,
+			      unsigned int idx_b_orig, 
+			      Float4  vel_a, 
+			      Float4* dev_vel,
+			      Float3  angvel_a,
+			      Float4* dev_angvel,
+			      Float radius_a, Float radius_b, 
+			      Float3 x_ab, Float x_ab_length, 
+			      Float delta_ab, Float4* dev_delta_t,
+			      unsigned int mempos) 
+{
+  Float4 vel_b = dev_vel[idx_b_orig];
+  Float4 angvel4_b = dev_vel[idx_b_orig];
+
+  // Fe
+  
+  
+  
+  
+}*/
+
+
+
+// Linear elastic contact model for particle-particle interactions
 __device__ void contactLinear(Float3* F, Float3* T, 
     			      Float* es_dot, Float* ev_dot, Float* p,
 			      unsigned int idx_a_orig,
@@ -364,12 +390,18 @@ __device__ void contactLinear(Float3* F, Float3* T,
   f_t   = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
   //T_res = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
 
+  //cuPrintf("mu_s = %f\n", devC_params.mu_s);
+
   // Apply a tangential force if the previous tangential displacement
   // is non-zero, or the current sliding velocity is non-zero.
   if (delta_t0_length > 0.0 || vel_t_ab_length > 0.0) {
 
+    // Add tangential displacement to total tangential displacement
+    delta_t = delta_t0 + vel_t_ab * devC_dt;
+
     // Tangential force: Visco-Elastic, before limitation criterion
-    Float3 f_t_elast = -devC_params.k_t * delta_t0;
+    //Float3 f_t_elast = -devC_params.k_t * delta_t0;
+    Float3 f_t_elast = -devC_params.k_t * delta_t;
     Float3 f_t_visc  = -devC_params.gamma_t * vel_t_ab;
     f_t = f_t_elast + f_t_visc;
     Float f_t_length = length(f_t);
@@ -377,14 +409,17 @@ __device__ void contactLinear(Float3* F, Float3* T,
     // Static frictional limit
     Float f_t_limit = devC_params.mu_s * length(f_n-f_c);
     
+
     // If failure criterion is not met, contact is viscous-linear elastic.
     // If failure criterion is met, contact force is limited, 
     // resulting in a slip and energy dissipation
     if (f_t_length > f_t_limit) { // Static friciton exceeded: Dynamic case
+
+      //cuPrintf("slip! %f > %f\n", f_t_length, f_t_limit);
       
       // Frictional force is reduced to equal the dynamic limit
-      //f_t *= (devC_params.mu_d * length(f_n-f_c))/f_t_length;
-      f_t = -devC_params.mu_d * length(f_n - f_c) * delta_t0/length(delta_t0);
+      f_t *= (devC_params.mu_d * length(f_n-f_c))/f_t_length;
+      //f_t = f_t * (devC_params.mu_d * f_n_length)/f_t;
 
       // A slip event zeros the displacement vector
       //delta_t = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
@@ -395,6 +430,8 @@ __device__ void contactLinear(Float3* F, Float3* T,
       //delta_t = -1.0f/devC_params.k_t * (f_t + devC_params.gamma_t * vel_t_ab);
       //delta_t = -1.0f/devC_params.k_t * f_t;
       delta_t = -1.0/devC_params.k_t * f_t + devC_params.gamma_t * vel_t_ab;
+      //delta_t = devC_params.k_t * f_t_limit * vel_t_ab/vel_t_ab_length
+	//+ devC_params.gamma_t * vel_t_ab;
 
       // Shear friction heat production rate: 
       // The energy lost from the tangential spring is dissipated as heat
@@ -403,14 +440,16 @@ __device__ void contactLinear(Float3* F, Float3* T,
       *es_dot += length(length(f_t) * vel_t_ab * devC_dt) / devC_dt; // Seen in ESyS-Particle
       //*es_dot += fabs(dot(delta_t0 - delta_t, f_t)) / devC_dt; 
 
-    } else { // Static case
+    } //else { // Static case
+      //cuPrintf("no slip: %f < %f\n", f_t_length, f_t_limit);
 
       // No correction of f_t is required
 
       // Add tangential displacement to total tangential displacement
-      delta_t = delta_t0 + vel_t_ab * devC_dt;
-    }
+      //delta_t = delta_t0 + vel_t_ab * devC_dt;
+    //}
   }
+
 
   //if (angvel_ab_length > 0.f) {
     // Apply rolling resistance (Zhou et al. 1999)
@@ -426,7 +465,6 @@ __device__ void contactLinear(Float3* F, Float3* T,
   //}
 
   // Add force components from this collision to total force for particle
-  //*F += f_n + f_t + f_c; 
   *F += f_n + f_t + f_c;
   // Add torque components from this collision to total torque for particle
   // Comment out the line below to disable rotation

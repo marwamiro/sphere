@@ -16,7 +16,7 @@
 #include "constants.cuh"
 #include "debug.h"
 
-//#include "cuPrintf.cu"
+#include "cuPrintf.cu"
 
 #include "sorting.cuh"	
 #include "contactmodels.cuh"
