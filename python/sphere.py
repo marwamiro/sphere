@@ -1050,8 +1050,8 @@ def video(project,
             + out_folder + "/" + project + "." + video_format, shell=True)
 
 
-    def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
-        """ Visualize output from the target project,
+def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
+    """ Visualize output from the target project,
     where the temporal progress is of interest.
     """
 
