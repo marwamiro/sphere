@@ -289,8 +289,8 @@ __device__ void contactLinear(Float3* F, Float3* T,
 			      Float3  angvel_a,
 			      Float4* dev_angvel,
 			      Float radius_a, Float radius_b, 
-			      Float3 x_ab, Float x_ab_length, 
-			      Float delta_ab, Float4* dev_delta_t,
+			      Float3 x, Float x_length, 
+			      Float delta, Float4* dev_delta_t,
 			      unsigned int mempos) 
 {
 
@@ -317,10 +317,10 @@ __device__ void contactLinear(Float3* F, Float3* T,
   //Float3 T_res;
 
   // Normal vector of contact
-  Float3 n_ab = x_ab / x_ab_length;
+  Float3 n = x / x_length;
 
   // Relative contact interface velocity, w/o rolling
-  Float3 vel_ab_linear = MAKE_FLOAT3(
+  Float3 vel_linear = MAKE_FLOAT3(
       vel_a.x - vel_b.x, 
       vel_a.y - vel_b.y, 
       vel_a.z - vel_b.z);
@@ -328,31 +328,28 @@ __device__ void contactLinear(Float3* F, Float3* T,
   // Relative contact interface velocity of particle surfaces at
   // the contact, with rolling (Hinrichsen and Wolf 2004, eq. 13.10,
   // or Luding 2008, eq. 10)
-  Float3 vel_ab = vel_ab_linear
-    + (radius_a + delta_ab/2.0) * cross(n_ab, angvel_a)
-    + (radius_b + delta_ab/2.0) * cross(n_ab, angvel_b);
+  Float3 vel = vel_linear
+    + (radius_a + delta/2.0) * cross(n, angvel_a)
+    + (radius_b + delta/2.0) * cross(n, angvel_b);
 
   // Relative contact interface rolling velocity
-  Float3 angvel_ab = angvel_a - angvel_b;
-  Float  angvel_ab_length = length(angvel_ab);
+  Float3 angvel = angvel_a - angvel_b;
+  Float  angvel_length = length(angvel);
 
   // Normal component of the relative contact interface velocity
-  Float vel_n_ab = dot(vel_ab_linear, n_ab);
-  //cuPrintf("vel_n_ab: %f\t%f\t%f\n", vel_n_ab*n_ab.x, vel_n_ab*n_ab.y, vel_n_ab*n_ab.z);
+  //Float vel_n = dot(vel_linear, n);
+  Float vel_n = -dot(vel_linear, n);
 
   // Tangential component of the relative contact interface velocity
   // Hinrichsen and Wolf 2004, eq. 13.9
-  //Float3 vel_t_ab = vel_ab - (n_ab * dot(vel_ab, n_ab));
-  //Float3 vel_t_ab = vel_ab - (n_ab * dot(n_ab, vel_ab));
-  //Float3 vel_t_ab = MAKE_FLOAT3(0.0, 0.0, 0.0);
-  Float3 vel_t_ab = vel_ab - vel_n_ab * n_ab;
-  //cuPrintf("vel_t_ab: %f\t%f\t%f\n", vel_t_ab.x, vel_t_ab.y, vel_t_ab.z);
-  //Float3 vel_t_ab = vel_ab_linear - vel_n_ab * n_ab;
-  Float  vel_t_ab_length = length(vel_t_ab);
+  //Float3 vel_t = vel - vel_n * n;
+  Float3 vel_t = vel - n * dot(n, vel);
+  Float  vel_t_length = length(vel_t);
 
   // Correct tangential displacement vector, which is
   // necessary if the tangential plane rotated
-  Float3 delta_t0 = delta_t0_uncor - (n_ab * dot(delta_t0_uncor, n_ab));
+  //Float3 delta_t0 = delta_t0_uncor - (n * dot(delta_t0_uncor, n));
+  Float3 delta_t0 = delta_t0_uncor - (n * dot(n, delta_t0_uncor));
   //cuPrintf("delta_t0: %f\t%f\t%f\n", delta_t0.x, delta_t0.y, delta_t0.z);
   Float  delta_t0_length = length(delta_t0);
 
@@ -363,28 +360,28 @@ __device__ void contactLinear(Float3* F, Float3* T,
   //Float k_n_ab = k_n_a * k_n_b / (k_n_a + k_n_b);
 
   // Normal force component: Elastic
-  //f_n = -devC_params.k_n * delta_ab * n_ab;
+  //f_n = -devC_params.k_n * delta * n_ab;
 
   // Normal force component: Elastic - viscous damping
-  f_n = (-devC_params.k_n * delta_ab - devC_params.gamma_n * vel_n_ab) * n_ab;
+  f_n = (-devC_params.k_n * delta - devC_params.gamma_n * vel_n) * n;
 
   // Store energy dissipated in normal viscous component
   // watt = gamma_n * vel_n * dx_n / dt
   // watt = gamma_n * vel_n * vel_n * dt / dt
   // watt = gamma_n * vel_n * vel_n
   // watt = N*m/s = N*s/m * m/s * m/s * s / s
-  *ev_dot += devC_params.gamma_n * vel_n_ab * vel_n_ab;
+  *ev_dot += devC_params.gamma_n * vel_n * vel_n;
 
 
   // Make sure the viscous damping doesn't exceed the elastic component,
   // i.e. the damping factor doesn't exceed the critical damping, 2*sqrt(m*k_n)
-  if (dot(f_n, n_ab) < 0.0f)
+  if (dot(f_n, n) < 0.0f)
     f_n = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
 
   Float f_n_length = length(f_n);
 
   // Add max. capillary force
-  f_c = -devC_params.kappa * sqrtf(radius_a * radius_b) * n_ab;
+  f_c = -devC_params.kappa * sqrtf(radius_a * radius_b) * n;
 
   // Initialize force vectors to zero
   f_t   = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
@@ -394,21 +391,23 @@ __device__ void contactLinear(Float3* F, Float3* T,
 
   // Apply a tangential force if the previous tangential displacement
   // is non-zero, or the current sliding velocity is non-zero.
-  if (delta_t0_length > 0.0 || vel_t_ab_length > 0.0) {
+  if (delta_t0_length > 0.0 || vel_t_length > 0.0) {
 
     // Add tangential displacement to total tangential displacement
-    delta_t = delta_t0 + vel_t_ab * devC_dt;
+    delta_t = delta_t0 + vel_t * devC_dt;
 
     // Tangential force: Visco-Elastic, before limitation criterion
     //Float3 f_t_elast = -devC_params.k_t * delta_t0;
     Float3 f_t_elast = -devC_params.k_t * delta_t;
-    Float3 f_t_visc  = -devC_params.gamma_t * vel_t_ab;
+    Float3 f_t_visc  = -devC_params.gamma_t * vel_t;
     f_t = f_t_elast + f_t_visc;
     Float f_t_length = length(f_t);
 
     // Static frictional limit
     Float f_t_limit = devC_params.mu_s * length(f_n-f_c);
     
+    // Add tangential displacement to total tangential displacement
+    delta_t = delta_t0 + vel_t * devC_dt;
 
     // If failure criterion is not met, contact is viscous-linear elastic.
     // If failure criterion is met, contact force is limited, 
@@ -417,8 +416,12 @@ __device__ void contactLinear(Float3* F, Float3* T,
 
       //cuPrintf("slip! %f > %f\n", f_t_length, f_t_limit);
       
+      // tangential vector
+      Float3 t = f_t/length(f_t);
+
       // Frictional force is reduced to equal the dynamic limit
-      f_t *= (devC_params.mu_d * length(f_n-f_c))/f_t_length;
+      //f_t *= (devC_params.mu_d * length(f_n-f_c))/f_t_length;
+      f_t = f_t_limit * t;
       //f_t = f_t * (devC_params.mu_d * f_n_length)/f_t;
 
       // A slip event zeros the displacement vector
@@ -429,15 +432,20 @@ __device__ void contactLinear(Float3* F, Float3* T,
       // (Hinrichsen and Wolf, 2004)
       //delta_t = -1.0f/devC_params.k_t * (f_t + devC_params.gamma_t * vel_t_ab);
       //delta_t = -1.0f/devC_params.k_t * f_t;
-      delta_t = -1.0/devC_params.k_t * f_t + devC_params.gamma_t * vel_t_ab;
-      //delta_t = devC_params.k_t * f_t_limit * vel_t_ab/vel_t_ab_length
-	//+ devC_params.gamma_t * vel_t_ab;
+      //delta_t = -1.0/devC_params.k_t * f_t + devC_params.gamma_t * vel_t_ab;
+      //delta_t = -1.0/devC_params.k_t * devC_params.mu_d * t +
+	//+ devC_params.gamma_t * vel_t;
+
+      // In the sliding friction case, the tangential spring is adjusted to
+      // a length consistent with Coulombs (dynamic) condition (Luding 2008)
+      delta_t = -1.0/devC_params.k_t
+	* (devC_params.mu_d * length(f_n-f_c) * t + devC_params.gamma_t * vel_t);
 
       // Shear friction heat production rate: 
       // The energy lost from the tangential spring is dissipated as heat
       //*es_dot += -dot(vel_t_ab, f_t);
       //*es_dot += length(delta_t0 - delta_t) * devC_params.k_t / devC_dt;
-      *es_dot += length(length(f_t) * vel_t_ab * devC_dt) / devC_dt; // Seen in ESyS-Particle
+      *es_dot += length(length(f_t) * vel_t * devC_dt) / devC_dt; // Seen in ESyS-Particle
       //*es_dot += fabs(dot(delta_t0 - delta_t, f_t)) / devC_dt; 
 
     } //else { // Static case
@@ -469,8 +477,8 @@ __device__ void contactLinear(Float3* F, Float3* T,
   // Add torque components from this collision to total torque for particle
   // Comment out the line below to disable rotation
   //*T += -(radius_a + delta_ab/2.0f) * cross(n_ab, f_t) + T_res;
-  //*T += cross(-(radius_a + delta_ab*0.5) * n_ab, f_t);
-  //*T += cross(-(radius_a + delta_ab*0.5) * n_ab, f_t) + T_res;
+  //*T += cross(-(radius_a + delta*0.5) * n_ab, f_t) + T_res;
+  *T += cross(-(radius_a + delta*0.5) * n, f_t);
 
   // Pressure excerted onto the particle from this contact
   *p += f_n_length / (4.0f * PI * radius_a*radius_a);
