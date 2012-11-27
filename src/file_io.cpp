@@ -190,7 +190,8 @@ void DEM::readbin(const char *target)
   walls.nx    = new Float4[walls.nw];
   walls.mvfd  = new Float4[walls.nw];
 
-  ifs.read(as_bytes(walls.wmode), sizeof(walls.wmode));
+  for (i = 0; i<walls.nw; ++i)
+      ifs.read(as_bytes(walls.wmode[i]), sizeof(walls.wmode[i]));
   for (i = 0; i<walls.nw; ++i) {
     ifs.read(as_bytes(walls.nx[i].x), sizeof(Float));
     ifs.read(as_bytes(walls.nx[i].y), sizeof(Float));
@@ -322,7 +323,7 @@ void DEM::writebin(const char *target)
 
     // Write wall parameters
     ofs.write(as_bytes(walls.nw), sizeof(walls.nw));
-    ofs.write(as_bytes(walls.wmode), sizeof(walls.wmode));
+    ofs.write(as_bytes(walls.wmode), sizeof(walls.wmode[0])*walls.nw);
     for (i = 0; i<walls.nw; ++i) {
       ofs.write(as_bytes(walls.nx[i].x), sizeof(Float));
       ofs.write(as_bytes(walls.nx[i].y), sizeof(Float));
