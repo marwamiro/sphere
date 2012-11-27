@@ -50,9 +50,9 @@ int main(const int argc, const char *argv[])
 	<< "-q, --quiet\t\tsuppress status messages to stdout\n"
 	<< "-n, --dry\t\tshow key experiment parameters and quit\n"
 	<< "-r, --render\t\trender input files instead of simulating temporal evolution\n"
-	<< "-dcv, --dpnt-check-values\t\tdon't check values before running\n" 
+	<< "-dc, --dont-check\t\tdon't check values before running\n" 
 	<< "Raytracer (-r) specific options:\n"
-	<< "-m <method> <maxval>, --method <method> <maxval>\tcolor visualization method, possible values:\n"
+	<< "-m <method> <maxval>, --method <method> <maxval>\n\tcolor visualization method, possible values:\n"
 	<< "\t\t\t\tpres, vel, angvel, xdisp, angpos\n"
 	<< std::endl;
       return 0; // Exit with success
@@ -82,7 +82,7 @@ int main(const int argc, const char *argv[])
     else if (argvi == "-r" || argvi == "--render")
       render = 1;
 
-    else if (argvi == "-dcv" || argvi == "--dont-check-values")
+    else if (argvi == "-dc" || argvi == "--dont-check")
       checkVals = 0;
 
     else if (argvi == "-m" || argvi == "--method") {
