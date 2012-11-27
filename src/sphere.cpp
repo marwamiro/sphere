@@ -224,9 +224,11 @@ void DEM::reportValues()
     if (walls.wmode[0] == 0)
       cout << "Fixed\n";
     else if (walls.wmode[0] == 1)
-      cout << "Deviatoric stress\n";
+      cout << "Deviatoric stress, "
+	<< walls.mvfd[0].w << " Pa\n";
     else if (walls.wmode[0] == 2)
-      cout << "Velocity\n";
+      cout << "Velocity, "
+	<< walls.mvfd[0].y << " m/s\n";
     else {
       cerr << "Top BC not recognized!\n";
       exit(1);

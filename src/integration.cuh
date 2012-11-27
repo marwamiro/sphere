@@ -242,7 +242,7 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
       return;
 
     // Find the final sum of forces on wall
-    w_mvfd.z = 0.0f;
+    w_mvfd.z = 0.0;
     for (int i=0; i<blocksPerGrid; ++i) {
       w_mvfd.z += dev_walls_force_partial[i];
     }
@@ -259,7 +259,7 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
 
     // If Wall BC is controlled by velocity, it should not change
     if (wmode == 2) { 
-      acc = 0.0f;
+      acc = 0.0;
     }
 
     // Update position. Second-order scheme based on Taylor expansion 
