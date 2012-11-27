@@ -1211,8 +1211,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             sb = Spherebin()
             # Read stress values from project binaries
             for i in range(lastfile+1):
-            fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
-            sb.readbin(fn, verbose = False)
+                fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
+                sb.readbin(fn, verbose = False)
 
                 # First iteration: Allocate arrays and find constant values
                 if (i == 0):
