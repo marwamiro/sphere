@@ -13,7 +13,7 @@ def compare(first, second, string):
 print("### Input/output tests ###")
 
 # Generate data in python
-orig = Spherebin(np = 100, nw = 0, sid = "test")
+orig = Spherebin(np = 100, nw = 1, sid = "test")
 orig.generateRadii(histogram = False)
 orig.defaultParams()
 orig.initRandomGridPos(g = numpy.zeros(orig.nd))
