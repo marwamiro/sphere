@@ -1161,100 +1161,100 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax9.plot(t, Erot, '+-r')
                 ax9.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
 
-            elif method == 'walls':
+        elif method == 'walls':
 
-                # Read energy values from project binaries
-                sb = Spherebin()
-                for i in range(lastfile+1):
-                    fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
-                    sb.readbin(fn, verbose = False)
+            # Read energy values from project binaries
+            sb = Spherebin()
+            for i in range(lastfile+1):
+                fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
+                sb.readbin(fn, verbose = False)
 
-                    # Allocate arrays on first run
-                    if (i == 0):
-                        wforce = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
-                        wvel   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
-                        wpos   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
-                        wdevs  = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+                # Allocate arrays on first run
+                if (i == 0):
+                    wforce = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+                    wvel   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+                    wpos   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+                    wdevs  = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
 
-                    wforce[i] = sb.w_force[0]
-                    wvel[i]   = sb.w_vel[0]
-                    wpos[i]   = sb.w_x[0]
-                    wdevs[i]  = sb.w_devs[0]
+                wforce[i] = sb.w_force[0]
+                wvel[i]   = sb.w_vel[0]
+                wpos[i]   = sb.w_x[0]
+                wdevs[i]  = sb.w_devs[0]
 
-                t = numpy.linspace(0.0, sb.time_current, lastfile+1)
+            t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
-                # Plotting
-                if (outformat != 'txt'):
-                    ax1 = plt.subplot2grid((2,2),(0,0))
-                    ax1.set_xlabel('Time [s]')
-                    ax1.set_ylabel('Position [m]')
-                    ax1.plot(t, wpos, '+-')
+            # Plotting
+            if (outformat != 'txt'):
+                ax1 = plt.subplot2grid((2,2),(0,0))
+                ax1.set_xlabel('Time [s]')
+                ax1.set_ylabel('Position [m]')
+                ax1.plot(t, wpos, '+-')
 
-                    ax2 = plt.subplot2grid((2,2),(0,1))
-                    ax2.set_xlabel('Time [s]')
-                    ax2.set_ylabel('Velocity [m/s]')
-                    ax2.plot(t, wvel, '+-')
+                ax2 = plt.subplot2grid((2,2),(0,1))
+                ax2.set_xlabel('Time [s]')
+                ax2.set_ylabel('Velocity [m/s]')
+                ax2.plot(t, wvel, '+-')
 
-                    ax3 = plt.subplot2grid((2,2),(1,0))
-                    ax3.set_xlabel('Time [s]')
-                    ax3.set_ylabel('Force [N]')
-                    ax3.plot(t, wforce, '+-')
+                ax3 = plt.subplot2grid((2,2),(1,0))
+                ax3.set_xlabel('Time [s]')
+                ax3.set_ylabel('Force [N]')
+                ax3.plot(t, wforce, '+-')
 
-                    ax4 = plt.subplot2grid((2,2),(1,1))
-                    ax4.set_xlabel('Time [s]')
-                    ax4.set_ylabel('Deviatoric stress [Pa]')
-                    ax4.plot(t, wdevs, '+-')
+                ax4 = plt.subplot2grid((2,2),(1,1))
+                ax4.set_xlabel('Time [s]')
+                ax4.set_ylabel('Deviatoric stress [Pa]')
+                ax4.plot(t, wdevs, '+-')
 
 
-            elif method == 'shear':
+        elif method == 'shear':
 
-                sb = Spherebin()
-                # Read stress values from project binaries
-                for i in range(lastfile+1):
-                    fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
-                    sb.readbin(fn, verbose = False)
+            sb = Spherebin()
+            # Read stress values from project binaries
+            for i in range(lastfile+1):
+            fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
+            sb.readbin(fn, verbose = False)
 
-                    # First iteration: Allocate arrays and find constant values
-                    if (i == 0):
-                        xdisp    = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear displacement
-                        sigma    = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Normal stress
-                        tau      = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear stress
-                        dilation = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Upper wall position
+                # First iteration: Allocate arrays and find constant values
+                if (i == 0):
+                    xdisp    = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear displacement
+                    sigma    = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Normal stress
+                    tau      = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear stress
+                    dilation = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Upper wall position
 
-                        fixvel = numpy.nonzero(sb.fixvel > 0.0)
-                        #fixvel_upper = numpy.nonzero(sb.vel[fixvel,0] > 0.0)
-                        shearvel = sb.vel[fixvel,0].max()
-                        w_x0 = sb.w_x[0]
-                        A = sb.L[0] * sb.L[1]   # Upper surface area
+                    fixvel = numpy.nonzero(sb.fixvel > 0.0)
+                    #fixvel_upper = numpy.nonzero(sb.vel[fixvel,0] > 0.0)
+                    shearvel = sb.vel[fixvel,0].max()
+                    w_x0 = sb.w_x[0]
+                    A = sb.L[0] * sb.L[1]   # Upper surface area
 
-                    # Summation of shear stress contributions
-                    for j in fixvel[0]:
-                        if (sb.vel[j,0] > 0.0):
-                            tau[i] += -sb.force[j,0]
+                # Summation of shear stress contributions
+                for j in fixvel[0]:
+                    if (sb.vel[j,0] > 0.0):
+                        tau[i] += -sb.force[j,0]
 
-                    xdisp[i]    = sb.time_current[0] * shearvel
-                    sigma[i]    = sb.w_force[0] / A
-                    sigma[i]    = sb.w_devs[0]
-                    #tau[i]      = sb.force[fixvel_upper,0].sum() / A
-                    dilation[i] = sb.w_x[0] - w_x0
+                xdisp[i]    = sb.time_current[0] * shearvel
+                sigma[i]    = sb.w_force[0] / A
+                sigma[i]    = sb.w_devs[0]
+                #tau[i]      = sb.force[fixvel_upper,0].sum() / A
+                dilation[i] = sb.w_x[0] - w_x0
 
-                # Plot stresses
-                if (outformat != 'txt'):
-                    ax1 = plt.subplot2grid((2,1),(0,0))
-                    ax1.set_xlabel('Shear distance [m]')
-                    ax1.set_ylabel('Stress [Pa]')
-                    ax1.plot(xdisp, sigma, '+-g')
-                    ax1.plot(xdisp, tau, '+-r')
-                    #plt.legend('$\sigma`$','$\tau$')
+            # Plot stresses
+            if (outformat != 'txt'):
+                ax1 = plt.subplot2grid((2,1),(0,0))
+                ax1.set_xlabel('Shear distance [m]')
+                ax1.set_ylabel('Stress [Pa]')
+                ax1.plot(xdisp, sigma, '+-g')
+                ax1.plot(xdisp, tau, '+-r')
+                #plt.legend('$\sigma`$','$\tau$')
 
-                    # Plot dilation
-                    ax2 = plt.subplot2grid((2,1),(1,0))
-                    ax2.set_xlabel('Shear distance [m]')
-                    ax2.set_ylabel('Dilation [m]')
-                    ax2.plot(xdisp, dilation, '+-')
+                # Plot dilation
+                ax2 = plt.subplot2grid((2,1),(1,0))
+                ax2.set_xlabel('Shear distance [m]')
+                ax2.set_ylabel('Dilation [m]')
+                ax2.plot(xdisp, dilation, '+-')
 
-                  # Write values to textfile
     else : 
+        # Write values to textfile
         filename = "shear-stresses-{0}.txt".format(project)
         #print("Writing stress data to " + filename)
         fh = None
