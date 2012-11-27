@@ -335,7 +335,8 @@ class Spherebin:
             fh.write(self.V_b.astype(numpy.float64))
 
             fh.write(self.nw.astype(numpy.uint32))
-            fh.write(self.wmode.astype(numpy.int32))
+            for i in range(self.nw):
+                fh.write(self.wmode[i].astype(numpy.int32))
             for i in range(self.nw):
                 fh.write(self.w_n[i,:].astype(numpy.float64))
                 fh.write(self.w_x[i].astype(numpy.float64))
