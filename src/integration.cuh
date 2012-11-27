@@ -262,14 +262,14 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
       acc = 0.0f;
     }
 
-    // Update linear velocity
-    w_mvfd.y += acc * dt;
-    
     // Update position. Second-order scheme based on Taylor expansion 
-    //w_nx.w += w_mvfd.y * dt + (acc * dt*dt)/2.0f;
+    w_nx.w += w_mvfd.y * dt + (acc * dt*dt)/2.0;
 
     // Update position. First-order Euler integration scheme
-    w_nx.w += w_mvfd.y * dt;
+    //w_nx.w += w_mvfd.y * dt;
+
+    // Update linear velocity
+    w_mvfd.y += acc * dt;
 
     // Store data in global memory
     dev_walls_nx[idx]   = w_nx;
