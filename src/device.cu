@@ -400,19 +400,6 @@ __host__ void DEM::transferToGlobalDeviceMemory()
   cudaMemcpy( dev_walls_mvfd,  walls.mvfd,
       sizeof(Float4)*walls.nw, cudaMemcpyHostToDevice);
 
-  std::cout << "walls.nw = " << walls.nw << '\n';
-  std::cout << "walls.nx[0] = "
-      << walls.nx[0].x << '\t'
-      << walls.nx[0].y << '\t'
-      << walls.nx[0].w << '\t'
-      << walls.nx[0].z << '\n';
-
-  std::cout << "walls.mvfd[0] = "
-      << walls.mvfd[0].x << '\t'
-      << walls.mvfd[0].y << '\t'
-      << walls.mvfd[0].w << '\t'
-      << walls.mvfd[0].z << '\n';
-
   checkForCudaErrors("End of transferToGlobalDeviceMemory");
   if (verbose == 1)
     std::cout << "Done\n";
