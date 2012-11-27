@@ -235,7 +235,7 @@ class Spherebin:
             self.V_b          = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
             # Wall data
-            self.nw        = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
+            self.nw      = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
             self.wmode   = numpy.zeros(self.nw, dtype=numpy.int32)
             self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
             self.w_x     = numpy.zeros(self.nw, dtype=numpy.float64)
@@ -637,15 +637,15 @@ class Spherebin:
         self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
 
         # Initialize upper wall
-        self.nw = numpy.array([1], dtype=numpy.uint32)
+        self.nw = numpy.ones(1)
         self.wmode = numpy.array([1]) # devs BC
         self.w_n = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
         self.w_n[0,2] = -1.0
         self.w_x = numpy.array([self.L[2]])
         self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
-        self.w_vel = numpy.array([0.0])
-        self.w_force = numpy.array([0.0])
-        self.w_devs = numpy.array([deviatoric_stress])
+        self.w_vel = numpy.zeros(1)
+        self.w_force = numpy.zeros(1)
+        self.w_devs = numpy.ones(1) * deviatoric_stress
 
     # Adjust grid and upper wall for consolidation under fixed upper wall velocity
     def uniaxialStrainRate(self, wvel = -0.001,
@@ -732,6 +732,10 @@ class Spherebin:
         # Set wall viscosities to zero
         self.gamma_wn[0] = 0.0
         self.gamma_wt[0] = 0.0
+
+        # Set wall friction coefficients to zero
+        self.mu_ws[0] = 0.0
+        self.mu_wd[0] = 0.0
 
 
     def initTemporal(self, total,
@@ -960,16 +964,20 @@ class Spherebin:
                         return porosity_grid
 
 
-    def run(self, verbose=True, hideinputfile=False):
+    def run(self, verbose=True, hideinputfile=False, dry=False):
         """ Execute sphere with target project
         """
         quiet = ""
         stdout = ""
+	dryarg = ""
         if (verbose == False):
-            quiet = "-q"
+            quiet = "-q "
         if (hideinputfile == True):
             stdout = " > /dev/null"
-        subprocess.call("cd ..; ./sphere_* " + quiet + " input/" + self.sid + ".bin " + stdout, shell=True)
+	if (dry == True):
+	    dryarg = "--dry "
+
+        subprocess.call("cd ..; ./sphere_* " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
 
     def render(self,
             method = "pres",
