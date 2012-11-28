@@ -661,10 +661,10 @@ class Spherebin:
         """
 
         # Zero the kinematics of all particles
-        zeroKinematics()
+        self.zeroKinematics()
 
         # Adjust grid and placement of upper wall
-        adjustUpperWall()
+        self.adjustUpperWall()
 
         # Set the top wall BC to a value of deviatoric stress
         sekf.wmode = numpy.array([1])
@@ -679,10 +679,10 @@ class Spherebin:
         """
 
         # zero kinematics
-        zeroKinematics()
+        self.zeroKinematics()
 
         # Initialize upper wall
-        adjustUpperWall()
+        self.adjustUpperWall()
         self.wmode = numpy.array([2]) # strain rate BC
         self.w_vel = numpy.array([wvel])
 
@@ -701,13 +701,13 @@ class Spherebin:
         z_min = numpy.min(self.x[:,2] - self.radius)
         z_max = numpy.max(self.x[:,2] + self.radius)
         cellsize = self.L[0] / self.num[0]
-        adjustUpperWall(z_adjust = 1.3)
+        self.adjustUpperWall(z_adjust = 1.3)
 
         # Initialize upper wall
         self.w_devs[0] = deviatoric_stress
 
         # zero kinematics
-        zeroKinematics()
+        self.zeroKinematics()
 
         #fixheight = 2*cellsize
         fixheight = cellsize
