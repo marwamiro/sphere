@@ -615,6 +615,42 @@ class Spherebin:
         self.num[1] = numpy.ceil(y_max/cellsize)
         self.num[2] = numpy.ceil(z_max/cellsize)
         self.L = self.num * cellsize
+    
+    def zeroKinematics(self):
+        "zero kinematics of particles"
+        self.vel = numpy.zeros(self.np*self.nd, dtype=numpy.float64)\
+                .reshape(self.np, self.nd)
+        self.angvel = numpy.zeros(self.np*self.nd, dtype=numpy.float64)\
+                .reshape(self.np, self.nd)
+        self.angpos = numpy.zeros(self.np*self.nd, dtype=numpy.float64)\
+                .reshape(self.np, self.nd)
+        self.es = numpy.zeros(self.np, dtype=numpy.float64)
+        self.ev = numpy.zeros(self.np, dtype=numpy.float64)
+        self.xysum = numpy.zeros(self.np*2, dtype=numpy.float64)\
+                .reshape(self.np, 2)
+
+
+    def adjustUpperWall(self, z_adjust = 1.1):
+        "Adjust grid and dynamic upper wall to max. particle height"
+
+        # Compute new grid, scaled to fit max. and min. particle positions
+        z_min = numpy.min(self.x[:,2] - self.radius)
+        z_max = numpy.max(self.x[:,2] + self.radius)
+        cellsize = self.L[0] / self.num[0]
+        self.num[2] = numpy.ceil(((z_max-z_min)*z_adjust + z_min)/cellsize)
+        self.L[2] = (z_max-z_min)*z_adjust + z_min
+
+        # Initialize upper wall
+        self.nw = numpy.ones(1)
+        self.wmode = numpy.zeros(1) # fixed BC
+        self.w_n = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
+        self.w_n[0,2] = -1.0
+        self.w_x = numpy.array([z_max])
+        self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
+        self.w_vel = numpy.zeros(1)
+        self.w_force = numpy.zeros(1)
+        self.w_devs = numpy.zeros(1) 
+
 
 
     # Adjust grid and upper wall for consolidation under deviatoric stress
@@ -624,29 +660,16 @@ class Spherebin:
         deviatoric stress in Pascal, default value is 10 kPa.
         """
 
-        # Compute new grid, scaled to fit max. and min. particle positions
-        z_min = numpy.min(self.x[:,2] - self.radius)
-        z_max = numpy.max(self.x[:,2] + self.radius)
-        cellsize = self.L[0] / self.num[0]
-        z_adjust = 1.1    # Overheightening of grid. 1.0 = no overheightening
-        self.num[2] = numpy.ceil((z_max-z_min)*z_adjust/cellsize)
-        self.L[2] = (z_max-z_min)*z_adjust
+        # Zero the kinematics of all particles
+        zeroKinematics()
 
-        # zero kinematics
-        self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
-        self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
-        self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
+        # Adjust grid and placement of upper wall
+        adjustUpperWall()
 
-        # Initialize upper wall
-        self.nw = numpy.ones(1)
-        self.wmode = numpy.array([1]) # devs BC
-        self.w_n = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
-        self.w_n[0,2] = -1.0
-        self.w_x = numpy.array([self.L[2]])
-        self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
-        self.w_vel = numpy.zeros(1)
-        self.w_force = numpy.zeros(1)
+        # Set the top wall BC to a value of deviatoric stress
+        sekf.wmode = numpy.array([1])
         self.w_devs = numpy.ones(1) * deviatoric_stress
+
 
     # Adjust grid and upper wall for consolidation under fixed upper wall velocity
     def uniaxialStrainRate(self, wvel = -0.001,
@@ -655,29 +678,13 @@ class Spherebin:
         deviatoric stress in Pascal, default value is 10 kPa.
         """
 
-        # Compute new grid, scaled to fit max. and min. particle positions
-        z_min = numpy.min(self.x[:,2] - self.radius)
-        z_max = numpy.max(self.x[:,2] + self.radius)
-        cellsize = self.L[0] / self.num[0]
-        z_adjust = 1.1    # Overheightening of grid. 1.0 = no overheightening
-        self.num[2] = numpy.ceil((z_max-z_min)*z_adjust/cellsize)
-        self.L[2] = (z_max-z_min)*z_adjust
-
         # zero kinematics
-        self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
-        self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
-        self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
+        zeroKinematics()
 
         # Initialize upper wall
-        self.nw = numpy.array([1], dtype=numpy.uint32)
+        adjustUpperWall()
         self.wmode = numpy.array([2]) # strain rate BC
-        self.w_n = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
-        self.w_n[0,2] = -1.0
-        self.w_x = numpy.array([self.L[2]])
-        self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
-        self.w_vel = numpy.array([0.0])
-        self.w_force = numpy.array([0.0])
-        self.w_devs = numpy.array([0.0])
+        self.w_vel = numpy.array([wvel])
 
 
     # Adjust grid and upper wall for shear, and fix boundary particle velocities
@@ -694,20 +701,16 @@ class Spherebin:
         z_min = numpy.min(self.x[:,2] - self.radius)
         z_max = numpy.max(self.x[:,2] + self.radius)
         cellsize = self.L[0] / self.num[0]
-        z_adjust = 1.3    # Overheightening of grid. 1.0 = no overheightening
-        self.num[2] = numpy.ceil((z_max-z_min)*z_adjust/cellsize)
-        self.L[2] = (z_max-z_min)*z_adjust
+        adjustUpperWall(z_adjust = 1.3)
 
         # Initialize upper wall
         self.w_devs[0] = deviatoric_stress
 
         # zero kinematics
-        self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
-        self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
-        self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np, self.nd)
+        zeroKinematics()
 
-        fixheight = 2*cellsize
-        #fixheight = cellsize
+        #fixheight = 2*cellsize
+        fixheight = cellsize
 
         # Fix horizontal velocity to 0.0 of lowermost particles
         I = numpy.nonzero(self.x[:,2] < (z_min + fixheight)) # Find indices of lowermost 10%
@@ -727,8 +730,6 @@ class Spherebin:
         self.vel[I,0] = (z_max-z_min)*shear_strain_rate
         self.vel[I,1] = 0.0 # y-dim
 
-        # Zero x-axis displacement
-        self.xysum = numpy.zeros(self.np*2, dtype=numpy.float64)
 
         # Set wall viscosities to zero
         self.gamma_wn[0] = 0.0
@@ -821,6 +822,10 @@ class Spherebin:
         # Wall viscosities
         self.gamma_wn[0] = gamma_wn # normal
         self.gamma_wt[0] = gamma_wt # sliding
+
+        # Wall friction coefficients
+        self.mu_ws = self.mu_s  # static
+        self.mu_wd = self.mu_d  # dynamic
 
         ### Parameters related to capillary bonds
 
