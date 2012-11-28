@@ -16,7 +16,7 @@ class Spherebin:
     '''
 
     def __init__(self, np = 1, nd = 3, nw = 1, sid = 'unnamed'):
-    'Constructor - Initializes arrays'
+        'Constructor - Initializes arrays'
 
         self.nd = numpy.ones(1, dtype=numpy.int32) * nd
         self.np = numpy.ones(1, dtype=numpy.uint32) * np
@@ -86,8 +86,8 @@ class Spherebin:
         self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
 
     def __cmp__(self, other):
-    ''' Called when to Spherebin objects are compared.
-        Returns 0 if the values are identical '''
+        ''' Called when to Spherebin objects are compared.
+            Returns 0 if the values are identical '''
         if ( (\
                 self.nd == other.nd and\
                 self.np == other.np and\
@@ -460,10 +460,10 @@ class Spherebin:
             margin = numpy.array([2.0, 2.0, 2.0]),
             periodic = 1,
             contactmodel = 2):
-        """ Initialize grid suitable for the particle positions set previously.
-        The margin parameter adjusts the distance (in no. of max. radii)
-        from the particle boundaries.
-        """
+        ''' Initialize grid suitable for the particle positions set previously.
+            The margin parameter adjusts the distance (in no. of max. radii)
+            from the particle boundaries.
+        '''
 
         self.g = g
         self.periodic[0] = periodic
@@ -497,10 +497,11 @@ class Spherebin:
             gridnum = numpy.array([12, 12, 36]),
             periodic = 1,
             contactmodel = 2):
-        """ Initialize particle positions in loose, cubic configuration.
-        Radii must be set beforehand.
-        xynum is the number of rows in both x- and y- directions.
-        """
+        ''' Initialize particle positions in loose, cubic configuration.
+            Radii must be set beforehand.
+            xynum is the number of rows in both x- and y- directions.
+        '''
+
         self.g = g
         self.periodic[0] = periodic
 
@@ -651,9 +652,9 @@ class Spherebin:
 
     def consolidate(self, deviatoric_stress = 10e3, 
             periodic = 1):
-        """ Setup consolidation experiment. Specify the upper wall 
+        ''' Setup consolidation experiment. Specify the upper wall 
             deviatoric stress in Pascal, default value is 10 kPa.
-        """
+        '''
 
         # Zero the kinematics of all particles
         self.zeroKinematics()
@@ -669,7 +670,7 @@ class Spherebin:
     def uniaxialStrainRate(self, wvel = -0.001,
             periodic = 1):
         ''' Setup consolidation experiment. Specify the upper wall 
-            deviatoric stress in Pascal, default value is 10 kPa.
+            velocity in m/s, default value is -0.001 m/s (i.e. downwards).
         '''
 
         # zero kinematics
@@ -837,8 +838,8 @@ class Spherebin:
         self.db[0] = (1.0 + theta/2.0) * self.V_b**(1.0/3.0)
 
     def energy(self, method):
-        """ Calculate the sum of the energy components of all particles.
-        """
+        ''' Calculate the sum of the energy components of all particles.
+        '''
 
         if method == 'pot':
             m = numpy.ones(self.np) * 4.0/3.0 * math.pi * self.radius**3 * self.rho
