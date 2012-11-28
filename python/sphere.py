@@ -9,15 +9,15 @@ import subprocess
 
 numpy.seterr(all='warn', over='raise')
 
-# Class declarations
 class Spherebin:
-    """ Class containing all data SPHERE data.
+    ''' Class containing all data SPHERE data.
         Contains functions for reading and writing
         binaries.
-    """
+    '''
 
-    # Constructor - Initialize arrays
     def __init__(self, np = 1, nd = 3, nw = 1, sid = 'unnamed'):
+    'Constructor - Initializes arrays'
+
         self.nd = numpy.ones(1, dtype=numpy.int32) * nd
         self.np = numpy.ones(1, dtype=numpy.uint32) * np
         self.sid = sid
@@ -85,9 +85,9 @@ class Spherebin:
         self.w_force = numpy.zeros(self.nw, dtype=numpy.float64)
         self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
 
-    # Compare the values of two Spherebin objects, and check
-    # whether the values are identical
     def __cmp__(self, other):
+    ''' Called when to Spherebin objects are compared.
+        Returns 0 if the values are identical '''
         if ( (\
                 self.nd == other.nd and\
                 self.np == other.np and\
@@ -146,10 +146,9 @@ class Spherebin:
 
 
 
-    # Read binary data
     def readbin(self, targetbin, verbose = True):
-        """ Reads a target SPHERE binary file and returns data.
-        """
+        'Reads a target SPHERE binary file'
+
         fh = None
         try :
             if (verbose == True):
@@ -261,10 +260,9 @@ class Spherebin:
             if fh is not None:
                 fh.close()
 
-    # Write binary data
     def writebin(self, folder = "../input/", verbose = True):
-        """ Reads a target SPHERE binary file and returns data.
-        """
+        'Writes to a target SPHERE binary file'
+
         fh = None
         try :
             targetbin = folder + "/" + self.sid + ".bin"
@@ -357,10 +355,10 @@ class Spherebin:
             radius_mean = 440e-6,
             radius_variance = 8.8e-9,
             histogram = True):
-        """ Draw random particle radii from the selected probability distribution.
+        ''' Draw random particle radii from the selected probability distribution.
             Specify mean radius and variance. The variance should be kept at a
             very low value.
-        """
+        '''
 
         if psd == 'logn': # Log-normal probability distribution
             mu = math.log((radius_mean**2)/math.sqrt(radius_variance+radius_mean**2))
@@ -389,16 +387,14 @@ class Spherebin:
             fig.clf()
 
 
-    # Initialize particle positions to completely random, non-overlapping configuration.
-    # This method is very compute intensive at high particle numbers.
     def initRandomPos(self, g = numpy.array([0.0, 0.0, -9.80665]), 
             gridnum = numpy.array([12, 12, 36]),
             periodic = 1,
             contactmodel = 2):
-        """ Initialize particle positions in loose, cubic configuration.
+        ''' Initialize particle positions in loose, cubic configuration.
             Radii must be set beforehand.
             xynum is the number of rows in both x- and y- directions.
-        """
+        '''
         self.g = g
         self.periodic[0] = periodic
 
@@ -437,12 +433,11 @@ class Spherebin:
         self.contactmodel[0] = contactmodel
 
 
-    # Generate grid based on particle positions
     def initGrid(self):
-        """ Initialize grid suitable for the particle positions set previously.
+        ''' Initialize grid suitable for the particle positions set previously.
             The margin parameter adjusts the distance (in no. of max. radii)
             from the particle boundaries.
-        """
+        '''
 
 
         # Cell configuration
@@ -562,16 +557,15 @@ class Spherebin:
             self.num[1] += 1
 
 
-    # Initialize particle positions to non-overlapping configuration
-    # in grid, with a certain element of randomness
     def initRandomGridPos(self, g = numpy.array([0.0, 0.0, -9.80665]), 
             gridnum = numpy.array([12, 12, 32]),
             periodic = 1,
             contactmodel = 2):
-        """ Initialize particle positions in loose, cubic configuration.
-        Radii must be set beforehand.
-        xynum is the number of rows in both x- and y- directions.
-        """
+        ''' Initialize particle positions in loose, cubic configuration.
+            Radii must be set beforehand.
+            xynum is the number of rows in both x- and y- directions.
+        '''
+
         self.g = g
         self.periodic[0] = periodic
 
@@ -615,9 +609,11 @@ class Spherebin:
         self.num[1] = numpy.ceil(y_max/cellsize)
         self.num[2] = numpy.ceil(z_max/cellsize)
         self.L = self.num * cellsize
-    
+   
+
     def zeroKinematics(self):
-        "zero kinematics of particles"
+        'Zero kinematics of particles'
+
         self.vel = numpy.zeros(self.np*self.nd, dtype=numpy.float64)\
                 .reshape(self.np, self.nd)
         self.angvel = numpy.zeros(self.np*self.nd, dtype=numpy.float64)\
@@ -631,7 +627,7 @@ class Spherebin:
 
 
     def adjustUpperWall(self, z_adjust = 1.1):
-        "Adjust grid and dynamic upper wall to max. particle height"
+        'Adjust grid and dynamic upper wall to max. particle height'
 
         # Compute new grid, scaled to fit max. and min. particle positions
         z_min = numpy.min(self.x[:,2] - self.radius)
@@ -653,11 +649,10 @@ class Spherebin:
 
 
 
-    # Adjust grid and upper wall for consolidation under deviatoric stress
     def consolidate(self, deviatoric_stress = 10e3, 
             periodic = 1):
         """ Setup consolidation experiment. Specify the upper wall 
-        deviatoric stress in Pascal, default value is 10 kPa.
+            deviatoric stress in Pascal, default value is 10 kPa.
         """
 
         # Zero the kinematics of all particles
@@ -671,12 +666,11 @@ class Spherebin:
         self.w_devs = numpy.ones(1) * deviatoric_stress
 
 
-    # Adjust grid and upper wall for consolidation under fixed upper wall velocity
     def uniaxialStrainRate(self, wvel = -0.001,
             periodic = 1):
-        """ Setup consolidation experiment. Specify the upper wall 
-        deviatoric stress in Pascal, default value is 10 kPa.
-        """
+        ''' Setup consolidation experiment. Specify the upper wall 
+            deviatoric stress in Pascal, default value is 10 kPa.
+        '''
 
         # zero kinematics
         self.zeroKinematics()
@@ -687,15 +681,14 @@ class Spherebin:
         self.w_vel = numpy.array([wvel])
 
 
-    # Adjust grid and upper wall for shear, and fix boundary particle velocities
     def shear(self, deviatoric_stress = 10e3, 
             shear_strain_rate = 1,
             periodic = 1):
-        """ Setup shear experiment. Specify the upper wall 
-        deviatoric stress in Pascal, default value is 10 kPa.
-        The shear strain rate is the shear length divided by the
-        initial height per second.
-        """
+        ''' Setup shear experiment. Specify the upper wall 
+            deviatoric stress in Pascal, default value is 10 kPa.
+            The shear strain rate is the shear length divided by the
+            initial height per second.
+        '''
 
         # Compute new grid, scaled to fit max. and min. particle positions
         z_min = numpy.min(self.x[:,2] - self.radius)
@@ -744,10 +737,10 @@ class Spherebin:
             current = 0.0,
             file_dt = 0.01,
             step_count = 0):
-        """ Set temporal parameters for the simulation.
-        Particle radii and physical parameters need to be set
-        prior to these.
-        """
+        ''' Set temporal parameters for the simulation.
+            Particle radii and physical parameters need to be set
+            prior to these.
+        '''
 
         r_min = numpy.amin(self.radius)
 
@@ -761,6 +754,7 @@ class Spherebin:
         self.time_total[0] = total
         self.time_file_dt[0] = file_dt
         self.time_step_count[0] = 0
+
 
     def defaultParams(self, 
 	    mu_s = 0.4,
@@ -776,9 +770,10 @@ class Spherebin:
             gamma_wn = 1e4,
             gamma_wt = 1e4,
             capillaryCohesion = 0):
-        """ Initialize particle parameters to default values.
-        Radii must be set prior to calling this function.
-        """
+        ''' Initialize particle parameters to default values.
+            Radii must be set prior to calling this function.
+        '''
+
         # Particle material density, kg/m^3
         self.rho = numpy.ones(1, dtype=numpy.float64) * rho
 
@@ -877,8 +872,7 @@ class Spherebin:
             return numpy.sum(self.ev_dot)
 
     def voidRatio(self):
-        """ Return the current void ratio
-        """
+        'Returns the current void ratio'
 
         # Find the bulk volume
         V_t = (self.L[0] - self.origo[0]) \
@@ -897,12 +891,12 @@ class Spherebin:
             upper_corner, 
             grid = numpy.array([10,10,10], int), 
             precisionfactor = 10, verbose = False):
-        """ Calculate the porosity inside each grid cell.
-        Specify the lower and upper corners of the volume to evaluate.
-        A good starting point for the grid vector is self.num.
-        The precision factor determines how much precise the grid porosity is.
-        A larger value will result in better precision, but more computations O(n^3).
-        """
+        ''' Calculate the porosity inside each grid cell.
+            Specify the lower and upper corners of the volume to evaluate.
+            A good starting point for the grid vector is self.num.
+            The precision factor determines how much precise the grid porosity is.
+            A larger value will result in better precision, but more computations O(n^3).
+        '''
 
         # Cell size length
         csl = numpy.array([(upper_corner[0]-lower_corner[0]) / grid[0], \
@@ -971,8 +965,8 @@ class Spherebin:
 
 
     def run(self, verbose=True, hideinputfile=False, dry=False):
-        """ Execute sphere with target project
-        """
+        'Execute sphere with target project'
+
         quiet = ""
         stdout = ""
 	dryarg = ""
@@ -985,13 +979,13 @@ class Spherebin:
 
         subprocess.call("cd ..; ./sphere_* " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
 
+
     def render(self,
             method = "pres",
             max_val = 1e3,
             graphicsformat = "png",
             verbose=True):
-        """ Render all output files that belong to the simulation, determined by sid.
-        """
+        'Render all output files that belong to the simulation, determined by sid.'
 
         quiet = ""
         if (verbose == False):
@@ -1009,8 +1003,8 @@ class Spherebin:
 
 def convert(graphicsformat = "png",
         folder = "../img_out"):
-    """ Converts all PPM images in img_out to graphicsformat,
-        using ImageMagick """
+    'Converts all PPM images in img_out to graphicsformat, using ImageMagick'
+
     #quiet = " > /dev/null"
     quiet = ""
     # Convert images
@@ -1026,8 +1020,7 @@ def convert(graphicsformat = "png",
 def render(binary,
         graphicsformat = 'png',
         verbose=True):
-    """ Render target binary using the sphere raytracer.
-    """
+    'Render target binary using the sphere raytracer.'
 
     quiet = ""
     if (verbose == False):
@@ -1050,7 +1043,7 @@ def video(project,
         qscale = 1,
         bitrate = 1800,
         verbose = False):
-    # Use ffmpeg to combine images to animation
+    'Use ffmpeg to combine images to animation'
 
     # Possible loglevels: quiet, panic, fatal, error, warning, info, verbose, debug
     loglevel = "info" # verbose = True
@@ -1065,9 +1058,9 @@ def video(project,
 
 
 def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
-    """ Visualize output from the target project,
-    where the temporal progress is of interest.
-    """
+    ''' Visualize output from the target project,
+        where the temporal progress is of interest.
+    '''
 
     lastfile = status(project)
 
@@ -1287,8 +1280,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             plt.show()
 
 def run(binary, verbose=True, hideinputfile=False):
-    """ Execute sphere with target project
-    """
+    'Execute sphere with target binary as input'
+
     quiet = ""
     stdout = ""
     if (verbose == False):
@@ -1298,9 +1291,10 @@ def run(binary, verbose=True, hideinputfile=False):
     subprocess.call("cd ..; ./sphere_* " + quiet + " " + binary + " " + stdout, shell=True)
 
 def status(project):
-    """ Check the status.dat file for the target project,
+    ''' Check the status.dat file for the target project,
     and return the last file numer.
-    """
+    '''
+    
     fh = None
     try :
         filepath = "../output/{0}.status.dat".format(project)
