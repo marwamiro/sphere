@@ -1202,7 +1202,9 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax4 = plt.subplot2grid((2,2),(1,1))
                 ax4.set_xlabel('Time [s]')
                 ax4.set_ylabel('Deviatoric stress [Pa]')
-                ax4.plot(t, wdevs, '+-')
+                ax4.plot(t, wdevs, '+-', label="$\sigma_0$")
+                ax4.plot(t, wforce/(sb.L[0]*sb.L[1]), '+-', label="$\sigma'$")
+                ax4.legend(loc=4)
 
 
         elif method == 'shear':
