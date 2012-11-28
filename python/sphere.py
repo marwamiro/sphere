@@ -667,7 +667,7 @@ class Spherebin:
         self.adjustUpperWall()
 
         # Set the top wall BC to a value of deviatoric stress
-        sekf.wmode = numpy.array([1])
+        self.wmode = numpy.array([1])
         self.w_devs = numpy.ones(1) * deviatoric_stress
 
 
