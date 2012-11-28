@@ -544,15 +544,16 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     //// Interact with walls
     Float delta_w; // Overlap distance
     Float3 w_n;    // Wall surface normal
-    Float w_force = 0.0f; // Force on wall from particle A
+    Float w_force = 0.0; // Force on wall from particle A
 
     // Upper wall (idx 0)
     delta_w = w_up_nx.w - (x_a.z + radius_a);
     w_n = MAKE_FLOAT3(0.0f, 0.0f, -1.0f);
     if (delta_w < 0.0f) {
-      w_force = contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a, radius_a,
+        w_force = contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a, radius_a,
 	  			   dev_vel_sorted, dev_angvel_sorted,
 				   w_n, delta_w, w_up_mvfd.y);
+        //cuPrintf("particle %d collides with upper wall, wforce = %f\n", idx_a, w_force);
     }
 
     // Lower wall (force on wall not stored)
@@ -637,8 +638,10 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
     dev_es[orig_idx]     += es_dot * devC_dt;
     dev_ev[orig_idx]     += ev_dot * devC_dt;
     dev_p[orig_idx]       = p;
-    if (devC_nw > 0)
+    if (devC_nw > 0 && w_force != 0.0) {
       dev_walls_force_pp[orig_idx] = w_force;
+      //cuPrintf("wforce written\n");
+    }
   }
 } // End of interact(...)
 

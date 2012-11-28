@@ -656,9 +656,9 @@ __host__ void DEM::startTime()
       checkForCudaErrors("Post topology: One or more particles moved outside the grid.\nThis could possibly be caused by a numerical instability.\nIs the computational time step too large?", iter);
     }
 
-    //cudaPrintfInit();
 
     // For each particle: Process collisions and compute resulting forces.
+    //cudaPrintfInit();
     if (PROFILING == 1)
       startTimer(&kernel_tic);
     interact<<<dimGrid, dimBlock>>>(dev_gridParticleIndex,

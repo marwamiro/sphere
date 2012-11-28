@@ -238,6 +238,7 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
     int wmode = dev_walls_wmode[idx];  // Wall BC, 0: fixed, 1: devs, 2: vel
     Float acc;
 
+
     if (wmode == 0) // Wall fixed: do nothing
       return;
 
@@ -270,6 +271,8 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
 
     // Update linear velocity
     w_mvfd.y += acc * dt;
+
+    //cuPrintf("\nwall %d, wmode = %d, force = %f, acc = %f\n", idx, wmode, w_mvfd.z, acc);
 
     // Store data in global memory
     dev_walls_nx[idx]   = w_nx;
