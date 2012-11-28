@@ -37,7 +37,7 @@ CCFILES=main.cpp file_io.cpp sphere.cpp
 CUFILES=device.cu utility.cu
 CCOBJECTS=$(CCFILES:.cpp=.o)
 CUOBJECTS=$(CUFILES:.cu=.o)
-OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
+	OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
 
 # If a header-file changes, update all objects
 DEPS=*.h *.cuh
@@ -49,17 +49,17 @@ OSUPPER=$(shell uname -s 2>/dev/null | tr [:lower:] [:upper:])
 	ARCH:=$(strip $(findstring X86_64, $(ARCHUPPER)))
 
 ifneq ($(DARWIN),) 	# If OS X
-  #GL_LIBS+=-framework glut -framework OpenGL
-  SDKPATH=/Developer/GPU\ Computing/C/common
-  EXECUTABLE=../sphere_darwin_$(ARCH)
-  CCFLAGS+=-arch x86_64
-  LDFLAGS=-L$(SDKPATH)/lib/darwin
+    #GL_LIBS+=-framework glut -framework OpenGL
+    SDKPATH=/Developer/GPU\ Computing/C/common
+    EXECUTABLE=../sphere_darwin_$(ARCH)
+    CCFLAGS+=-arch x86_64
+    LDFLAGS=-L$(SDKPATH)/lib/darwin
 else			# If Linux
-  CCFLAGS+=-DUNIX
-  #GL_LIBS+=-L/usr/X11/lib -lglut -lGL -lGLU
-  SDKPATH=$(HOME)/NVIDIA_GPU_Computing_SDK/C/common
-  EXECUTABLE=../sphere_linux_$(ARCH)
-  LDFLAGS=-L$(SDKPATH)/lib/linux -L$(CUDA_INSTALL_PATH)/lib -L$(CUDA_INSTALL_PATH)/lib64
+    CCFLAGS+=-DUNIX
+    #GL_LIBS+=-L/usr/X11/lib -lglut -lGL -lGLU
+    SDKPATH=$(HOME)/NVIDIA_GPU_Computing_SDK/C/common
+    EXECUTABLE=../sphere_linux_$(ARCH)
+    LDFLAGS=-L$(SDKPATH)/lib/linux -L$(CUDA_INSTALL_PATH)/lib -L$(CUDA_INSTALL_PATH)/lib64
 endif
 
 INCLUDES+=-I. -I$(SDKPATH)/shared/inc -I$(SDKPATH)/inc -I$(CUDA_INSTALL_PATH)/include
@@ -113,10 +113,11 @@ backup:
 clean:
 	$(RM) $(OBJECTS)
 	$(RM) ../sphere_*
-#	$(MAKE) -C ../raytracer clean
+	#	$(MAKE) -C ../raytracer clean
 
 clear:
 	# Remove all output data and images
 	$(RM) ../img_out/*.{ppm,png}
 	$(RM) ../output/*.{dat,bin}
 
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

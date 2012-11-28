@@ -16,7 +16,7 @@ __constant__ Float	  devC_dt;   // Computational time step length
 // Device constant memory structures
 __constant__ Params 	  devC_params;
 __constant__ Grid   	  devC_grid;
- 
+
 // Raytracer constants
 __constant__ float3 	  devC_u;
 __constant__ float3 	  devC_v;

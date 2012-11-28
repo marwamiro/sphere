@@ -8,27 +8,28 @@
 //   for error discription. Error enumeration starts from 0.
 void checkForCudaErrors(const char* checkpoint_description)
 {
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    std::cerr << "\nCuda error detected, checkpoint: " << checkpoint_description
-      << "\nError string: " << cudaGetErrorString(err) << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "\nCuda error detected, checkpoint: " << checkpoint_description
+            << "\nError string: " << cudaGetErrorString(err) << std::endl;
+        exit(EXIT_FAILURE);
+    }
 }
 
 void checkForCudaErrors(const char* checkpoint_description, const unsigned int iteration)
 {
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    std::cerr << "\nCuda error detected, checkpoint: " << checkpoint_description
-      << "\nduring iteration " << iteration
-      << "\nError string: " << cudaGetErrorString(err) << std::endl;
-    exit(EXIT_FAILURE);
-  }
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "\nCuda error detected, checkpoint: " << checkpoint_description
+            << "\nduring iteration " << iteration
+            << "\nError string: " << cudaGetErrorString(err) << std::endl;
+        exit(EXIT_FAILURE);
+    }
 }
 
 //Round a / b to nearest higher integer value
 unsigned int iDivUp(unsigned int a, unsigned int b) {
-  return (a % b != 0) ? (a / b + 1) : (a / b);
+    return (a % b != 0) ? (a / b + 1) : (a / b);
 }
 
+// vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

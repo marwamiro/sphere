@@ -16,12 +16,12 @@ typedef unsigned short ushort;
 
 inline Float fminf(Float a, Float b)
 {
-  return a < b ? a : b;
+    return a < b ? a : b;
 }
 
 inline Float fmaxf(Float a, Float b)
 {
-  return a > b ? a : b;
+    return a > b ? a : b;
 }
 
 inline Float rsqrtf(Float x)
@@ -232,11 +232,11 @@ inline __host__ __device__ Float4 operator/(Float b, Float4 a){
 
 inline __host__ __device__ Float3 fminf(Float3 a, Float3 b)
 {
-	return MAKE_FLOAT3(fminf(a.x,b.x), fminf(a.y,b.y), fminf(a.z,b.z));
+    return MAKE_FLOAT3(fminf(a.x,b.x), fminf(a.y,b.y), fminf(a.z,b.z));
 }
 inline  __host__ __device__ Float4 fminf(Float4 a, Float4 b)
 {
-	return MAKE_FLOAT4(fminf(a.x,b.x), fminf(a.y,b.y), fminf(a.z,b.z), fminf(a.w,b.w));
+    return MAKE_FLOAT4(fminf(a.x,b.x), fminf(a.y,b.y), fminf(a.z,b.z), fminf(a.w,b.w));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -245,11 +245,11 @@ inline  __host__ __device__ Float4 fminf(Float4 a, Float4 b)
 
 inline __host__ __device__ Float3 fmaxf(Float3 a, Float3 b)
 {
-	return MAKE_FLOAT3(fmaxf(a.x,b.x), fmaxf(a.y,b.y), fmaxf(a.z,b.z));
+    return MAKE_FLOAT3(fmaxf(a.x,b.x), fmaxf(a.y,b.y), fmaxf(a.z,b.z));
 }
 inline __host__ __device__ Float4 fmaxf(Float4 a, Float4 b)
 {
-	return MAKE_FLOAT4(fmaxf(a.x,b.x), fmaxf(a.y,b.y), fmaxf(a.z,b.z), fmaxf(a.w,b.w));
+    return MAKE_FLOAT4(fmaxf(a.x,b.x), fmaxf(a.y,b.y), fmaxf(a.z,b.z), fmaxf(a.w,b.w));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -387,11 +387,11 @@ inline __host__ __device__ Float4 fmodf(Float4 a, Float4 b)
 
 inline __host__ __device__ Float3 fabs(Float3 v)
 {
-	return MAKE_FLOAT3(fabs(v.x), fabs(v.y), fabs(v.z));
+    return MAKE_FLOAT3(fabs(v.x), fabs(v.y), fabs(v.z));
 }
 inline __host__ __device__ Float4 fabs(Float4 v)
 {
-	return MAKE_FLOAT4(fabs(v.x), fabs(v.y), fabs(v.z), fabs(v.w));
+    return MAKE_FLOAT4(fabs(v.x), fabs(v.y), fabs(v.z), fabs(v.w));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -402,7 +402,7 @@ inline __host__ __device__ Float4 fabs(Float4 v)
 
 inline __host__ __device__ Float3 reflect(Float3 i, Float3 n)
 {
-	return i - 2.0f * n * dot(n,i);
+    return i - 2.0f * n * dot(n,i);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -415,3 +415,4 @@ inline __host__ __device__ Float3 cross(Float3 a, Float3 b)
 }
 
 #endif
+// vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

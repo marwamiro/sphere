@@ -10,9 +10,9 @@
 
 // Uncomment all five lines below for single precision
 /*
-typedef Float Float;
-typedef Float3 Float3;
-typedef Float4 Float4;
+   typedef Float Float;
+   typedef Float3 Float3;
+   typedef Float4 Float4;
 #define MAKE_FLOAT2(x, y) make_float2(x, y)
 #define MAKE_FLOAT3(x, y, z) make_float3(x, y, z)
 #define MAKE_FLOAT4(x, y, z, w) make_float4(x, y, z, w)
@@ -34,3 +34,4 @@ typedef double4 Float4;
 //*/
 
 #endif
+// vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
