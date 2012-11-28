@@ -79,8 +79,10 @@ int main(const int argc, const char *argv[])
         else if (argvi == "-n" || argvi == "--dry")
             dry = 1;
 
-        else if (argvi == "-r" || argvi == "--render")
+        else if (argvi == "-r" || argvi == "--render") {
             render = 1;
+            checkVals = 0;
+        }
 
         else if (argvi == "-dc" || argvi == "--dont-check")
             checkVals = 0;
