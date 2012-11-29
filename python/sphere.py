@@ -1031,7 +1031,7 @@ def render(binary,
 
     # Render images using sphere raytracer
     subprocess.call("cd ..; ./sphere_* " + quiet + \
-            " --method " + method + " {}".format(max_val) \
+            " --method " + method + " {}".format(max_val) + \
             " --render " + binary, shell=True)
 
 
