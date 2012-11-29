@@ -225,6 +225,7 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
         Float4* dev_walls_mvfd,
         int* dev_walls_wmode,
         Float* dev_walls_force_partial,
+        Float* dev_walls_vel0,
         unsigned int blocksPerGrid)
 {
     unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
@@ -236,6 +237,7 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
         Float4 w_nx   = dev_walls_nx[idx];
         Float4 w_mvfd = dev_walls_mvfd[idx];
         int wmode = dev_walls_wmode[idx];  // Wall BC, 0: fixed, 1: devs, 2: vel
+        Float vel0 = dev_walls_vel0[idx];
         Float acc;
 
 
@@ -263,20 +265,30 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
             acc = 0.0;
         }
 
+        //// Half-step leapfrog Verlet integration scheme ////
+        
+        // Update half-step velocity
+        vel0 += acc * dt;
+
         // Update position. Second-order scheme based on Taylor expansion 
-        w_nx.w += w_mvfd.y * dt + (acc * dt*dt)/2.0;
+        //w_nx.w += w_mvfd.y * dt + (acc * dt*dt)/2.0;
+
+        // Update position
+        w_nx.w += vel0 * dt;
 
         // Update position. First-order Euler integration scheme
         //w_nx.w += w_mvfd.y * dt;
 
         // Update linear velocity
-        w_mvfd.y += acc * dt;
+        //w_mvfd.y += acc * dt;
+        w_mvfd.y += vel0 + 0.5 * acc * dt;
 
         //cuPrintf("\nwall %d, wmode = %d, force = %f, acc = %f\n", idx, wmode, w_mvfd.z, acc);
 
         // Store data in global memory
         dev_walls_nx[idx]   = w_nx;
         dev_walls_mvfd[idx] = w_mvfd;
+        dev_walls_vel0[idx] = vel0;
     }
 } // End of integrateWalls(...)
 

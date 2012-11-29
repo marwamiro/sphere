@@ -82,6 +82,7 @@ class DEM {
         Float4 *dev_walls_mvfd; // Mass, velocity, force, dev. stress
         Float *dev_walls_force_partial; // Pre-sum per wall
         Float *dev_walls_force_pp; // Force per particle per wall
+        Float *dev_walls_vel0; // Half-step velocity
         unsigned char *dev_img;
         float4 *dev_ray_origo;	// Ray data always single precision
         float4 *dev_ray_direction;

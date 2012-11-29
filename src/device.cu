@@ -283,6 +283,7 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
     cudaMalloc((void**)&dev_walls_nx, sizeof(Float4)*walls.nw);
     cudaMalloc((void**)&dev_walls_mvfd, sizeof(Float4)*walls.nw);
     cudaMalloc((void**)&dev_walls_force_pp, sizeof(Float)*walls.nw*np);
+    cudaMalloc((void**)&dev_walls_vel0, sizeof(Float)*walls.nw);
     // dev_walls_force_partial allocated later
 
     checkForCudaErrors("End of allocateGlobalDeviceMemory");
@@ -331,6 +332,7 @@ __host__ void DEM::freeGlobalDeviceMemory()
     cudaFree(dev_walls_mvfd);
     cudaFree(dev_walls_force_partial);
     cudaFree(dev_walls_force_pp);
+    cudaFree(dev_walls_vel0);
     checkForCudaErrors("During cudaFree calls");
 
     if (verbose == 1)
@@ -399,6 +401,10 @@ __host__ void DEM::transferToGlobalDeviceMemory()
             sizeof(Float4)*walls.nw, cudaMemcpyHostToDevice);
     cudaMemcpy( dev_walls_mvfd,  walls.mvfd,
             sizeof(Float4)*walls.nw, cudaMemcpyHostToDevice);
+    for (int i = 0; i<walls.nw; ++i) {
+        cudaMemcpy( &dev_walls_vel0[i], &walls.mvfd[i].y,
+                sizeof(Float), cudaMemcpyHostToDevice);
+    }
 
     checkForCudaErrors("End of transferToGlobalDeviceMemory");
     if (verbose == 1)
@@ -736,10 +742,12 @@ __host__ void DEM::startTime()
         if (PROFILING == 1)
             startTimer(&kernel_tic);
         if (walls.nw > 0) {
-            integrateWalls<<< 1, walls.nw>>>(dev_walls_nx,
+            integrateWalls<<< 1, walls.nw>>>(
+                    dev_walls_nx,
                     dev_walls_mvfd,
                     dev_walls_wmode,
                     dev_walls_force_partial,
+                    dev_walls_vel0,
                     blocksPerGrid);
         }
 
