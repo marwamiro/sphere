@@ -10,10 +10,10 @@ import subprocess
 numpy.seterr(all='warn', over='raise')
 
 class Spherebin:
-    ''' Class containing all data SPHERE data.
+    """ Class containing all data SPHERE data.
         Contains functions for reading and writing
         binaries.
-    '''
+    """
 
     def __init__(self, np = 1, nd = 3, nw = 1, sid = 'unnamed'):
         'Constructor - Initializes arrays'
@@ -86,8 +86,8 @@ class Spherebin:
         self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
 
     def __cmp__(self, other):
-        ''' Called when to Spherebin objects are compared.
-            Returns 0 if the values are identical '''
+        """ Called when to Spherebin objects are compared.
+            Returns 0 if the values are identical """
         if ( (\
                 self.nd == other.nd and\
                 self.np == other.np and\
@@ -355,10 +355,10 @@ class Spherebin:
             radius_mean = 440e-6,
             radius_variance = 8.8e-9,
             histogram = True):
-        ''' Draw random particle radii from the selected probability distribution.
+        """ Draw random particle radii from the selected probability distribution.
             Specify mean radius and variance. The variance should be kept at a
             very low value.
-        '''
+        """
 
         if psd == 'logn': # Log-normal probability distribution
             mu = math.log((radius_mean**2)/math.sqrt(radius_variance+radius_mean**2))
@@ -391,10 +391,10 @@ class Spherebin:
             gridnum = numpy.array([12, 12, 36]),
             periodic = 1,
             contactmodel = 2):
-        ''' Initialize particle positions in loose, cubic configuration.
+        """ Initialize particle positions in loose, cubic configuration.
             Radii must be set beforehand.
             xynum is the number of rows in both x- and y- directions.
-        '''
+        """
         self.g = g
         self.periodic[0] = periodic
 
@@ -434,10 +434,10 @@ class Spherebin:
 
 
     def initGrid(self):
-        ''' Initialize grid suitable for the particle positions set previously.
+        """ Initialize grid suitable for the particle positions set previously.
             The margin parameter adjusts the distance (in no. of max. radii)
             from the particle boundaries.
-        '''
+        """
 
 
         # Cell configuration
@@ -460,10 +460,10 @@ class Spherebin:
             margin = numpy.array([2.0, 2.0, 2.0]),
             periodic = 1,
             contactmodel = 2):
-        ''' Initialize grid suitable for the particle positions set previously.
+        """ Initialize grid suitable for the particle positions set previously.
             The margin parameter adjusts the distance (in no. of max. radii)
             from the particle boundaries.
-        '''
+        """
 
         self.g = g
         self.periodic[0] = periodic
@@ -497,10 +497,10 @@ class Spherebin:
             gridnum = numpy.array([12, 12, 36]),
             periodic = 1,
             contactmodel = 2):
-        ''' Initialize particle positions in loose, cubic configuration.
+        """ Initialize particle positions in loose, cubic configuration.
             Radii must be set beforehand.
             xynum is the number of rows in both x- and y- directions.
-        '''
+        """
 
         self.g = g
         self.periodic[0] = periodic
@@ -562,10 +562,10 @@ class Spherebin:
             gridnum = numpy.array([12, 12, 32]),
             periodic = 1,
             contactmodel = 2):
-        ''' Initialize particle positions in loose, cubic configuration.
+        """ Initialize particle positions in loose, cubic configuration.
             Radii must be set beforehand.
             xynum is the number of rows in both x- and y- directions.
-        '''
+        """
 
         self.g = g
         self.periodic[0] = periodic
@@ -652,9 +652,9 @@ class Spherebin:
 
     def consolidate(self, deviatoric_stress = 10e3, 
             periodic = 1):
-        ''' Setup consolidation experiment. Specify the upper wall 
+        """ Setup consolidation experiment. Specify the upper wall 
             deviatoric stress in Pascal, default value is 10 kPa.
-        '''
+        """
 
         # Zero the kinematics of all particles
         self.zeroKinematics()
@@ -669,9 +669,9 @@ class Spherebin:
 
     def uniaxialStrainRate(self, wvel = -0.001,
             periodic = 1):
-        ''' Setup consolidation experiment. Specify the upper wall 
+        """ Setup consolidation experiment. Specify the upper wall 
             velocity in m/s, default value is -0.001 m/s (i.e. downwards).
-        '''
+        """
 
         # zero kinematics
         self.zeroKinematics()
@@ -685,11 +685,11 @@ class Spherebin:
     def shear(self, deviatoric_stress = 10e3, 
             shear_strain_rate = 1,
             periodic = 1):
-        ''' Setup shear experiment. Specify the upper wall 
+        """ Setup shear experiment. Specify the upper wall 
             deviatoric stress in Pascal, default value is 10 kPa.
             The shear strain rate is the shear length divided by the
             initial height per second.
-        '''
+        """
 
         # Compute new grid, scaled to fit max. and min. particle positions
         z_min = numpy.min(self.x[:,2] - self.radius)
@@ -738,10 +738,10 @@ class Spherebin:
             current = 0.0,
             file_dt = 0.01,
             step_count = 0):
-        ''' Set temporal parameters for the simulation.
+        """ Set temporal parameters for the simulation.
             Particle radii and physical parameters need to be set
             prior to these.
-        '''
+        """
 
         r_min = numpy.amin(self.radius)
 
@@ -771,9 +771,9 @@ class Spherebin:
             gamma_wn = 1e4,
             gamma_wt = 1e4,
             capillaryCohesion = 0):
-        ''' Initialize particle parameters to default values.
+        """ Initialize particle parameters to default values.
             Radii must be set prior to calling this function.
-        '''
+        """
 
         # Particle material density, kg/m^3
         self.rho = numpy.ones(1, dtype=numpy.float64) * rho
@@ -838,8 +838,8 @@ class Spherebin:
         self.db[0] = (1.0 + theta/2.0) * self.V_b**(1.0/3.0)
 
     def energy(self, method):
-        ''' Calculate the sum of the energy components of all particles.
-        '''
+        """ Calculate the sum of the energy components of all particles.
+        """
 
         if method == 'pot':
             m = numpy.ones(self.np) * 4.0/3.0 * math.pi * self.radius**3 * self.rho
@@ -892,12 +892,12 @@ class Spherebin:
             upper_corner, 
             grid = numpy.array([10,10,10], int), 
             precisionfactor = 10, verbose = False):
-        ''' Calculate the porosity inside each grid cell.
+        """ Calculate the porosity inside each grid cell.
             Specify the lower and upper corners of the volume to evaluate.
             A good starting point for the grid vector is self.num.
             The precision factor determines how much precise the grid porosity is.
             A larger value will result in better precision, but more computations O(n^3).
-        '''
+        """
 
         # Cell size length
         csl = numpy.array([(upper_corner[0]-lower_corner[0]) / grid[0], \
@@ -1063,9 +1063,9 @@ def video(project,
 
 
 def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
-    ''' Visualize output from the target project,
+    """ Visualize output from the target project,
         where the temporal progress is of interest.
-    '''
+    """
 
     lastfile = status(project)
 
@@ -1333,9 +1333,9 @@ def run(binary, verbose=True, hideinputfile=False):
     subprocess.call("cd ..; ./sphere_* " + quiet + " " + binary + " " + stdout, shell=True)
 
 def status(project):
-    ''' Check the status.dat file for the target project,
-    and return the last file numer.
-    '''
+    """ Check the status.dat file for the target project,
+        and return the last file numer.
+    """
     
     fh = None
     try :
