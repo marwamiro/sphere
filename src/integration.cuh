@@ -281,7 +281,7 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
 
         // Update linear velocity
         //w_mvfd.y += acc * dt;
-        w_mvfd.y += vel0 + 0.5 * acc * dt;
+        w_mvfd.y = vel0 + 0.5 * acc * dt;
 
         //cuPrintf("\nwall %d, wmode = %d, force = %f, acc = %f\n", idx, wmode, w_mvfd.z, acc);
 
