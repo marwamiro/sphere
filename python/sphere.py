@@ -1179,17 +1179,23 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                     wpos   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
                     wdevs  = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
                     maxpos = numpy.zeros((lastfile+1), dtype=numpy.float64)
+                    logstress = numpy.zeros((lastfile+1), dtype=numpy.float64)
+                    voidratio = numpy.zeros((lastfile+1), dtype=numpy.float64)
 
                 wforce[i] = sb.w_force[0]
                 wvel[i]   = sb.w_vel[0]
                 wpos[i]   = sb.w_x[0]
                 wdevs[i]  = sb.w_devs[0]
                 maxpos[i] = numpy.max(sb.x[:,2]+sb.radius)
+                logstress[i] = numpy.log((sb.w_force[0]/(sb.L[0]*sb.L[1]))/1000.0)
+                voidratio[i] = sb.voidRatio()
+
 
             t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
             # Plotting
             if (outformat != 'txt'):
+                # linear plot of time vs. wall position
                 ax1 = plt.subplot2grid((2,2),(0,0))
                 ax1.set_xlabel('Time [s]')
                 ax1.set_ylabel('Position [m]')
@@ -1197,16 +1203,24 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax1.plot(t, maxpos, '+-', label="heighest particle")
                 ax1.legend()
 
-                ax2 = plt.subplot2grid((2,2),(0,1))
-                ax2.set_xlabel('Time [s]')
-                ax2.set_ylabel('Velocity [m/s]')
-                ax2.plot(t, wvel, '+-')
+                #ax2 = plt.subplot2grid((2,2),(1,0))
+                #ax2.set_xlabel('Time [s]')
+                #ax2.set_ylabel('Force [N]')
+                #ax2.plot(t, wforce, '+-')
 
-                ax3 = plt.subplot2grid((2,2),(1,0))
+                # semilog plot of log stress vs. void ratio
+                ax2 = plt.subplot2grid((2,2),(1,0))
+                ax2.set_xlabel('log deviatoric stress [kPa]')
+                ax2.set_ylabel('Void ratio [-]')
+                ax2.plot(logstress, voidratio, '+-')
+
+                # linear plot of time vs. wall velocity
+                ax3 = plt.subplot2grid((2,2),(0,1))
                 ax3.set_xlabel('Time [s]')
-                ax3.set_ylabel('Force [N]')
-                ax3.plot(t, wforce, '+-')
+                ax3.set_ylabel('Velocity [m/s]')
+                ax3.plot(t, wvel, '+-')
 
+                # linear plot of time vs. deviatoric stress
                 ax4 = plt.subplot2grid((2,2),(1,1))
                 ax4.set_xlabel('Time [s]')
                 ax4.set_ylabel('Deviatoric stress [Pa]')
