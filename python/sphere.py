@@ -1111,48 +1111,56 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax1.set_xlabel('Time [s]')
                 ax1.set_ylabel('Total potential energy [J]')
                 ax1.plot(t, Epot, '+-')
+                ax1.grid()
 
                 # Kinetic energy
                 ax2 = plt.subplot2grid((2,5),(0,1))
                 ax2.set_xlabel('Time [s]')
                 ax2.set_ylabel('Total kinetic energy [J]')
                 ax2.plot(t, Ekin, '+-')
+                ax2.grid()
 
                 # Rotational energy
                 ax3 = plt.subplot2grid((2,5),(0,2))
                 ax3.set_xlabel('Time [s]')
                 ax3.set_ylabel('Total rotational energy [J]')
                 ax3.plot(t, Erot, '+-')
+                ax3.grid()
 
                 # Total energy
                 ax4 = plt.subplot2grid((2,5),(0,3))
                 ax4.set_xlabel('Time [s]')
                 ax4.set_ylabel('Total energy [J]')
                 ax4.plot(t, Esum, '+-')
+                ax4.grid()
 
                 # Shear energy rate
                 ax5 = plt.subplot2grid((2,5),(1,0))
                 ax5.set_xlabel('Time [s]')
                 ax5.set_ylabel('Frictional dissipation rate [W]')
                 ax5.plot(t, Es_dot, '+-')
+                ax5.grid()
 
                 # Shear energy
                 ax6 = plt.subplot2grid((2,5),(1,1))
                 ax6.set_xlabel('Time [s]')
                 ax6.set_ylabel('Total frictional dissipation [J]')
                 ax6.plot(t, Es, '+-')
+                ax6.grid()
 
                 # Visc_n energy rate
                 ax7 = plt.subplot2grid((2,5),(1,2))
                 ax7.set_xlabel('Time [s]')
                 ax7.set_ylabel('Viscous dissipation rate [W]')
                 ax7.plot(t, Ev_dot, '+-')
+                ax7.grid()
 
                 # Visc_n energy
                 ax8 = plt.subplot2grid((2,5),(1,3))
                 ax8.set_xlabel('Time [s]')
                 ax8.set_ylabel('Total viscous dissipation [J]')
                 ax8.plot(t, Ev, '+-')
+                ax8.grid()
 
 
                 # Combined view
@@ -1163,6 +1171,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax9.plot(t, Ekin, '+-b')
                 ax9.plot(t, Erot, '+-r')
                 ax9.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
+                ax9.grid()
 
         elif method == 'walls':
 
@@ -1202,6 +1211,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax1.plot(t, wpos, '+-', label="upper wall")
                 ax1.plot(t, maxpos, '+-', label="heighest particle")
                 ax1.legend()
+                ax1.grid()
 
                 #ax2 = plt.subplot2grid((2,2),(1,0))
                 #ax2.set_xlabel('Time [s]')
@@ -1213,12 +1223,14 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax2.set_xlabel('log deviatoric stress [kPa]')
                 ax2.set_ylabel('Void ratio [-]')
                 ax2.plot(logstress, voidratio, '+-')
+                ax2.grid()
 
                 # linear plot of time vs. wall velocity
                 ax3 = plt.subplot2grid((2,2),(0,1))
                 ax3.set_xlabel('Time [s]')
                 ax3.set_ylabel('Velocity [m/s]')
                 ax3.plot(t, wvel, '+-')
+                ax3.grid()
 
                 # linear plot of time vs. deviatoric stress
                 ax4 = plt.subplot2grid((2,2),(1,1))
@@ -1227,6 +1239,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax4.plot(t, wdevs, '+-', label="$\sigma_0$")
                 ax4.plot(t, wforce/(sb.L[0]*sb.L[1]), '+-', label="$\sigma'$")
                 ax4.legend(loc=4)
+                ax4.grid()
 
 
         elif method == 'shear':
@@ -1271,12 +1284,14 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax1.plot(xdisp, sigma_def, '+-b', label="$\sigma_0")
                 ax1.plot(xdisp, tau, '+-r')
                 ax1.legend()
+                ax1.grid()
 
                 # Plot dilation
                 ax2 = plt.subplot2grid((2,1),(1,0))
                 ax2.set_xlabel('Shear distance [m]')
                 ax2.set_ylabel('Dilation [m]')
                 ax2.plot(xdisp, dilation, '+-')
+                ax2.grid()
 
     else : 
         # Write values to textfile
