@@ -1019,6 +1019,8 @@ def convert(graphicsformat = "png",
 
 
 def render(binary,
+        method = "pres",
+        max_val = 1e3,
         graphicsformat = 'png',
         verbose=True):
     'Render target binary using the sphere raytracer.'
@@ -1028,7 +1030,9 @@ def render(binary,
         quiet = "-q"
 
     # Render images using sphere raytracer
-    subprocess.call("cd ..; ./sphere_* " + quiet + " -r " + binary, shell=True)
+    subprocess.call("cd ..; ./sphere_* " + quiet + \
+            " --method " + method + " {}".format(max_val) \
+            " --render " + binary, shell=True)
 
 
     # Convert images to compressed format
@@ -1174,11 +1178,13 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                     wvel   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
                     wpos   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
                     wdevs  = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+                    maxpos = numpy.zeros((lastfile+1), dtype=numpy.float64)
 
                 wforce[i] = sb.w_force[0]
                 wvel[i]   = sb.w_vel[0]
                 wpos[i]   = sb.w_x[0]
                 wdevs[i]  = sb.w_devs[0]
+                maxpos[i] = numpy.max(sb.x[:,2]+sb.radius)
 
             t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
@@ -1187,7 +1193,9 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax1 = plt.subplot2grid((2,2),(0,0))
                 ax1.set_xlabel('Time [s]')
                 ax1.set_ylabel('Position [m]')
-                ax1.plot(t, wpos, '+-')
+                ax1.plot(t, wpos, '+-', label="upper wall")
+                ax1.plot(t, maxpos, '+-', label="heighest particle")
+                ax1.legend()
 
                 ax2 = plt.subplot2grid((2,2),(0,1))
                 ax2.set_xlabel('Time [s]')
