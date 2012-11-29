@@ -696,7 +696,7 @@ class Spherebin:
         self.w_vel = numpy.array([wvel])
 
 
-    def shear(self, deviatoric_stress = 10e3, 
+    def shear(self,
             shear_strain_rate = 1,
             periodic = 1):
         """ Setup shear experiment. Specify the upper wall 
@@ -705,18 +705,21 @@ class Spherebin:
             initial height per second.
         """
 
-        # Compute new grid, scaled to fit max. and min. particle positions
+        # Find lowest and heighest point
         z_min = numpy.min(self.x[:,2] - self.radius)
         z_max = numpy.max(self.x[:,2] + self.radius)
-        cellsize = self.L[0] / self.num[0]
-        self.adjustUpperWall(z_adjust = 1.3)
 
-        # Initialize upper wall
-        self.w_devs[0] = deviatoric_stress
+        # the grid cell size is equal to the max. particle diameter
+        cellsize = self.L[0] / self.num[0]
+
+        # make grid one cell heigher to allow dilation
+        self.num[2] += 1
+        self.L[2] = self.num[2] * cellsize
 
         # zero kinematics
         self.zeroKinematics()
 
+        # set the thickness of the horizons of fixed particles
         #fixheight = 2*cellsize
         fixheight = cellsize
 
