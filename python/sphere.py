@@ -10,13 +10,27 @@ import subprocess
 numpy.seterr(all='warn', over='raise')
 
 class Spherebin:
-    """ Class containing all data SPHERE data.
-        Contains functions for reading and writing
-        binaries.
+    """ 
+    Class containing all data SPHERE data.
+    
+    Contains functions for reading and writing binaries, as well as simulation
+    setup and data analysis.
     """
 
     def __init__(self, np = 1, nd = 3, nw = 1, sid = 'unnamed'):
-        'Constructor - Initializes arrays'
+        """
+        Constructor - initializes arrays
+
+        :param np: the number of particles to allocate memory for
+        :param nd: the number of spatial dimensions
+        :param nw: the number of dynamic walls
+        :param sid: the simulation id
+        :type np: int
+        :type nd: int
+        :type nw: int
+        :type sid: string
+
+        """
 
         self.nd = numpy.ones(1, dtype=numpy.int32) * nd
         self.np = numpy.ones(1, dtype=numpy.uint32) * np
@@ -1058,7 +1072,7 @@ def video(project,
     subprocess.call(\
             "ffmpeg -qscale {0} -r {1} -b {2} -y ".format(qscale, fps, bitrate) \
             + "-loglevel " + loglevel + " " \
-            + "-i " + graphics_folder + project + ".output%d." + graphics_format + " " \
+            + "-i " + graphics_folder + project + ".output%05d." + graphics_format + " " \
             + out_folder + "/" + project + "." + video_format, shell=True)
 
 
