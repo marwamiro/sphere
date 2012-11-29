@@ -1217,10 +1217,11 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
 
                 # First iteration: Allocate arrays and find constant values
                 if (i == 0):
-                    xdisp    = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear displacement
-                    sigma    = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Normal stress
-                    tau      = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear stress
-                    dilation = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Upper wall position
+                    xdisp     = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear displacement
+                    sigma_eff = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Normal stress
+                    sigma_def = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Normal stress
+                    tau       = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear stress
+                    dilation  = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Upper wall position
 
                     fixvel = numpy.nonzero(sb.fixvel > 0.0)
                     #fixvel_upper = numpy.nonzero(sb.vel[fixvel,0] > 0.0)
@@ -1234,8 +1235,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                         tau[i] += -sb.force[j,0]
 
                 xdisp[i]    = sb.time_current[0] * shearvel
-                sigma[i]    = sb.w_force[0] / A
-                sigma[i]    = sb.w_devs[0]
+                sigma_eff[i] = sb.w_force[0] / A
+                sigma_def[i] = sb.w_devs[0]
                 #tau[i]      = sb.force[fixvel_upper,0].sum() / A
                 dilation[i] = sb.w_x[0] - w_x0
 
@@ -1244,9 +1245,10 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax1 = plt.subplot2grid((2,1),(0,0))
                 ax1.set_xlabel('Shear distance [m]')
                 ax1.set_ylabel('Stress [Pa]')
-                ax1.plot(xdisp, sigma, '+-g')
+                ax1.plot(xdisp, sigma_eff, '+-g', label="$\sigma'")
+                ax1.plot(xdisp, sigma_def, '+-b', label="$\sigma_0")
                 ax1.plot(xdisp, tau, '+-r')
-                #plt.legend('$\sigma`$','$\tau$')
+                ax1.legend()
 
                 # Plot dilation
                 ax2 = plt.subplot2grid((2,1),(1,0))
