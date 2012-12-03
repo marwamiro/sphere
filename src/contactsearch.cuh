@@ -638,10 +638,7 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
         dev_es[orig_idx]     += es_dot * devC_dt;
         dev_ev[orig_idx]     += ev_dot * devC_dt;
         dev_p[orig_idx]       = p;
-        if (devC_nw > 0 && w_force != 0.0) {
-            dev_walls_force_pp[orig_idx] = w_force;
-            //cuPrintf("wforce written\n");
-        }
+        dev_walls_force_pp[orig_idx] = w_force;
     }
 } // End of interact(...)
 
