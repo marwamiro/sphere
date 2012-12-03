@@ -40,7 +40,8 @@ CUOBJECTS=$(CUFILES:.cu=.o)
 	OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
 
 # If a header-file changes, update all objects
-DEPS=*.h *.cuh
+CDEPS=*.h
+CUDEPS=$(CDEPS) *.cuh
 
 # Detect OS
 OSUPPER=$(shell uname -s 2>/dev/null | tr [:lower:] [:upper:])
@@ -80,16 +81,16 @@ $(EXECUTABLE): $(OBJECTS)
 utility.o: utility.cu
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
 
-file_io.o: file_io.cpp $(DEPS)
+file_io.o: file_io.cpp $(CDEPS)
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
-device.o: device.cu $(DEPS)
+device.o: device.cu $(CUDEPS)
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
 
-main.o: main.cpp $(DEPS)
+main.o: main.cpp $(CDEPS)
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
-sphere.o: sphere.cpp $(DEPS)
+sphere.o: sphere.cpp $(CDEPS)
 	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
 ../sphere_status: sphere_status.cpp
