@@ -60,7 +60,8 @@ else			# If Linux
     #GL_LIBS+=-L/usr/X11/lib -lglut -lGL -lGLU
     SDKPATH=$(HOME)/NVIDIA_GPU_Computing_SDK/C/common
     EXECUTABLE=../sphere_linux_$(ARCH)
-    LDFLAGS=-L$(SDKPATH)/lib/linux -L$(CUDA_INSTALL_PATH)/lib -L$(CUDA_INSTALL_PATH)/lib64
+    LDFLAGS=-L$(SDKPATH)/lib/linux -L$(CUDA_INSTALL_PATH)/lib64 
+    #LDFLAGS+=-L$(CUDA_INSTALL_PATH)/lib	# 32 bit
 endif
 
 INCLUDES+=-I. -I$(SDKPATH)/shared/inc -I$(SDKPATH)/inc -I$(CUDA_INSTALL_PATH)/include
@@ -69,11 +70,8 @@ LDFLAGS+=-L$(SDKPATH)/../../shared/lib -L$(SDKPATH)/../lib
 LDFLAGS+=-lcutil_x86_64 -lcuda -lcudart
 LDFLAGS+=-fopenmp 
 
-#all: $(CCFILES) $(CUFILES) $(EXECUTABLE) raytracer
 all: $(CCFILES) $(CUFILES) $(EXECUTABLE) folders
 
-#raytracer: 
-#	$(MAKE) -C ../raytracer/
 
 $(EXECUTABLE): $(OBJECTS)
 	$(LINKER) $(OBJECTS) $(LDFLAGS) -o $@
@@ -114,7 +112,6 @@ backup:
 clean:
 	$(RM) $(OBJECTS)
 	$(RM) ../sphere_*
-	#	$(MAKE) -C ../raytracer clean
 
 clear:
 	# Remove all output data and images
