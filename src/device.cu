@@ -47,7 +47,7 @@ __host__ void DEM::initializeGPU(void)
     // Register number of devices
     cudaGetDeviceCount(&devicecount);
 
-    if(devicecount == 0) {
+    if (devicecount == 0) {
         std::cerr << "\nERROR: No CUDA-enabled devices availible. Bye."
             << std::endl;
         exit(EXIT_FAILURE);
@@ -74,7 +74,7 @@ __host__ void DEM::initializeGPU(void)
     }
 
     // Comment following line when using a system only containing exclusive mode GPUs
-    //cudaChooseDevice(&cudadevice, &prop); 
+    cudaChooseDevice(&cudadevice, &prop); 
 
     checkForCudaErrors("While initializing CUDA device");
 }
