@@ -240,7 +240,6 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
         Float vel0 = dev_walls_vel0[idx];
         Float acc;
 
-
         if (wmode == 0) // Wall fixed: do nothing
             return;
 
