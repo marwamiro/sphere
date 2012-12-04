@@ -40,6 +40,6 @@ To obtain a local copy, execute:
 
 Build instructions
 ==================
- cd src/ && make
+  ``cd src/ && make``
 
 This will generate a command-line executable in the root folder.
