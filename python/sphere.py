@@ -439,10 +439,10 @@ class Spherebin:
                             - (self.radius[i] + self.radius[j])
                     if (delta_len < 0.0):
                         overlaps = True
-            print "\rFinding non-overlapping particle positions, {0} % complete".format(numpy.ceil(i/self.np[0]*100)),
+            print("\rFinding non-overlapping particle positions, {0} % complete".format(numpy.ceil(i/self.np[0]*100)))
 
         # Print newline
-        print " "
+        print()
 
         self.contactmodel[0] = contactmodel
 
@@ -529,7 +529,7 @@ class Spherebin:
 
         # Check whether there are enough grid cells 
         if ((self.num[0]*self.num[1]*self.num[2]-(2**3)) < self.np):
-            print "Error! The grid is not sufficiently large."
+            print("Error! The grid is not sufficiently large.")
             raise NameError('Error! The grid is not sufficiently large.')
 
         gridpos = numpy.zeros(self.nd, dtype=numpy.uint32)
@@ -541,7 +541,7 @@ class Spherebin:
 
         # Check whether there are enough grid cells 
         if ((self.num[0]*self.num[1]*self.num[2]-(2*3*3)) < self.np):
-            print "Error! The grid is not sufficiently large."
+            print("Error! The grid is not sufficiently large.")
             raise NameError('Error! The grid is not sufficiently large.')
 
 
@@ -593,7 +593,7 @@ class Spherebin:
 
         # Check whether there are enough grid cells 
         if (((coarsegrid[0]-1)*(coarsegrid[1]-1)*(coarsegrid[2]-1)) < self.np):
-            print "Error! The grid is not sufficiently large."
+            print("Error! The grid is not sufficiently large.")
             raise NameError('Error! The grid is not sufficiently large.')
 
         gridpos = numpy.zeros(self.nd, dtype=numpy.uint32)
@@ -822,15 +822,15 @@ class Spherebin:
 
         # Contact static shear friction coefficient
         #self.mu_s = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_s))
-	self.mu_s = numpy.ones(1, dtype=numpy.float64) * mu_s
+        self.mu_s = numpy.ones(1, dtype=numpy.float64) * mu_s
 
         # Contact dynamic shear friction coefficient
         #self.mu_d = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_d))
-	self.mu_d = numpy.ones(1, dtype=numpy.float64) * mu_d
+        self.mu_d = numpy.ones(1, dtype=numpy.float64) * mu_d
 
         # Contact rolling friction coefficient
         #self.mu_r = numpy.ones(1, dtype=numpy.float64) * numpy.tan(numpy.radians(ang_r))
-	self.mu_r = numpy.ones(1, dtype=numpy.float64) * mu_r
+        self.mu_r = numpy.ones(1, dtype=numpy.float64) * mu_r
 
         # Wall viscosities
         self.gamma_wn[0] = gamma_wn # normal
@@ -987,13 +987,13 @@ class Spherebin:
 
         quiet = ""
         stdout = ""
-	dryarg = ""
+        dryarg = ""
         if (verbose == False):
             quiet = "-q "
         if (hideinputfile == True):
             stdout = " > /dev/null"
-	if (dry == True):
-	    dryarg = "--dry "
+        if (dry == True):
+            dryarg = "--dry "
 
         subprocess.call("cd ..; ./sphere_* " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
 
