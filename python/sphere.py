@@ -1309,6 +1309,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax2.set_ylabel('Dilation [m]')
                 ax2.plot(xdisp, dilation, '+-')
                 ax2.grid()
+        else :
+            print("Visualization type '" + method + "' not understood")
 
     else : 
         # Write values to textfile
