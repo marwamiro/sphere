@@ -11,24 +11,24 @@ See the ``doc/`` folder for general reference.
 Requirements
 ============
 The build requirements are:
-- A Nvidia CUDA-supported version of Linux or Mac OS X
-- The GNU Compiler Collection (GCC)
-- The Nvidia CUDA toolkit and SDK
+  - A Nvidia CUDA-supported version of Linux or Mac OS X
+  - The GNU Compiler Collection (GCC)
+  - The Nvidia CUDA toolkit and SDK
 
 The runtime requirements are:
-- A Nvidia CUDA-enabled GPU and device driver
+  - A Nvidia CUDA-enabled GPU and device driver
 
 Optional tools, required for simulation setup and data processing:
-- Python 2.7
-- Numpy
-- Matplotlib
-- Imagemagick
-- ffmpeg
+  - Python 2.7
+  - Numpy
+  - Matplotlib
+  - Imagemagick
+  - ffmpeg
 
 Optional tools, required for building the documentation:
-- Sphinx
-- Doxygen
-- Breathe
+  - Sphinx
+  - Doxygen
+  - Breathe
 
 Obtaining SPHERE
 ================
