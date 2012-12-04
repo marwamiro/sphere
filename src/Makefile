@@ -94,7 +94,10 @@ sphere.o: sphere.cpp $(CDEPS)
 ../sphere_status: sphere_status.cpp
 	$(CC) $(CCFLAGS) sphere_status.cpp -o ../sphere_status
 
-folders: ../output ../img_out
+folders: ../output ../img_out ../input
+
+../input:
+	mkdir $@
 
 ../output:
 	mkdir $@
