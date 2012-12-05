@@ -1,6 +1,6 @@
 C++ reference
 =============
 .. doxygenclass:: DEM
-    :members:
+   :members:
 
 
