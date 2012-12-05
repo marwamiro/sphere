@@ -1278,7 +1278,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                     fixvel = numpy.nonzero(sb.fixvel > 0.0)
                     #fixvel_upper = numpy.nonzero(sb.vel[fixvel,0] > 0.0)
                     shearvel = sb.vel[fixvel,0].max()
-                    w_x0 = sb.w_x[0]
+                    w_x0 = sb.w_x[0]        # Original height
                     A = sb.L[0] * sb.L[1]   # Upper surface area
 
                 # Summation of shear stress contributions
@@ -1290,7 +1290,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 sigma_eff[i] = sb.w_force[0] / A
                 sigma_def[i] = sb.w_devs[0]
                 #tau[i]      = sb.force[fixvel_upper,0].sum() / A
-                dilation[i] = sb.w_x[0] - w_x0
+                #dilation[i] = sb.w_x[0] - w_x0                 # dilation in meters
+                dilation[i] = (sb.w_x[0] - w_x0)/w_x0 * 100.0   # dilation in percent
 
             # Plot stresses
             if (outformat != 'txt'):
@@ -1306,7 +1307,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 # Plot dilation
                 ax2 = plt.subplot2grid((2,1),(1,0))
                 ax2.set_xlabel('Shear distance [m]')
-                ax2.set_ylabel('Dilation [m]')
+                ax2.set_ylabel('Dilation [%]')
                 ax2.plot(xdisp, dilation, '+-')
                 ax2.grid()
         else :
