@@ -20,7 +20,6 @@ Contents:
    introduction
    dem
    python_api
-   sphere_ref
    sphere_internals
 
 
