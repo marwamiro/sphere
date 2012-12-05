@@ -1301,7 +1301,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 ax1.plot(xdisp, sigma_eff, '+-g', label="$\sigma'$")
                 ax1.plot(xdisp, sigma_def, '+-b', label="$\sigma_0$")
                 ax1.plot(xdisp, tau, '+-r', label="$\\tau$")
-                ax1.legend()
+                ax1.legend(loc = 4)
                 ax1.grid()
 
                 # Plot dilation
