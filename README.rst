@@ -9,7 +9,7 @@ See license.txt for more information.
 See the ``doc/`` folder for general reference.
 
 Requirements
-============
+------------
 The build requirements are:
   * A Nvidia CUDA-supported version of Linux or Mac OS X (see the `CUDA toolkit release notes <http://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html>`_ for more information)
   * The `GNU Compiler Collection <http://gcc.gnu.org/>`_ (GCC)
@@ -31,11 +31,8 @@ Optional tools, required for building the documentation:
   * `Doxygen <http://www.stack.nl/~dimitri/doxygen/>`_
   * `Breathe <http://michaeljones.github.com/breathe/>`_
 
-`Git <http://git-scm.com>`_ is used as the distributed version control system platform, and the source code is maintained at `Github <https://github.com/anders-dc/sphere/>`_. *sphere* is licensed under the `GNU Public License, v.3 <https://www.gnu.org/licenses/gpl.html>`_.
-
-
 Obtaining SPHERE
-================
+----------------
 The best way to keep up to date with subsequent updates, bugfixes
 and development, is to use the Git version control system.
 
@@ -43,7 +40,7 @@ To obtain a local copy, execute:
   ``git clone https://github.com/anders-dc/sphere.git``
 
 Build instructions
-==================
+------------------
   ``cd src/ && make``
 
 This will generate a command-line executable in the root folder.
