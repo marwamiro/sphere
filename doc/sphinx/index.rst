@@ -9,7 +9,7 @@ This is the official documentation for the *sphere* discrete element modelling s
 
 *sphere* is developed by Anders Damsgaard Christensen under supervision of David Lunbek Egholm and Jan A. Piotrowski, all of the department of Geology, Aarhus University, Denmark. This document is a work in progress, and is still in an early state. 
 
-Contact: Anders Damsgaard Christensen, http://cs.au.dk/~adc, adc@geo.au.dk
+Contact: Anders Damsgaard Christensen, `<http://cs.au.dk/~adc>`_, `<adc@geo.au.dk>`_
 
 
 Contents:
@@ -27,7 +27,8 @@ Contents:
 Indices and tables
 ==================
 
+.. * :ref:`modindex`
+
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 
