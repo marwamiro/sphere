@@ -50,10 +50,10 @@ int main(const int argc, const char *argv[])
                 << "-q, --quiet\t\tsuppress status messages to stdout\n"
                 << "-n, --dry\t\tshow key experiment parameters and quit\n"
                 << "-r, --render\t\trender input files instead of simulating temporal evolution\n"
-                << "-dc, --dont-check\t\tdon't check values before running\n" 
-                << "Raytracer (-r) specific options:\n"
+                << "-dc, --dont-check\tdon't check values before running\n" 
+                << "\nRaytracer (-r) specific options:\n"
                 << "-m <method> <maxval>, --method <method> <maxval>\n\tcolor visualization method, possible values:\n"
-                << "\t\t\t\tpres, vel, angvel, xdisp, angpos\n"
+                << "\tpres, vel, angvel, xdisp, angpos\n"
                 << std::endl;
             return 0; // Exit with success
         }
@@ -69,7 +69,9 @@ int main(const int argc, const char *argv[])
                 << "|   |___/ .__/|_| |_|\\___|_|  \\___|   |\n"
                 << "|       | |                           |\n"
                 << "|       |_|           Version: " << VERS << "   |\n"           
-                << "`-------------------------------------´\n";
+                << "`-------------------------------------´\n"
+                << " A discrete element method particle dynamics simulator.\n"
+                << " Written by Anders Damsgaard Christensen, license GPLv3+.\n";
             return 0;
         }
 

@@ -37,7 +37,7 @@ CCFILES=main.cpp file_io.cpp sphere.cpp
 CUFILES=device.cu utility.cu
 CCOBJECTS=$(CCFILES:.cpp=.o)
 CUOBJECTS=$(CUFILES:.cu=.o)
-	OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
+OBJECTS=$(CCOBJECTS) $(CUOBJECTS)
 
 # If a header-file changes, update all objects
 CDEPS=*.h
@@ -53,10 +53,10 @@ ifneq ($(DARWIN),) 	# If OS X
     #GL_LIBS+=-framework glut -framework OpenGL
     SDKPATH=/Developer/GPU\ Computing/C/common
     EXECUTABLE=../sphere_darwin_$(ARCH)
-    CCFLAGS+=-arch x86_64
+    CCFLAGS+=-arch x86_64 -lopenmp
     LDFLAGS=-L$(SDKPATH)/lib/darwin
 else			# If Linux
-    CCFLAGS+=-DUNIX
+    CCFLAGS+=-DUNIX -fopenmp
     #GL_LIBS+=-L/usr/X11/lib -lglut -lGL -lGLU
     SDKPATH=$(HOME)/NVIDIA_GPU_Computing_SDK/C/common
     EXECUTABLE=../sphere_linux_$(ARCH)
@@ -70,11 +70,17 @@ LDFLAGS+=-L$(SDKPATH)/../../shared/lib -L$(SDKPATH)/../lib
 LDFLAGS+=-lcutil_x86_64 -lcuda -lcudart
 LDFLAGS+=-fopenmp 
 
-all: $(CCFILES) $(CUFILES) $(EXECUTABLE) folders
+all: $(CCFILES) $(CUFILES) $(EXECUTABLE) folders ../porosity
 
 
 $(EXECUTABLE): $(OBJECTS)
 	$(LINKER) $(OBJECTS) $(LDFLAGS) -o $@
+
+../porosity: porosity.o sphere.o device.o file_io.o utility.o
+	$(LINKER) $^ $(LDFLAGS) -o $@
+
+porosity.o: porosity.cpp $(CDEPS)
+	$(CC) $(CCFLAGS) $(INCLUDES) -c $< -o $@
 
 utility.o: utility.cu
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -c $< -o $@
@@ -105,6 +111,8 @@ folders: ../output ../img_out ../input
 ../img_out:
 	mkdir $@
 
+doc:
+	$(MAKE) -C ../doc
 edit:
 	$(EDITOR) Makefile $(CCFILES) $(CUFILES) *.h *.cuh 
 

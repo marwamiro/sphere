@@ -130,7 +130,8 @@ class DEM {
         DEM(std::string inputbin, 
                 const int verbosity = 1,
                 const int checkVals = 1,
-                const int dry = 0);
+                const int dry = 0,
+                const int initCuda = 1);
 
         // Destructor
         ~DEM(void);
@@ -161,6 +162,9 @@ class DEM {
 
         // Write image data to PPM file
         void writePPM(const char *target);
+
+        // Calculate porosity with depth and save as text file
+        void porosity(const int z_slices = 10);
 
 };
 

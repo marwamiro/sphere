@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.abspath('../../python/'))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 #extensions = []
-extensions = ['sphinx.ext.autodoc','breathe','sphinx.ext.pngmath']
+extensions = ['sphinx.ext.autodoc','breathe','sphinx.ext.pngmath','sphinxcontrib.programoutput']
 breathe_projects = { "sphere": "../doxygen/xml/" }
 breathe_default_project = "sphere"
 

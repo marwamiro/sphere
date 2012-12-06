@@ -1,5 +1,11 @@
 sphere internals
 ================
+
+The *sphere* executable has the following options:
+
+.. command-output:: ../../sphere_linux_X86_64 --help
+
+
 After compiling the *sphere* binary (see sub-section \ref{subsec:compilation}), the procedure of a creating and handling a simulation is typically arranged in the following order:
 	\item Setup of particle assemblage, physical properties and conditions using the Python API, described in section \ref{sec:ModelSetup}, page \pageref{sec:ModelSetup}.
 	\item Execution of *sphere* software, which simulates the particle behavior as a function of time, as a result of the conditions initially specified in the input file. Described in section \ref{sec:Simulation}, page \pageref{sec:Simulation}.

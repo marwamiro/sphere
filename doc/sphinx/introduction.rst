@@ -30,8 +30,12 @@ Optional tools, required for simulation setup and data processing:
 
 Optional tools, required for building the documentation:
   * `Sphinx <http://sphinx-doc.org>`_
+
+    * `sphinxcontrib-programoutput <http://packages.python.org/sphinxcontrib-programoutput/>`_
+
   * `Doxygen <http://www.stack.nl/~dimitri/doxygen/>`_
   * `Breathe <http://michaeljones.github.com/breathe/>`_
+  * `dvipng <http://www.nongnu.org/dvipng/>`_
 
 `Git <http://git-scm.com>`_ is used as the distributed version control system platform, and the source code is maintained at `Github <https://github.com/anders-dc/sphere/>`_. *sphere* is licensed under the `GNU Public License, v.3 <https://www.gnu.org/licenses/gpl.html>`_.
 
@@ -47,6 +51,10 @@ If successfull, the GNU Makefile will create the required data folders, object f
 
  $ ./sphere_* --version
 
+The output should look similar to this:
+
+.. program-output:: ../../sphere_linux_X86_64 --version
+
 The documentation can be read in the `reStructuredText <http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html>`_-format in the ``doc/sphinx/`` folder, or build into e.g. HTML or PDF format with the following commands::
 
  $ cd doc/sphinx
@@ -56,4 +64,13 @@ The documentation can be read in the `reStructuredText <http://docutils.sourcefo
 To see all available output formats, execute::
 
  $ make help
+
+
+Work flow
+---------
+After compiling the *sphere* binary, the procedure of a creating and handling a simulation is typically arranged in the following order:
+  * Setup of particle assemblage, physical properties and conditions using the Python API.
+  * Execution of *sphere* software, which simulates the particle behavior as a function of time, as a result of the conditions initially specified in the input file.
+  * Inspection, analysis, interpretation and visualization of *sphere* output in Python, and/or scene rendering using the built-in ray tracer.
+
 
