@@ -146,12 +146,45 @@ void DEM::checkValues(void)
         exit(1);
     }
 
-    // Check that radii are positive values
+
+    // Per-particle checks
+    Float4 x;
     for (i = 0; i < np; ++i) {
-        if (k.x[i].w <= 0.0) {
+
+        // Read value into register
+        x = k.x[i];
+
+        // Check that radii are positive values
+        if (x.w <= 0.0) {
             cerr << "Error: Particle " << i << " has a radius of "
-                << k.x[i].w << " m.";
+                << k.x[i].w << " m." << std::endl;
             exit(1);
+        }
+
+        // Check that all particles are inside of the grid
+        if (x.x < grid.origo[0] ||
+                x.y < grid.origo[1] ||
+                x.z < grid.origo[2] ||
+                x.x > grid.L[0] ||
+                x.y > grid.L[1] ||
+                x.z > grid.L[2]) {
+            cerr << "Error: Particle " << i << " is outside of "
+                << "the computational grid\n"
+                << "k.x[i] = ["
+                << x.x << ", "
+                << x.y << ", "
+                << x.z << "]\n"
+                << "grid.origo = ["
+                << grid.origo[0] << ", "
+                << grid.origo[1] << ", "
+                << grid.origo[2] << "], "
+                << "grid.L = ["
+                << grid.L[0] << ", "
+                << grid.L[1] << ", "
+                << grid.L[2] << "]."
+                << std::endl;
+            exit(1);
+
         }
     }
 

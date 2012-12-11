@@ -451,20 +451,25 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
                 mempos = (unsigned int)(idx_a_orig * devC_nc + i);
                 __syncthreads();
                 idx_b_orig = dev_contacts[mempos];
-                distmod    = dev_distmod[mempos];
-                x_b        = dev_x[idx_b_orig];
-                radius_b   = distmod.w;
-
-                // Inter-particle vector, corrected for periodic boundaries
-                x_ab = MAKE_FLOAT3(x_a.x - x_b.x + distmod.x,
-                        x_a.y - x_b.y + distmod.y,
-                        x_a.z - x_b.z + distmod.z);
-
-                x_ab_length = length(x_ab);
-                delta_n = x_ab_length - (radius_a + radius_b);
+                //radius_b   = distmod.w;
 
 
                 if (idx_b_orig != (unsigned int)devC_np) {
+
+                    // Read inter-particle distance correction vector
+                    distmod    = dev_distmod[mempos];
+
+                    // Read particle b position and radius
+                    x_b = dev_x[idx_b_orig];
+                    radius_b = x_b.w;
+
+                    // Inter-particle vector, corrected for periodic boundaries
+                    x_ab = MAKE_FLOAT3(x_a.x - x_b.x + distmod.x,
+                            x_a.y - x_b.y + distmod.y,
+                            x_a.z - x_b.z + distmod.z);
+
+                    x_ab_length = length(x_ab);
+                    delta_n = x_ab_length - (radius_a + radius_b);
 
                     // Process collision if the particles are overlapping
                     if (delta_n < 0.0f) {
@@ -553,7 +558,6 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
             w_force = contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a, radius_a,
                     dev_vel_sorted, dev_angvel_sorted,
                     w_n, delta_w, w_up_mvfd.y);
-            //cuPrintf("particle %d collides with upper wall, wforce = %f\n", idx_a, w_force);
         }
 
         // Lower wall (force on wall not stored)
@@ -638,7 +642,8 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
         dev_es[orig_idx]     += es_dot * devC_dt;
         dev_ev[orig_idx]     += ev_dot * devC_dt;
         dev_p[orig_idx]       = p;
-        dev_walls_force_pp[orig_idx] = w_force;
+        if (devC_nw > 0)
+            dev_walls_force_pp[orig_idx] = w_force;
     }
 } // End of interact(...)
 
