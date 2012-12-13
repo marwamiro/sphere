@@ -998,6 +998,27 @@ class Spherebin:
         subprocess.call("cd ..; ./sphere_* " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
 
 
+    def torqueScript(self, 
+            e-mail="adc@geo.au.dk", 
+            e-mail-alerts="ae",
+            walltime="8:00:00"):
+        'Create job script for the Torque queue manager for the binary'
+
+        filename = self.sid + ".sh"
+        fh = None
+        try :
+            fh = open(filename, "w")
+
+            # write stuff
+
+        finally :
+            if fh is not None:
+                fh.close()
+
+
+
+        
+
     def render(self,
             method = "pres",
             max_val = 1e3,
@@ -1349,6 +1370,8 @@ def run(binary, verbose=True, hideinputfile=False):
     if (hideinputfile == True):
         stdout = " > /dev/null"
     subprocess.call("cd ..; ./sphere_* " + quiet + " " + binary + " " + stdout, shell=True)
+
+
 
 def status(project):
     """ Check the status.dat file for the target project,
