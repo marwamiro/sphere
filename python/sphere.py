@@ -1327,8 +1327,6 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                     sigma[i]/1000.0,
                     tau[i]/1000.0,
                     dilation[i]/L*100.0))
-        except (EnvironmentError, ValueError) as err:
-            print("{0}: export error: {1}".format(os.path.basename(sys.argv[0]), err))
         finally :
             if fh is not None:
                 fh.close()
@@ -1365,9 +1363,6 @@ def status(project):
         data = fh.read()
         #print(data)
         return int(data.split()[2])  # Return last file number
-    except (EnvironmentError, ValueError, KeyError) as err:
-        print("status.py: import error: {0}".format(err))
-        return False
     finally :
         if fh is not None:
             fh.close()
