@@ -999,8 +999,8 @@ class Spherebin:
 
 
     def torqueScript(self, 
-            e-mail="adc@geo.au.dk", 
-            e-mail-alerts="ae",
+            email="adc@geo.au.dk", 
+            email_alerts="ae",
             walltime="8:00:00"):
         'Create job script for the Torque queue manager for the binary'
 
