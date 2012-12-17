@@ -309,6 +309,9 @@ Float sphericalCap(const Float h, const Float r)
 // Calculate the porosity with depth, and write to file in output directory
 void DEM::porosity(const int z_slices)
 {
+    // The porosity value is higher at the boundaries due 
+    // to the no-flux BCs.
+    
     Float top;
     if (walls.nw > 0)
         top = walls.nx->w;
