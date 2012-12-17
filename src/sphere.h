@@ -122,6 +122,13 @@ class DEM {
         // Find and return the max. position of any particle in each dimension
         float3 maxPos(void);
 
+        // Write porosities found in porosity() to text file
+        void writePorosities(
+                const char *target,
+                const int z_slices,
+                const Float *z_pos,
+                const Float *porosity);
+
 
         // Values and functions accessible from the outside
     public:
@@ -153,7 +160,7 @@ class DEM {
         void startTime(void);
 
         // Render particles using raytracing
-        void render(//const char *target,
+        void render(
                 const int method = 1,
                 const float maxval = 1.0e3,
                 const float focalLength = 1.0,

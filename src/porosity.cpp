@@ -29,6 +29,7 @@ int main(const int argc, const char *argv[])
     // Default values
     int verbose = 1;
     int nfiles = 0; // number of input files
+    int slices = 10; // number of vertical slices
 
     // Process input parameters
     int i;
@@ -42,7 +43,8 @@ int main(const int argc, const char *argv[])
                 << "Usage: " << argv[0] << " [OPTION[S]]... [FILE1 ...]\nOptions:\n"
                 << "-h, --help\t\tprint help\n"
                 << "-V, --version\t\tprint version information and exit\n"
-                << "-q, --quiet\t\tDo not display in-/output file names\n"
+                << "-q, --quiet\t\tdo not display in-/output file names\n"
+                << "-s. --slices\t\tnumber of vertical slices to find porosity within\n"
                 << "The porosity values are stored in the output/ folder"
                 << std::endl;
             return 0; // Exit with success
@@ -58,6 +60,15 @@ int main(const int argc, const char *argv[])
         else if (argvi == "-q" || argvi == "--quiet")
             verbose = 0;
 
+        else if (argvi == "-s" || argvi == "--slices") {
+            slices = atoi(argv[++i]); 
+            if (slices < 1) {
+                std::cerr << "Error: The number of slices must be a positive, real number (was "
+                    << slices << ")" << std::endl;
+                return 1;
+            }
+        }
+
         // The rest of the values must be input binary files
         else {
             nfiles++;
@@ -69,7 +80,7 @@ int main(const int argc, const char *argv[])
             DEM dem(argvi, verbose, 0, 0, 0);
 
             // Calculate porosity and save as file
-            dem.porosity();
+            dem.porosity(slices);
 
         }
     }

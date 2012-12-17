@@ -309,18 +309,26 @@ Float sphericalCap(const Float h, const Float r)
 // Calculate the porosity with depth, and write to file in output directory
 void DEM::porosity(const int z_slices)
 {
+    Float top;
+    if (walls.nw > 0)
+        top = walls.nx->w;
+    else
+        top = grid.L[2];
 
     // Calculate depth slice thickness
-    Float h_slice = (walls.nx->w - grid.origo[2]) / (Float)z_slices;
+    Float h_slice = (top - grid.origo[2]) / (Float)z_slices;
 
     // Calculate slice volume
     Float V_slice = h_slice * grid.L[0] * grid.L[1];
+
+    // Array of depth values
+    Float z_pos[z_slices];
 
     // Array of porosity values
     Float porosity[z_slices];
 
     // Loop over vertical slices
-//#pragma omp parallel for if(np > 100)
+#pragma omp parallel for if(np > 100)
     for (int iz = 0; iz<z_slices; ++iz) {
 
         // The void volume equals the slice volume, with the
@@ -328,75 +336,87 @@ void DEM::porosity(const int z_slices)
         Float V_void = V_slice;
 
         // Bottom and top position of depth slice
-        Float z_low = iz * h_slice;
-        Float z_high = z_low + h_slice;
+        Float z_slice_low = iz * h_slice;
+        Float z_slice_high = z_slice_low + h_slice;
 
         // Loop over particles to see whether they are inside of the slice
         for (unsigned int i = 0; i<np; ++i) {
 
-            Float z_pos = k.x[i].z;
+            // Read particle values
+            Float z_sphere_centre = k.x[i].z;
             Float radius = k.x[i].w;
+            
+            // Save vertical positions of particle boundaries
+            Float z_sphere_low = z_sphere_centre - radius;
+            Float z_sphere_high = z_sphere_centre + radius;
 
             // Sphere volume
             Float V_sphere = 4.0/3.0 * M_PI * radius * radius * radius;
 
-
             // If the sphere is inside the slice and not intersecting the
             // boundaries, subtract the entire sphere volume
-            if (z_low < (z_pos - radius) && (z_pos + radius) < z_high) {
+            if (z_slice_low < z_sphere_low && z_sphere_high < z_slice_high) {
                 V_void -= V_sphere;
-                std::cout << "sphere " << i << " entirely inside volume" << std::endl;
+
             } else {
 
                 // If the sphere intersects with the lower boundary,
                 // and the centre is below the boundary
-                if (z_low > z_pos && z_low < (z_pos + radius)) {
+                if (z_slice_low > z_sphere_centre && z_slice_low < z_sphere_high) {
 
                     // Subtract the volume of a spherical cap
-                    V_void -= sphericalCap(z_pos + radius - z_low, radius);
-
-                    std::cout << "sphere " << i << " intersects lower boundary on upper hemisphere" << std::endl;
+                    V_void -= sphericalCap(z_sphere_high - z_slice_low, radius);
                 }
 
                 // If the sphere intersects with the lower boundary,
                 // and the centre is above the boundary
-                else if (z_low < z_pos && z_low > (z_pos - radius)) {
+                else if (z_slice_low < z_sphere_centre && z_slice_low > z_sphere_low) {
 
                     // Subtract the volume of the sphere, 
                     // then add the volume of the spherical cap below
-                    V_void -= V_sphere + sphericalCap(z_low - z_pos - radius, radius);
-                    std::cout << "sphere " << i << " intersects lower boundary on lower hemisphere" << std::endl;
+                    V_void -= V_sphere + sphericalCap(z_slice_low - z_sphere_low, radius);
                 }
 
                 // If the sphere intersects with the upper boundary,
                 // and the centre is below the boundary
-                if (z_high > z_pos && z_high < (z_pos + radius)) {
+                if (z_slice_high > z_sphere_centre && z_slice_high < z_sphere_high) {
 
                     // Subtract the volume of the sphere, 
                     // then add the volume of the spherical cap above
-                    V_void -= V_sphere + sphericalCap(z_pos + radius - z_high, radius);
-                    std::cout << "sphere " << i << " intersects upper boundary on upper hemisphere" << std::endl;
+                    V_void -= V_sphere + sphericalCap(z_sphere_high - z_slice_high, radius);
                 }
-
+                
                 // If the sphere intersects with the upper boundary,
                 // and the centre is above the boundary
-                else if (z_high < z_pos && z_high > (z_pos - radius)) {
+                else if (z_slice_high < z_sphere_centre && z_slice_high > z_sphere_low) {
 
                     // Subtract the volume of the spherical cap below
-                    V_void -= sphericalCap(z_high - z_pos - radius, radius);
-                    std::cout << "sphere " << i << " intersects upper boundary on lower hemisphere" << std::endl;
+                    V_void -= sphericalCap(z_slice_high - z_sphere_low, radius);
                 }
+                
 
             }
         }
 
+        // Save the mid z-point
+        z_pos[iz] = z_slice_low + 0.5*h_slice;
+
         // Save the porosity
         porosity[iz] = V_void / V_slice;
+
+        // Report values to stdout
+        /*
+        std::cout << iz << ": V_void = " << V_void 
+            << "\tV_slice = " << V_slice 
+            << "\tporosity = " << V_void/V_slice
+            << '\n' << std::endl;
+            */
     }
 
-    // Display results from the top down
-    for (int i=z_slices-1; i>=0; --i)
-        std::cout << porosity[i] << std::endl;
+    // Save results to text file
+    writePorosities(("output/" + sid + "-porosity.txt").c_str(), z_slices, z_pos, porosity);
+    //for (int i=z_slices-1; i>=0; --i)
+        //std::cout << porosity[i] << std::endl;
 
 }
 

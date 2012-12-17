@@ -372,4 +372,33 @@ void DEM::writePPM(const char *target)
         ofs.close();
 }
 
+// Write write depth vs. porosity values to file
+void DEM::writePorosities(
+        const char *target,
+        const int z_slices,
+        const Float *z_pos,
+        const Float *porosity)
+{
+    // Open output file
+    std::ofstream ofs(target);
+    if (!ofs) {
+        std::cerr << "Could not create output porosity file '"
+            << target << std::endl;
+        exit(1); // Return unsuccessful exit status
+    }
+
+    if (verbose == 1)
+        std::cout << "  Saving porosities: " << target << std::endl;
+
+    // Write pixel array to ppm image file
+    for (int i=0; i<z_slices; ++i)
+        ofs << z_pos[i] << '\t' << porosity[i] << '\n';
+
+    // Close file if it is still open
+    if (ofs.is_open())
+        ofs.close();
+}
+
+
+
 // vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
