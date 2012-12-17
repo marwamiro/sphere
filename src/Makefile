@@ -111,6 +111,9 @@ folders: ../output ../img_out ../input
 ../img_out:
 	mkdir $@
 
+unittest: boost-unit-tests.cpp sphere.h
+	$(CC) -lboost_unit_test_framework $< -o $@
+
 doc:
 	$(MAKE) -C ../doc
 edit:
