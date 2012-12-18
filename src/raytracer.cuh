@@ -415,6 +415,8 @@ __host__ void DEM::render(
 
     Float* linarr;     // Linear array to use for color visualization
     Float* dev_linarr; // Device linear array to use for color visualization
+    cudaMalloc((void**)&dev_linarr, np*sizeof(Float));
+    checkForCudaErrors("Error during cudaMalloc of linear array");
     std::string desc;  // Description of parameter visualized
     std::string unit;  // Unit of parameter values visualized
     unsigned int i;
@@ -492,9 +494,8 @@ __host__ void DEM::render(
 
         // Copy linarr to dev_linarr if required
         if (transfer == 1) {
-            cudaMalloc((void**)&dev_linarr, np*sizeof(Float));
-            cudaMemcpy(dev_linarr, &linarr, np*sizeof(Float), cudaMemcpyHostToDevice);
-            checkForCudaErrors("Error during cudaMalloc or cudaMemcpy of linear array");
+            cudaMemcpy(dev_linarr, linarr, np*sizeof(Float), cudaMemcpyHostToDevice);
+            checkForCudaErrors("Error during cudaMemcpy of linear array");
         }
 
         // Start raytracing kernel
