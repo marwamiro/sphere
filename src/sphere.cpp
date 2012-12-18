@@ -407,19 +407,16 @@ void DEM::porosity(const int z_slices)
         // Save the porosity
         porosity[iz] = V_void / V_slice;
 
-        // Report values to stdout
-        /*
-        std::cout << iz << ": V_void = " << V_void 
-            << "\tV_slice = " << V_slice 
-            << "\tporosity = " << V_void/V_slice
-            << '\n' << std::endl;
-            */
     }
 
     // Save results to text file
-    writePorosities(("output/" + sid + "-porosity.txt").c_str(), z_slices, z_pos, porosity);
-    //for (int i=z_slices-1; i>=0; --i)
-        //std::cout << porosity[i] << std::endl;
+    //writePorosities(("output/" + sid + "-porosity.txt").c_str(), z_slices, z_pos, porosity);
+
+    // Report values to stdout
+    std::cout << "z-pos" << '\t' << "porosity" << '\n';
+    for (int i = 0; i<z_slices; ++i) {
+        std::cout << z_pos[i] << '\t' << porosity[i] << '\n'; 
+    }
 
 }
 

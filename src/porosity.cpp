@@ -27,7 +27,7 @@
 int main(const int argc, const char *argv[]) 
 {
     // Default values
-    int verbose = 1;
+    int verbose = 0;
     int nfiles = 0; // number of input files
     int slices = 10; // number of vertical slices
 
@@ -43,7 +43,7 @@ int main(const int argc, const char *argv[])
                 << "Usage: " << argv[0] << " [OPTION[S]]... [FILE1 ...]\nOptions:\n"
                 << "-h, --help\t\tprint help\n"
                 << "-V, --version\t\tprint version information and exit\n"
-                << "-q, --quiet\t\tdo not display in-/output file names\n"
+                << "-v, --verbose\t\tdisplay in-/output file names\n"
                 << "-s. --slices\t\tnumber of vertical slices to find porosity within\n"
                 << "The porosity values are stored in the output/ folder"
                 << std::endl;
@@ -57,8 +57,8 @@ int main(const int argc, const char *argv[])
             return 0;
         }
 
-        else if (argvi == "-q" || argvi == "--quiet")
-            verbose = 0;
+        else if (argvi == "-v" || argvi == "--verbose")
+            verbose = 1;
 
         else if (argvi == "-s" || argvi == "--slices") {
             slices = atoi(argv[++i]); 
