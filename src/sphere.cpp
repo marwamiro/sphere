@@ -413,7 +413,7 @@ void DEM::porosity(const int z_slices)
     //writePorosities(("output/" + sid + "-porosity.txt").c_str(), z_slices, z_pos, porosity);
 
     // Report values to stdout
-    std::cout << "z-pos" << '\t' << "porosity" << '\n';
+    //std::cout << "z-pos" << '\t' << "porosity" << '\n';
     for (int i = 0; i<z_slices; ++i) {
         std::cout << z_pos[i] << '\t' << porosity[i] << '\n'; 
     }
