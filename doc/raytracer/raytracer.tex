@@ -256,59 +256,6 @@ The host system was measured to have a memory bandwidth of 4642.1 MB/s when tran
 \fi
 
 
-\section{Source code}
-The entire source code, as well as input data files, can be found in the following archive
-\url{http://users-cs.au.dk/adc/files/sphere-rt.tar.gz}
-The source code is built and run with the commands:
-\begin{lstlisting}
-  make
-  make run
-\end{lstlisting}
-With the \texttt{make run} command, the Makefile uses ImageMagick to convert the PPM file to PNG format, and the OS X command \texttt{open} to display the image. Other input data files are included with other particle number magnitudes. The syntax for the raytracer application is the following:
-\begin{lstlisting}
-  ./rt <CPU | GPU> <sphere-binary.bin> <width> <height> <output-image.ppm>
-\end{lstlisting}
-This appendix contains the following source code files:
-\lstlistoflistings
-
-\subsection{CUDA raytracing source code}
-%\subsubsection{rt\_kernel.h}
-\lstinputlisting[caption={rt-kernel.h},label={rt-kernel.h},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel.h}
-
-%\subsubsection{rt\_kernel.cu}
-\lstinputlisting[caption={rt-kernel.cu},label={rt-kernel.cu},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel.cu}
-
-\subsection{CPU raytracing source code}
-%\subsubsection{rt\_kernel\_cpu.h}
-\lstinputlisting[caption={rt-kernel-cpu.h},label={rt-kernel-cpu.h},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel-cpu.h}
-
-%\subsubsection{rt\_kernel\_cpu.cpp}
-\lstinputlisting[caption={rt-kernel-cpu.cpp},label={rt-kernel-cpu.cpp},numbers=left,breaklines=true,xleftmargin=15pt,basicstyle=\scriptsize]{../rt-kernel-cpu.cpp}
-
-
-
-\clearpage
-
-
-
-
-
-
-
-
-
-% You can push biographies down or up by placing
-% a \vfill before or after them. The appropriate
-% use of \vfill depends on what kind of text is
-% on the last page and whether or not the columns
-% are being equalized.
-
-%\vfill
-
-% Can be used to pull up biographies so that the bottom of the last one
-% is flush with the other column.
-%\enlargethispage{-5in}
-
 
 
 % that's all folks
