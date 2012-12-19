@@ -1059,7 +1059,7 @@ def convert(graphicsformat = "png",
 def render(binary,
         method = "pres",
         max_val = 1e3,
-        graphicsformat = 'png',
+        graphicsformat = "png",
         verbose=True):
     'Render target binary using the sphere raytracer.'
 
@@ -1068,7 +1068,7 @@ def render(binary,
         quiet = "-q"
 
     # Render images using sphere raytracer
-    subprocess.call("cd ..; ./sphere_* " + quiet + \
+    subprocess.call("cd .. ; ./sphere_* " + quiet + \
             " --method " + method + " {}".format(max_val) + \
             " --render " + binary, shell=True)
 
