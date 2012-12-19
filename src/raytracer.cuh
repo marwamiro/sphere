@@ -402,9 +402,10 @@ __host__ void DEM::render(
     // Initialize camera values and transfer to constant memory
     float imgw = grid.L[0]*1.35f; // Screen width in world coordinates
     float3 lookat = maxPos() / 2.0f; // Look at the centre of the mean positions
-    float3 eye = make_float3(grid.L[0] * 0.5f,
+    float3 eye = make_float3(
+            grid.L[0] * 2.3f,
             grid.L[1] * -5.0f,
-            grid.L[2] * 0.5f);
+            grid.L[2] * 1.3f);
     cameraInit(eye, lookat, imgw, focalLength);
 
     // Construct rays for perspective projection
@@ -415,7 +416,6 @@ __host__ void DEM::render(
 
     Float* linarr;     // Linear array to use for color visualization
     Float* dev_linarr; // Device linear array to use for color visualization
-    cudaMalloc((void**)&dev_linarr, np*sizeof(Float));
     checkForCudaErrors("Error during cudaMalloc of linear array");
     std::string desc;  // Description of parameter visualized
     std::string unit;  // Unit of parameter values visualized
@@ -494,6 +494,8 @@ __host__ void DEM::render(
 
         // Copy linarr to dev_linarr if required
         if (transfer == 1) {
+            cudaMalloc((void**)&dev_linarr, np*sizeof(Float));
+            checkForCudaErrors("Error during cudaMalloc of linear array");
             cudaMemcpy(dev_linarr, linarr, np*sizeof(Float), cudaMemcpyHostToDevice);
             checkForCudaErrors("Error during cudaMemcpy of linear array");
         }
