@@ -1317,19 +1317,19 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             # Plot stresses
             if (outformat != 'txt'):
                 ax1 = plt.subplot2grid((2,1),(0,0))
-                ax1.set_xlabel('Shear distance [m]')
+                ax1.set_xlabel('Shear strain [-]')
                 ax1.set_ylabel('Stress [Pa]')
-                ax1.plot(xdisp, sigma_eff, '+-g', label="$\sigma'$")
-                ax1.plot(xdisp, sigma_def, '+-b', label="$\sigma_0$")
-                ax1.plot(xdisp, tau, '+-r', label="$\\tau$")
+                ax1.plot(xdisp/w_x0, sigma_eff, '+-g', label="$\sigma'$")
+                ax1.plot(xdisp/w_x0, sigma_def, '+-b', label="$\sigma_0$")
+                ax1.plot(xdisp/w_x0, tau, '+-r', label="$\\tau$")
                 ax1.legend(loc = 4)
                 ax1.grid()
 
                 # Plot dilation
                 ax2 = plt.subplot2grid((2,1),(1,0))
-                ax2.set_xlabel('Shear distance [m]')
+                ax2.set_xlabel('Shear strain [-]')
                 ax2.set_ylabel('Dilation [%]')
-                ax2.plot(xdisp, dilation, '+-')
+                ax2.plot(xdisp/w_x0, dilation, '+-')
                 ax2.grid()
         else :
             print("Visualization type '" + method + "' not understood")
