@@ -49,8 +49,10 @@ the root directory::
  make
 
 In some cases the CMake FindCUDA module will have troubles locating the
-CUDA SDK directory. In that case, modify the `NVSDKCOMPUTE_ROOT` environment
-variable in `INSTALL.sh`, and execute it.
+CUDA SDK directory, and will complain about `cutil_math.h` not being found.
+
+In that case, modify the `NVSDKCOMPUTE_ROOT` environment variable in 
+`INSTALL.sh`, and execute it.
 
 After a successfull installation, the `sphere` executable will be located
 in the root folder.
