@@ -15,6 +15,8 @@ FIND_PACKAGE(CUDA)
 # Find OpenMP
 FIND_PACKAGE(OpenMP)
 
+#SET(CMAKE_BUILD_TYPE Debug)
+SET(CMAKE_BUILD_TYPE Release)
 
 #Add source directory to project.
 ADD_SUBDIRECTORY(src)
