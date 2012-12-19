@@ -995,7 +995,7 @@ class Spherebin:
         if (dry == True):
             dryarg = "--dry "
 
-        subprocess.call("cd ..; ./sphere_* " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
+        subprocess.call("cd ..; ./sphere " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
 
 
     def torqueScript(self, 
@@ -1031,7 +1031,7 @@ class Spherebin:
             quiet = "-q"
 
         # Render images using sphere raytracer
-        subprocess.call("cd ..; ./sphere_* " + quiet \
+        subprocess.call("cd ..; ./sphere* " + quiet \
                 + " --method " + method + " {}".format(max_val) \
                 + " --render output/" + self.sid + "*.bin" \
                 , shell=True)
@@ -1068,7 +1068,7 @@ def render(binary,
         quiet = "-q"
 
     # Render images using sphere raytracer
-    subprocess.call("cd .. ; ./sphere_* " + quiet + \
+    subprocess.call("cd .. ; ./sphere " + quiet + \
             " --method " + method + " {}".format(max_val) + \
             " --render " + binary, shell=True)
 
@@ -1369,7 +1369,7 @@ def run(binary, verbose=True, hideinputfile=False):
         quiet = "-q"
     if (hideinputfile == True):
         stdout = " > /dev/null"
-    subprocess.call("cd ..; ./sphere_* " + quiet + " " + binary + " " + stdout, shell=True)
+    subprocess.call("cd ..; ./sphere " + quiet + " " + binary + " " + stdout, shell=True)
 
 
 
