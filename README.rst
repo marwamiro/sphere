@@ -12,7 +12,8 @@ Requirements
 ------------
 The build requirements are:
   * A Nvidia CUDA-supported version of Linux or Mac OS X (see the `CUDA toolkit release notes <http://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html>`_ for more information)
-  * The `GNU Compiler Collection <http://gcc.gnu.org/>`_ (GCC)
+  * `CMake <http://cmake.org>`_, version 2.8 or higher
+  * A C/C++ compiler toolkit, e.g. the `GNU Compiler Collection <http://gcc.gnu.org/>`_ (GCC)
   * The `Nvidia CUDA toolkit and SDK <https://developer.nvidia.com/cuda-downloads>`_
 
 The runtime requirements are:
@@ -31,7 +32,7 @@ Optional tools, required for building the documentation:
   * `Doxygen <http://www.stack.nl/~dimitri/doxygen/>`_
   * `Breathe <http://michaeljones.github.com/breathe/>`_
 
-Obtaining SPHERE
+Obtaining sphere
 ----------------
 The best way to keep up to date with subsequent updates, bugfixes
 and development, is to use the Git version control system.
@@ -41,6 +42,15 @@ To obtain a local copy, execute:
 
 Build instructions
 ------------------
-  ``cd src/ && make``
+Sphere is built using `cmake`, the platform-specific c/c++ compilers,
+and `nvcc` from the cuda toolkit. Execute the following commands from
+the root directory::
+ cmake .
+ make
 
-This will generate a command-line executable in the root folder.
+In some cases the CMake FindCUDA module will have troubles locating the
+CUDA SDK directory. In that case, modify the `NVSDKCOMPUTE_ROOT` environment
+variable in `INSTALL.sh`, and execute it.
+
+After a successfull installation, the `sphere` executable will be located
+in the root folder.
