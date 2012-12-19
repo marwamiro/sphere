@@ -4,8 +4,8 @@
 from sphere import *
 
 ### EXPERIMENT SETUP ###
-initialization = False
-consolidation  = False
+initialization = True
+consolidation  = True
 shearing       = True
 rendering      = True
 plots	       = True
