@@ -1114,243 +1114,245 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
         fig.text(0.5,0.95,figtitle,horizontalalignment='center',fontproperties=FontProperties(size=18))
 
 
-        if method == 'energy':
+    if method == 'energy':
 
-            # Allocate arrays
-            Epot = numpy.zeros(lastfile+1)
-            Ekin = numpy.zeros(lastfile+1)
-            Erot = numpy.zeros(lastfile+1)
-            Es  = numpy.zeros(lastfile+1)
-            Ev  = numpy.zeros(lastfile+1)
-            Es_dot = numpy.zeros(lastfile+1)
-            Ev_dot = numpy.zeros(lastfile+1)
-            Esum = numpy.zeros(lastfile+1)
+        # Allocate arrays
+        Epot = numpy.zeros(lastfile+1)
+        Ekin = numpy.zeros(lastfile+1)
+        Erot = numpy.zeros(lastfile+1)
+        Es  = numpy.zeros(lastfile+1)
+        Ev  = numpy.zeros(lastfile+1)
+        Es_dot = numpy.zeros(lastfile+1)
+        Ev_dot = numpy.zeros(lastfile+1)
+        Esum = numpy.zeros(lastfile+1)
 
-            # Read energy values from project binaries
-            sb = Spherebin()
-            for i in range(lastfile+1):
-                fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
-                sb.readbin(fn, verbose = False)
+        # Read energy values from project binaries
+        sb = Spherebin()
+        for i in range(lastfile+1):
+            fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
+            sb.readbin(fn, verbose = False)
 
-                Epot[i] = sb.energy("pot")
-                Ekin[i] = sb.energy("kin")
-                Erot[i] = sb.energy("rot")
-                Es[i]   = sb.energy("shear")
-                Ev[i]   = sb.energy("visc_n")
-                Es_dot[i] = sb.energy("shearrate")
-                Ev_dot[i] = sb.energy("visc_n_rate")
-                Esum[i] = Epot[i] + Ekin[i] + Erot[i] + Es[i] + Ev[i]
-
-                t = numpy.linspace(0.0, sb.time_current, lastfile+1)
-
-            if (outformat != 'txt'):
-                # Potential energy
-                ax1 = plt.subplot2grid((2,5),(0,0))
-                ax1.set_xlabel('Time [s]')
-                ax1.set_ylabel('Total potential energy [J]')
-                ax1.plot(t, Epot, '+-')
-                ax1.grid()
-
-                # Kinetic energy
-                ax2 = plt.subplot2grid((2,5),(0,1))
-                ax2.set_xlabel('Time [s]')
-                ax2.set_ylabel('Total kinetic energy [J]')
-                ax2.plot(t, Ekin, '+-')
-                ax2.grid()
-
-                # Rotational energy
-                ax3 = plt.subplot2grid((2,5),(0,2))
-                ax3.set_xlabel('Time [s]')
-                ax3.set_ylabel('Total rotational energy [J]')
-                ax3.plot(t, Erot, '+-')
-                ax3.grid()
-
-                # Total energy
-                ax4 = plt.subplot2grid((2,5),(0,3))
-                ax4.set_xlabel('Time [s]')
-                ax4.set_ylabel('Total energy [J]')
-                ax4.plot(t, Esum, '+-')
-                ax4.grid()
-
-                # Shear energy rate
-                ax5 = plt.subplot2grid((2,5),(1,0))
-                ax5.set_xlabel('Time [s]')
-                ax5.set_ylabel('Frictional dissipation rate [W]')
-                ax5.plot(t, Es_dot, '+-')
-                ax5.grid()
-
-                # Shear energy
-                ax6 = plt.subplot2grid((2,5),(1,1))
-                ax6.set_xlabel('Time [s]')
-                ax6.set_ylabel('Total frictional dissipation [J]')
-                ax6.plot(t, Es, '+-')
-                ax6.grid()
-
-                # Visc_n energy rate
-                ax7 = plt.subplot2grid((2,5),(1,2))
-                ax7.set_xlabel('Time [s]')
-                ax7.set_ylabel('Viscous dissipation rate [W]')
-                ax7.plot(t, Ev_dot, '+-')
-                ax7.grid()
-
-                # Visc_n energy
-                ax8 = plt.subplot2grid((2,5),(1,3))
-                ax8.set_xlabel('Time [s]')
-                ax8.set_ylabel('Total viscous dissipation [J]')
-                ax8.plot(t, Ev, '+-')
-                ax8.grid()
-
-
-                # Combined view
-                ax9 = plt.subplot2grid((2,5),(1,4))
-                ax9.set_xlabel('Time [s]')
-                ax9.set_ylabel('Energy [J]')
-                ax9.plot(t, Epot, '+-g')
-                ax9.plot(t, Ekin, '+-b')
-                ax9.plot(t, Erot, '+-r')
-                ax9.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
-                ax9.grid()
-
-        elif method == 'walls':
-
-            # Read energy values from project binaries
-            sb = Spherebin()
-            for i in range(lastfile+1):
-                fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
-                sb.readbin(fn, verbose = False)
-
-                # Allocate arrays on first run
-                if (i == 0):
-                    wforce = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
-                    wvel   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
-                    wpos   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
-                    wdevs  = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
-                    maxpos = numpy.zeros((lastfile+1), dtype=numpy.float64)
-                    logstress = numpy.zeros((lastfile+1), dtype=numpy.float64)
-                    voidratio = numpy.zeros((lastfile+1), dtype=numpy.float64)
-
-                wforce[i] = sb.w_force[0]
-                wvel[i]   = sb.w_vel[0]
-                wpos[i]   = sb.w_x[0]
-                wdevs[i]  = sb.w_devs[0]
-                maxpos[i] = numpy.max(sb.x[:,2]+sb.radius)
-                logstress[i] = numpy.log((sb.w_force[0]/(sb.L[0]*sb.L[1]))/1000.0)
-                voidratio[i] = sb.voidRatio()
-
+            Epot[i] = sb.energy("pot")
+            Ekin[i] = sb.energy("kin")
+            Erot[i] = sb.energy("rot")
+            Es[i]   = sb.energy("shear")
+            Ev[i]   = sb.energy("visc_n")
+            Es_dot[i] = sb.energy("shearrate")
+            Ev_dot[i] = sb.energy("visc_n_rate")
+            Esum[i] = Epot[i] + Ekin[i] + Erot[i] + Es[i] + Ev[i]
 
             t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
-            # Plotting
-            if (outformat != 'txt'):
-                # linear plot of time vs. wall position
-                ax1 = plt.subplot2grid((2,2),(0,0))
-                ax1.set_xlabel('Time [s]')
-                ax1.set_ylabel('Position [m]')
-                ax1.plot(t, wpos, '+-', label="upper wall")
-                ax1.plot(t, maxpos, '+-', label="heighest particle")
-                ax1.legend()
-                ax1.grid()
+        if (outformat != 'txt'):
+            # Potential energy
+            ax1 = plt.subplot2grid((2,5),(0,0))
+            ax1.set_xlabel('Time [s]')
+            ax1.set_ylabel('Total potential energy [J]')
+            ax1.plot(t, Epot, '+-')
+            ax1.grid()
 
-                #ax2 = plt.subplot2grid((2,2),(1,0))
-                #ax2.set_xlabel('Time [s]')
-                #ax2.set_ylabel('Force [N]')
-                #ax2.plot(t, wforce, '+-')
+            # Kinetic energy
+            ax2 = plt.subplot2grid((2,5),(0,1))
+            ax2.set_xlabel('Time [s]')
+            ax2.set_ylabel('Total kinetic energy [J]')
+            ax2.plot(t, Ekin, '+-')
+            ax2.grid()
 
-                # semilog plot of log stress vs. void ratio
-                ax2 = plt.subplot2grid((2,2),(1,0))
-                ax2.set_xlabel('log deviatoric stress [kPa]')
-                ax2.set_ylabel('Void ratio [-]')
-                ax2.plot(logstress, voidratio, '+-')
-                ax2.grid()
+            # Rotational energy
+            ax3 = plt.subplot2grid((2,5),(0,2))
+            ax3.set_xlabel('Time [s]')
+            ax3.set_ylabel('Total rotational energy [J]')
+            ax3.plot(t, Erot, '+-')
+            ax3.grid()
 
-                # linear plot of time vs. wall velocity
-                ax3 = plt.subplot2grid((2,2),(0,1))
-                ax3.set_xlabel('Time [s]')
-                ax3.set_ylabel('Velocity [m/s]')
-                ax3.plot(t, wvel, '+-')
-                ax3.grid()
+            # Total energy
+            ax4 = plt.subplot2grid((2,5),(0,3))
+            ax4.set_xlabel('Time [s]')
+            ax4.set_ylabel('Total energy [J]')
+            ax4.plot(t, Esum, '+-')
+            ax4.grid()
 
-                # linear plot of time vs. deviatoric stress
-                ax4 = plt.subplot2grid((2,2),(1,1))
-                ax4.set_xlabel('Time [s]')
-                ax4.set_ylabel('Deviatoric stress [Pa]')
-                ax4.plot(t, wdevs, '+-', label="$\sigma_0$")
-                ax4.plot(t, wforce/(sb.L[0]*sb.L[1]), '+-', label="$\sigma'$")
-                ax4.legend(loc=4)
-                ax4.grid()
+            # Shear energy rate
+            ax5 = plt.subplot2grid((2,5),(1,0))
+            ax5.set_xlabel('Time [s]')
+            ax5.set_ylabel('Frictional dissipation rate [W]')
+            ax5.plot(t, Es_dot, '+-')
+            ax5.grid()
+
+            # Shear energy
+            ax6 = plt.subplot2grid((2,5),(1,1))
+            ax6.set_xlabel('Time [s]')
+            ax6.set_ylabel('Total frictional dissipation [J]')
+            ax6.plot(t, Es, '+-')
+            ax6.grid()
+
+            # Visc_n energy rate
+            ax7 = plt.subplot2grid((2,5),(1,2))
+            ax7.set_xlabel('Time [s]')
+            ax7.set_ylabel('Viscous dissipation rate [W]')
+            ax7.plot(t, Ev_dot, '+-')
+            ax7.grid()
+
+            # Visc_n energy
+            ax8 = plt.subplot2grid((2,5),(1,3))
+            ax8.set_xlabel('Time [s]')
+            ax8.set_ylabel('Total viscous dissipation [J]')
+            ax8.plot(t, Ev, '+-')
+            ax8.grid()
 
 
-        elif method == 'shear':
+            # Combined view
+            ax9 = plt.subplot2grid((2,5),(1,4))
+            ax9.set_xlabel('Time [s]')
+            ax9.set_ylabel('Energy [J]')
+            ax9.plot(t, Epot, '+-g')
+            ax9.plot(t, Ekin, '+-b')
+            ax9.plot(t, Erot, '+-r')
+            ax9.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
+            ax9.grid()
 
-            sb = Spherebin()
-            # Read stress values from project binaries
-            for i in range(lastfile+1):
-                fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
-                sb.readbin(fn, verbose = False)
+    elif method == 'walls':
 
-                # First iteration: Allocate arrays and find constant values
-                if (i == 0):
-                    xdisp     = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear displacement
-                    sigma_eff = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Normal stress
-                    sigma_def = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Normal stress
-                    tau       = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear stress
-                    dilation  = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Upper wall position
+        # Read energy values from project binaries
+        sb = Spherebin()
+        for i in range(lastfile+1):
+            fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
+            sb.readbin(fn, verbose = False)
 
-                    fixvel = numpy.nonzero(sb.fixvel > 0.0)
-                    #fixvel_upper = numpy.nonzero(sb.vel[fixvel,0] > 0.0)
-                    shearvel = sb.vel[fixvel,0].max()
-                    w_x0 = sb.w_x[0]        # Original height
-                    A = sb.L[0] * sb.L[1]   # Upper surface area
+            # Allocate arrays on first run
+            if (i == 0):
+                wforce = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+                wvel   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+                wpos   = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+                wdevs  = numpy.zeros((lastfile+1)*sb.nw[0], dtype=numpy.float64).reshape((lastfile+1), sb.nw[0])
+                maxpos = numpy.zeros((lastfile+1), dtype=numpy.float64)
+                logstress = numpy.zeros((lastfile+1), dtype=numpy.float64)
+                voidratio = numpy.zeros((lastfile+1), dtype=numpy.float64)
 
-                # Summation of shear stress contributions
-                for j in fixvel[0]:
-                    if (sb.vel[j,0] > 0.0):
-                        tau[i] += -sb.force[j,0]
+            wforce[i] = sb.w_force[0]
+            wvel[i]   = sb.w_vel[0]
+            wpos[i]   = sb.w_x[0]
+            wdevs[i]  = sb.w_devs[0]
+            maxpos[i] = numpy.max(sb.x[:,2]+sb.radius)
+            logstress[i] = numpy.log((sb.w_force[0]/(sb.L[0]*sb.L[1]))/1000.0)
+            voidratio[i] = sb.voidRatio()
 
-                xdisp[i]    = sb.time_current[0] * shearvel
-                sigma_eff[i] = sb.w_force[0] / A
-                sigma_def[i] = sb.w_devs[0]
-                #tau[i]      = sb.force[fixvel_upper,0].sum() / A
-                #dilation[i] = sb.w_x[0] - w_x0                 # dilation in meters
-                dilation[i] = (sb.w_x[0] - w_x0)/w_x0 * 100.0   # dilation in percent
 
-            # Plot stresses
-            if (outformat != 'txt'):
-                ax1 = plt.subplot2grid((2,1),(0,0))
-                ax1.set_xlabel('Shear strain [-]')
-                ax1.set_ylabel('Stress [Pa]')
-                ax1.plot(xdisp/w_x0, sigma_eff, '+-g', label="$\sigma'$")
-                ax1.plot(xdisp/w_x0, sigma_def, '+-b', label="$\sigma_0$")
-                ax1.plot(xdisp/w_x0, tau, '+-r', label="$\\tau$")
-                ax1.legend(loc = 4)
-                ax1.grid()
+        t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
-                # Plot dilation
-                ax2 = plt.subplot2grid((2,1),(1,0))
-                ax2.set_xlabel('Shear strain [-]')
-                ax2.set_ylabel('Dilation [%]')
-                ax2.plot(xdisp/w_x0, dilation, '+-')
-                ax2.grid()
-        else :
-            print("Visualization type '" + method + "' not understood")
+        # Plotting
+        if (outformat != 'txt'):
+            # linear plot of time vs. wall position
+            ax1 = plt.subplot2grid((2,2),(0,0))
+            ax1.set_xlabel('Time [s]')
+            ax1.set_ylabel('Position [m]')
+            ax1.plot(t, wpos, '+-', label="upper wall")
+            ax1.plot(t, maxpos, '+-', label="heighest particle")
+            ax1.legend()
+            ax1.grid()
 
-    else : 
-        # Write values to textfile
-        filename = "shear-stresses-{0}.txt".format(project)
-        #print("Writing stress data to " + filename)
-        fh = None
-        try :
-            fh = open(filename, "w")
-            L = sb.L[2] - sb.origo[2] # Initial height
-            for i in range(lastfile+1):
-                # format: shear distance [mm], sigma [kPa], tau [kPa], Dilation [%]
-                fh.write("{0}\t{1}\t{2}\t{3}\n".format(xdisp[i]*1000.0,
-                    sigma[i]/1000.0,
+            #ax2 = plt.subplot2grid((2,2),(1,0))
+            #ax2.set_xlabel('Time [s]')
+            #ax2.set_ylabel('Force [N]')
+            #ax2.plot(t, wforce, '+-')
+
+            # semilog plot of log stress vs. void ratio
+            ax2 = plt.subplot2grid((2,2),(1,0))
+            ax2.set_xlabel('log deviatoric stress [kPa]')
+            ax2.set_ylabel('Void ratio [-]')
+            ax2.plot(logstress, voidratio, '+-')
+            ax2.grid()
+
+            # linear plot of time vs. wall velocity
+            ax3 = plt.subplot2grid((2,2),(0,1))
+            ax3.set_xlabel('Time [s]')
+            ax3.set_ylabel('Velocity [m/s]')
+            ax3.plot(t, wvel, '+-')
+            ax3.grid()
+
+            # linear plot of time vs. deviatoric stress
+            ax4 = plt.subplot2grid((2,2),(1,1))
+            ax4.set_xlabel('Time [s]')
+            ax4.set_ylabel('Deviatoric stress [Pa]')
+            ax4.plot(t, wdevs, '+-', label="$\sigma_0$")
+            ax4.plot(t, wforce/(sb.L[0]*sb.L[1]), '+-', label="$\sigma'$")
+            ax4.legend(loc=4)
+            ax4.grid()
+
+
+    elif method == 'shear':
+
+        sb = Spherebin()
+        # Read stress values from project binaries
+        for i in range(lastfile+1):
+            fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
+            sb.readbin(fn, verbose = False)
+
+            # First iteration: Allocate arrays and find constant values
+            if (i == 0):
+                xdisp     = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear displacement
+                sigma_eff = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Normal stress
+                sigma_def = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Normal stress
+                tau       = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear stress
+                dilation  = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Upper wall position
+
+                fixvel = numpy.nonzero(sb.fixvel > 0.0)
+                #fixvel_upper = numpy.nonzero(sb.vel[fixvel,0] > 0.0)
+                shearvel = sb.vel[fixvel,0].max()
+                w_x0 = sb.w_x[0]        # Original height
+                A = sb.L[0] * sb.L[1]   # Upper surface area
+
+            # Summation of shear stress contributions
+            for j in fixvel[0]:
+                if (sb.vel[j,0] > 0.0):
+                    tau[i] += -sb.force[j,0]
+
+            xdisp[i]    = sb.time_current[0] * shearvel
+            sigma_eff[i] = sb.w_force[0] / A
+            sigma_def[i] = sb.w_devs[0]
+            #tau[i]      = sb.force[fixvel_upper,0].sum() / A
+            #dilation[i] = sb.w_x[0] - w_x0                 # dilation in meters
+            dilation[i] = (sb.w_x[0] - w_x0)/w_x0 * 100.0   # dilation in percent
+
+        # Plot stresses
+        if (outformat != 'txt'):
+            ax1 = plt.subplot2grid((2,1),(0,0))
+            ax1.set_xlabel('Shear strain [-]')
+            ax1.set_ylabel('Stress [Pa]')
+            ax1.plot(xdisp/w_x0, sigma_eff, '+-g', label="$\sigma'$")
+            ax1.plot(xdisp/w_x0, sigma_def, '+-b', label="$\sigma_0$")
+            ax1.plot(xdisp/w_x0, tau, '+-r', label="$\\tau$")
+            ax1.legend(loc = 4)
+            ax1.grid()
+
+            # Plot dilation
+            ax2 = plt.subplot2grid((2,1),(1,0))
+            ax2.set_xlabel('Shear strain [-]')
+            ax2.set_ylabel('Dilation [%]')
+            ax2.plot(xdisp/w_x0, dilation, '+-')
+            ax2.grid()
+
+        else : 
+            # Write values to textfile
+            filename = "shear-stresses-{0}.txt".format(project)
+            #print("Writing stress data to " + filename)
+            fh = None
+            try :
+                fh = open(filename, "w")
+                L = sb.L[2] - sb.origo[2] # Initial height
+                for i in range(lastfile+1):
+                    # format: shear distance [mm], sigma [kPa], tau [kPa], Dilation [%]
+                    fh.write("{0}\t{1}\t{2}\t{3}\n".format(xdisp[i]*1000.0,
+                    sigma_eff[i]/1000.0,
                     tau[i]/1000.0,
                     dilation[i]/L*100.0))
-        finally :
-            if fh is not None:
-                fh.close()
+            finally :
+                if fh is not None:
+                    fh.close()
+
+    else :
+        print("Visualization type '" + method + "' not understood")
+
 
     # Optional save of figure
     if (outformat != 'txt'):
