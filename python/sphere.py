@@ -1342,10 +1342,10 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 L = sb.L[2] - sb.origo[2] # Initial height
                 for i in range(lastfile+1):
                     # format: shear distance [mm], sigma [kPa], tau [kPa], Dilation [%]
-                    fh.write("{0}\t{1}\t{2}\t{3}\n".format(xdisp[i]*1000.0,
+                    fh.write("{0}\t{1}\t{2}\t{3}\n".format(xdisp[i],
                     sigma_eff[i]/1000.0,
                     tau[i]/1000.0,
-                    dilation[i]/L*100.0))
+                    dilation[i]))
             finally :
                 if fh is not None:
                     fh.close()
