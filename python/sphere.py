@@ -765,7 +765,7 @@ class Spherebin:
         # Computational time step (O'Sullivan et al, 2003)
         #self.time_dt[0] = 0.17 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amax([self.k_n[:], self.k_t[:]]) )
         # Computational time step (Zhang and Campbell, 1992)
-        self.time_dt[0] = 0.075 * math.sqrt((4.0/3.0 * math.pi * r_min**3 * self.rho[0]) / numpy.amax([self.k_n[:], self.k_t[:]]) )
+        self.time_dt[0] = 0.075 * math.sqrt((V_sphere(r_min) * self.rho[0]) / numpy.amax([self.k_n[:], self.k_t[:]]) )
 
         # Time at start
         self.time_current[0] = current
@@ -905,81 +905,56 @@ class Spherebin:
         return e
 
 
-    def porosity(self, lower_corner, 
-            upper_corner, 
-            grid = numpy.array([10,10,10], int), 
-            precisionfactor = 10, verbose = False):
-        """ Calculate the porosity inside each grid cell.
-            Specify the lower and upper corners of the volume to evaluate.
-            A good starting point for the grid vector is self.num.
-            The precision factor determines how much precise the grid porosity is.
-            A larger value will result in better precision, but more computations O(n^3).
+    def bulkPorosity(self):
+        """ Calculate and return the bulk porosity """
+
+        if (self.nw == 0):
+            V_total = self.L[0] * self.L[1] * self.L[2]
+        elif (self.nw == 1):
+            V_total = self.L[0] * self.L[1] * self.w_x[0]
+            if (V_total <= 0.0):
+                raise Exception("Could not determine total volume")
+
+        # Find the volume of solids
+        V_solid = numpy.sum(V_sphere(self.radius))
+        return (V_total - V_solid) / V_total
+   
+
+    def porosity(self,
+            slices = 10,
+            verbose = False):
+        """ Calculate the porosity as a function of depth, by averaging values
+            in horizontal slabs.
+            Returns porosity values and depth
         """
 
-        # Cell size length
-        csl = numpy.array([(upper_corner[0]-lower_corner[0]) / grid[0], \
-                (upper_corner[1]-lower_corner[1]) / grid[1], \
-                (upper_corner[2]-lower_corner[2]) / grid[2] ])
+        # Write data as binary
+        self.writebin(verbose=False)
 
-        # Create 3d vector of porosity values
-        porosity_grid = numpy.ones((grid[0], grid[1], grid[2]), float) * csl[0]*csl[1]*csl[2]
+        # Run porosity program on binary
+        pipe = subprocess.Popen(\
+                ["../porosity",\
+                "-s","{}".format(slices),\
+                "../input/" + self.sid + ".bin"],\
+                stdout=subprocess.PIPE)
+        output, err = pipe.communicate()
 
-        # Fine grid, to be interpolated to porosity_grid. The fine cells are
-        # assumed to be either completely solid- (True), or void space (False).
-        fine_grid = numpy.zeros((grid[0]*precisionfactor, \
-                grid[1]*precisionfactor, \
-                grid[2]*precisionfactor), bool)
+        if (err):
+            print(err)
+            raise Exception("Could not run external 'porosity' program")
 
-        # Side length of fine grid cells
-        csl_fine = numpy.array([(upper_corner[0]-lower_corner[0]) / (grid[0]*precisionfactor), \
-                (upper_corner[1]-lower_corner[1]) / (grid[1]*precisionfactor), \
-                (upper_corner[2]-lower_corner[2]) / (grid[2]*precisionfactor) ])
+        # read one line of output at a time
+        s2 = output.split('\n')
+        depth = []
+        porosity = []
+        for row in s2:
+            if (row != '\n' or row != '' or row != ' '): # skip blank lines
+                s3 = row.split('\t')
+                if (s3 != '' and len(s3) == 2): # make sure line has two vals
+                    depth.append(float(s3[0]))
+                    porosity.append(float(s3[1]))
 
-        # Volume of fine grid vells
-        Vc_fine = csl_fine[0] * csl_fine[1] * csl_fine[2]
-
-        if (verbose == True):
-            print("Iterating over fine grid cells")
-
-        # Iterate over fine grid cells
-        for ix in range(grid[0]*precisionfactor):
-            for iy in range(grid[1]*precisionfactor):
-                for iz in range(grid[2]*precisionfactor):
-
-                    # Coordinates of cell centre
-                    cpos = numpy.array([ix*csl_fine[0] + 0.5*csl_fine[0], \
-                            iy*csl_fine[1] + 0.5*csl_fine[1], \
-                            iz*csl_fine[2] + 0.5*csl_fine[2] ])
-
-
-                    # Find out if the cell centre lies within a particle
-                    for i in range(self.np):
-                        p = self.x[i,:]     # Particle position
-                        r = self.radius[i]    # Particle radius
-
-                        delta = numpy.linalg.norm(cpos - p) - r
-
-                        if (delta < 0.0): # Cell lies within a particle
-                            fine_grid[ix,iy,iz] = True
-                            break # No need to check more particles
-
-                    fine_grid[ix,iy,iz] = False
-
-        if (verbose == True):
-            print("Interpolating fine grid to normal grid")
-
-        # Interpolate fine grid to coarse grid by looping
-        # over the fine grid, and subtracting the fine cell volume
-        # if it is marked as inside a particle
-        for ix in range(fine_grid[0]):
-            for iy in range(fine_grid[1]):
-                for iz in range(fine_grid[2]):
-                    if (fine_grid[ix,iy,iz] == True):
-                        porosity_grid[floor(ix/precisionfactor), \
-                                floor(iy/precisionfactor), \
-                                floor(iz/precisionfactor) ] -= Vc_fine
-
-                        return porosity_grid
+        return numpy.array(porosity), numpy.array(depth)
 
 
     def run(self, verbose=True, hideinputfile=False, dry=False):
@@ -1015,9 +990,6 @@ class Spherebin:
             if fh is not None:
                 fh.close()
 
-
-
-        
 
     def render(self,
             method = "pres",
@@ -1295,6 +1267,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 sigma_def = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Normal stress
                 tau       = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Shear stress
                 dilation  = numpy.zeros(lastfile+1, dtype=numpy.float64)  # Upper wall position
+                tau_u = 0.0             # Peak shear stress
+                tau_u_shearstrain = 0.0 # Shear strain value of peak shear stress
 
                 fixvel = numpy.nonzero(sb.fixvel > 0.0)
                 #fixvel_upper = numpy.nonzero(sb.vel[fixvel,0] > 0.0)
@@ -1310,12 +1284,19 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             xdisp[i]    = sb.time_current[0] * shearvel
             sigma_eff[i] = sb.w_force[0] / A
             sigma_def[i] = sb.w_devs[0]
-            #tau[i]      = sb.force[fixvel_upper,0].sum() / A
             #dilation[i] = sb.w_x[0] - w_x0                 # dilation in meters
             dilation[i] = (sb.w_x[0] - w_x0)/w_x0 * 100.0   # dilation in percent
 
+            # Test if this was the max. shear stress
+            if (tau[i] > tau_u):
+                tau_u = tau[i]
+                tau_u_shearstrain = xdisp[i]/w_x0
+
+
         # Plot stresses
         if (outformat != 'txt'):
+            figtitle = "{1}, $\\tau_u = {} (\gamma = {})$".format(project, tau_u, tau_u_shearstrain)
+            fig.text(0.5,0.95,figtitle,horizontalalignment='center',fontproperties=FontProperties(size=18))
             ax1 = plt.subplot2grid((2,1),(0,0))
             ax1.set_xlabel('Shear strain [-]')
             ax1.set_ylabel('Stress [Pa]')
@@ -1392,5 +1373,10 @@ def status(project):
         if fh is not None:
             fh.close()
 
+
+def V_sphere(r):
+    """ Returns the volume of a sphere with radius r
+    """
+    return 4.0/3.0 * math.pi * r**3.0
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
