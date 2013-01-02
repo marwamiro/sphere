@@ -122,6 +122,9 @@ class DEM {
         // Find and return the max. position of any particle in each dimension
         float3 maxPos(void);
 
+        // Find and return the max. radius
+        Float r_max(void);
+
         // Write porosities found in porosity() to text file
         void writePorosities(
                 const char *target,

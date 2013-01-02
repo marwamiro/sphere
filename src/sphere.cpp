@@ -306,6 +306,19 @@ Float sphericalCap(const Float h, const Float r)
     return M_PI * h * h / 3.0 * (3.0 * r - h);
 }
 
+// Returns the max. radius of any particle
+Float DEM::r_max()
+{
+    Float r_max = 0.0;
+    Float r;
+    for (unsigned int i=0; i<np; ++i) {
+        r = k.x[i].w;
+        if (r > r_max)
+            r_max = r;
+    }
+    return r;
+}
+
 // Calculate the porosity with depth, and write to file in output directory
 void DEM::porosity(const int z_slices)
 {
@@ -321,6 +334,15 @@ void DEM::porosity(const int z_slices)
     // Calculate depth slice thickness
     Float h_slice = (top - grid.origo[2]) / (Float)z_slices;
 
+    // Check that the vertical slice height does not exceed the
+    // max particle diameter, since this function doesn't work
+    // if the sphere intersects more than 1 boundary
+    if (h_slice <= r_max()*2.0) {
+        std::cerr << "Error! The number of z-slices is too high."
+            << std::endl;
+        exit(1);
+    }
+
     // Calculate slice volume
     Float V_slice = h_slice * grid.L[0] * grid.L[1];
 
@@ -331,7 +353,7 @@ void DEM::porosity(const int z_slices)
     Float porosity[z_slices];
 
     // Loop over vertical slices
-#pragma omp parallel for if(np > 100)
+//#pragma omp parallel for if(np > 100)
     for (int iz = 0; iz<z_slices; ++iz) {
 
         // The void volume equals the slice volume, with the
@@ -358,14 +380,14 @@ void DEM::porosity(const int z_slices)
 
             // If the sphere is inside the slice and not intersecting the
             // boundaries, subtract the entire sphere volume
-            if (z_slice_low < z_sphere_low && z_sphere_high < z_slice_high) {
+            if (z_slice_low <= z_sphere_low && z_sphere_high <= z_slice_high) {
                 V_void -= V_sphere;
 
             } else {
 
                 // If the sphere intersects with the lower boundary,
                 // and the centre is below the boundary
-                if (z_slice_low > z_sphere_centre && z_slice_low < z_sphere_high) {
+                if (z_slice_low >= z_sphere_centre && z_slice_low <= z_sphere_high) {
 
                     // Subtract the volume of a spherical cap
                     V_void -= sphericalCap(z_sphere_high - z_slice_low, radius);
@@ -381,24 +403,25 @@ void DEM::porosity(const int z_slices)
                 }
 
                 // If the sphere intersects with the upper boundary,
+                // and the centre is above the boundary
+                if (z_slice_high <= z_sphere_centre && z_slice_high >= z_sphere_low) {
+
+                    // Subtract the volume of the spherical cap below
+                    V_void -= sphericalCap(z_slice_high - z_sphere_low, radius);
+                }
+                // If the sphere intersects with the upper boundary,
                 // and the centre is below the boundary
-                if (z_slice_high > z_sphere_centre && z_slice_high < z_sphere_high) {
+                else if (z_slice_high > z_sphere_centre && z_slice_high < z_sphere_high) {
 
                     // Subtract the volume of the sphere, 
                     // then add the volume of the spherical cap above
                     V_void -= V_sphere + sphericalCap(z_sphere_high - z_slice_high, radius);
                 }
                 
-                // If the sphere intersects with the upper boundary,
-                // and the centre is above the boundary
-                else if (z_slice_high < z_sphere_centre && z_slice_high > z_sphere_low) {
-
-                    // Subtract the volume of the spherical cap below
-                    V_void -= sphericalCap(z_slice_high - z_sphere_low, radius);
-                }
                 
 
             }
+            
         }
 
         // Save the mid z-point

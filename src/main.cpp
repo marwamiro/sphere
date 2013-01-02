@@ -53,7 +53,8 @@ int main(const int argc, const char *argv[])
                 << "-dc, --dont-check\tdon't check values before running\n" 
                 << "\nRaytracer (-r) specific options:\n"
                 << "-m <method> <maxval>, --method <method> <maxval>\n\tcolor visualization method, possible values:\n"
-                << "\tpres, vel, angvel, xdisp, angpos\n"
+                << "\tnormal, pres, vel, angvel, xdisp, angpos\n"
+                << "\t'normal' is the default mode\n"
                 << std::endl;
             return 0; // Exit with success
         }
@@ -92,7 +93,9 @@ int main(const int argc, const char *argv[])
         else if (argvi == "-m" || argvi == "--method") {
 
             // Find out which
-            if (std::string(argv[i+1]) == "pres")
+            if (std::string(argv[i+1]) == "normal")
+                method = 0;
+            else if (std::string(argv[i+1]) == "pres")
                 method = 1;
             else if (std::string(argv[i+1]) == "vel")
                 method = 2;
@@ -109,8 +112,12 @@ int main(const int argc, const char *argv[])
             }
 
             // Read max. value of colorbar as next argument
-            max_val = atof(argv[i+2]);
-            i += 2; // skip ahead
+            if (method != 0) {
+                max_val = atof(argv[i+2]);
+                i += 2; // skip ahead
+            } else {
+                i += 1;
+            }
         }
 
 
