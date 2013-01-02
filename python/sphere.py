@@ -1295,7 +1295,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
 
         # Plot stresses
         if (outformat != 'txt'):
-            figtitle = "{1}, $\\tau_u = {} (\gamma = {})$".format(project, tau_u, tau_u_shearstrain)
+            figtitle = "{}, $\\tau_u = {} (\gamma = {})$".format(project, tau_u, tau_u_shearstrain)
             fig.text(0.5,0.95,figtitle,horizontalalignment='center',fontproperties=FontProperties(size=18))
             ax1 = plt.subplot2grid((2,1),(0,0))
             ax1.set_xlabel('Shear strain [-]')
