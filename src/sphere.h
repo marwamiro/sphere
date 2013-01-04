@@ -165,8 +165,9 @@ class DEM {
         // Render particles using raytracing
         void render(
                 const int method = 1,
-                const float maxval = 1.0e3,
-                const float focalLength = 1.0,
+                const float maxval = 1.0e3f,
+                const float lower_cutoff = 0.0f,
+                const float focalLength = 1.0f,
                 const unsigned int img_width = 800,
                 const unsigned int img_height = 800);
 

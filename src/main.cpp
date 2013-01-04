@@ -33,7 +33,8 @@ int main(const int argc, const char *argv[])
     int render = 0; // whether to render an image
     int method = 0; // visualization method
     int nfiles = 0; // number of input files
-    float max_val = 0.0f;
+    float max_val = 0.0f;       // max value of colorbar
+    float lower_cutoff = 0.0f;  // lower cutoff, particles below will not be rendered
 
     // Process input parameters
     int i;
@@ -52,9 +53,12 @@ int main(const int argc, const char *argv[])
                 << "-r, --render\t\trender input files instead of simulating temporal evolution\n"
                 << "-dc, --dont-check\tdon't check values before running\n" 
                 << "\nRaytracer (-r) specific options:\n"
-                << "-m <method> <maxval>, --method <method> <maxval>\n\tcolor visualization method, possible values:\n"
+                << "-m <method> <maxval> [-l <lower cutoff val>], or\n"
+                << "--method <method> <maxval> [-l <lower cutoff val>]\n"
+                << "\tcolor visualization method, possible values:\n"
                 << "\tnormal, pres, vel, angvel, xdisp, angpos\n"
                 << "\t'normal' is the default mode\n"
+                << "\tif -l is appended, don't render particles with value below\n"
                 << std::endl;
             return 0; // Exit with success
         }
@@ -114,7 +118,14 @@ int main(const int argc, const char *argv[])
             // Read max. value of colorbar as next argument
             if (method != 0) {
                 max_val = atof(argv[i+2]);
-                i += 2; // skip ahead
+
+                // Check if a lower cutoff value was specified
+                if (std::string(argv[i+3]) == "-l") {
+                    lower_cutoff = atof(argv[i+4]);
+                    i += 4; // skip ahead
+                } else {
+                    i += 2; // skip ahead
+                }
             } else {
                 i += 1;
             }
@@ -133,7 +144,7 @@ int main(const int argc, const char *argv[])
 
             // Render image if requested
             if (render == 1)
-                dem.render(method, max_val);
+                dem.render(method, max_val, lower_cutoff);
 
             // Otherwise, start iterating through time
             else

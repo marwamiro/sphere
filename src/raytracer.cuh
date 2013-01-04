@@ -143,6 +143,7 @@ __global__ void rayIntersectSpheresColormap(float4* dev_ray_origo,
         Float4* dev_vel,
         Float*  dev_linarr,
         float max_val,
+        float lower_cutoff,
         unsigned char* dev_img)
 {
     // Compute pixel position from threadIdx/blockIdx
@@ -168,6 +169,8 @@ __global__ void rayIntersectSpheresColormap(float4* dev_ray_origo,
     // Iterate through all particles
     for (unsigned int i=0; i<devC_np; ++i) {
 
+        __syncthreads();
+
         // Read sphere coordinate and radius
         Float4 x = dev_x[i];
         float3 c = make_float3(x.x, x.y, x.z);
@@ -178,32 +181,65 @@ __global__ void rayIntersectSpheresColormap(float4* dev_ray_origo,
             - 4.0f*dot(d,d)	// -4*A
             * (dot((e-c),(e-c)) - R*R);  // C
 
+
+
         // If the determinant is positive, there are two solutions
         // One where the line enters the sphere, and one where it exits
-        if (Delta > 0.0f) {
+        if (lower_cutoff > 0.0) {
 
-            // Calculate roots, Shirley 2009 p. 77
-            float t_minus = ((dot(-d,(e-c)) - sqrt( dot(d,(e-c))*dot(d,(e-c)) - dot(d,d)
-                            * (dot((e-c),(e-c)) - R*R) ) ) / dot(d,d));
+            // value on colorbar
+            float val = dev_linarr[i];
 
-            // Check wether intersection is closer than previous values
-            if (fabs(t_minus) < tdist) {
-                p = e + t_minus*d;
-                tdist = fabs(t_minus);
-                n = normalize(2.0f * (p - c));   // Surface normal
-                hitidx = i;
-            }
+            // particle is fixed if value > 0
+            float fixvel = dev_vel[i].w;
 
-        } // End of solution branch
+            // only render particles which are above the lower cutoff
+            // and which are not fixed at a velocity
+            if (Delta > 0.0f && val > lower_cutoff && fixvel == 0.f) {
+
+                // Calculate roots, Shirley 2009 p. 77
+                float t_minus = ((dot(-d,(e-c)) - sqrt( dot(d,(e-c))*dot(d,(e-c)) - dot(d,d)
+                                * (dot((e-c),(e-c)) - R*R) ) ) / dot(d,d));
+
+                // Check wether intersection is closer than previous values
+                if (fabs(t_minus) < tdist) {
+                    p = e + t_minus*d;
+                    tdist = fabs(t_minus);
+                    n = normalize(2.0f * (p - c));   // Surface normal
+                    hitidx = i;
+                }
+
+            } // End of solution branch
+
+        } else {
+
+            // render particle if it intersects with the ray
+            if (Delta > 0.0f) {
+
+                // Calculate roots, Shirley 2009 p. 77
+                float t_minus = ((dot(-d,(e-c)) - sqrt( dot(d,(e-c))*dot(d,(e-c)) - dot(d,d)
+                                * (dot((e-c),(e-c)) - R*R) ) ) / dot(d,d));
+
+                // Check wether intersection is closer than previous values
+                if (fabs(t_minus) < tdist) {
+                    p = e + t_minus*d;
+                    tdist = fabs(t_minus);
+                    n = normalize(2.0f * (p - c));   // Surface normal
+                    hitidx = i;
+                }
+
+            } // End of solution branch
+        }
 
     } // End of particle loop
 
     // Write pixel color
     if (tdist < 1e10) {
 
+        __syncthreads();
         // Fetch particle data used for color
-        float ratio = dev_linarr[hitidx] / max_val;
         float fixvel = dev_vel[hitidx].w;
+        float ratio = dev_linarr[hitidx] / max_val;
 
         // Make sure the ratio doesn't exceed the 0.0-1.0 interval
         if (ratio < 0.01f)
@@ -362,6 +398,7 @@ __host__ float3 DEM::maxPos()
 __host__ void DEM::render(
         const int method,
         const float maxval,
+        const float lower_cutoff,
         const float focalLength,
         const unsigned int img_width,
         const unsigned int img_height)
@@ -504,7 +541,7 @@ __host__ void DEM::render(
         rayIntersectSpheresColormap<<< blocksPerGrid, threadsPerBlock >>>(
                 dev_ray_origo, dev_ray_direction,
                 dev_x, dev_vel,
-                dev_linarr, maxval,
+                dev_linarr, maxval, lower_cutoff,
                 dev_img);
 
     }
