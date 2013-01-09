@@ -994,6 +994,7 @@ class Spherebin:
     def render(self,
             method = "pres",
             max_val = 1e3,
+            lower_cutoff = 0.0,
             graphicsformat = "png",
             verbose=True):
         'Render all output files that belong to the simulation, determined by sid.'
@@ -1005,11 +1006,245 @@ class Spherebin:
         # Render images using sphere raytracer
         subprocess.call("cd ..; ./sphere* " + quiet \
                 + " --method " + method + " {}".format(max_val) \
+                + " -l {}".format(lower_cutoff) \
                 + " --render output/" + self.sid + "*.bin" \
                 , shell=True)
 
         # Convert images to compressed format
         convert()
+
+    def shearvel(self):
+        'Calculates and returns the shear velocity (gamma_dot) of the experiment'
+
+        # Find the fixed particles
+        fixvel = numpy.nonzero(self.fixvel > 0.0)
+
+        # The shear velocity is the x-axis velocity value of the upper particles
+        return self.vel[fixvel,0].max()
+
+
+    def shearstrain(self):
+        'Calculates and returns the shear strain (gamma) value of the experiment'
+
+        # Current height
+        w_x0 = self.w_x[0]
+
+        # Displacement of the upper, fixed particles in the shear direction
+        xdisp = self.time_current[0] * self.shearvel()
+
+        # Return shear strain
+        return xdisp/w_x0
+
+    def thinsection_x1x3(self,
+            x2 = 'center',
+            graphicsformat = 'png',
+            cbmax = None,
+            arrowscale = 0.01,
+            slipscale = 1.0,
+            verbose = False):
+        ''' Produce a 2D image of particles on a x1,x3 plane, intersecting the second axis at x2.
+            Output is saved as '<sid>-ts-x1x3.txt' in the current folder.
+
+            An upper limit to the pressure color bar range can be set by the cbmax parameter.
+
+            The data can be plotted in gnuplot with:
+                gnuplot> set size ratio -1
+                gnuplot> set palette defined (0 "blue", 0.5 "gray", 1 "red")
+                gnuplot> plot '<sid>-ts-x1x3.txt' with circles palette fs transparent solid 0.4 noborder
+        '''
+
+        if (x2 == 'center') :
+            x2 = (self.L[1] - self.origo[1]) / 2.0
+
+        # Initialize plot circle positionsr, radii and pressures
+        ilist = []
+        xlist = []
+        ylist = []
+        rlist = []
+        plist = []
+        pmax = 0.0
+        rmax = 0.0
+        axlist = []
+        aylist = []
+        daxlist = []
+        daylist = []
+
+        # Loop over all particles, find intersections
+        for i in range(self.np):
+            
+            delta = abs(self.x[i,1] - x2)   # distance between centre and plane
+
+            if (delta < self.radius[i]): # if the sphere intersects the plane
+
+                # Store particle index
+                ilist.append(i)
+                
+                # Store position on plane
+                xlist.append(self.x[i,0])
+                ylist.append(self.x[i,2])
+
+                # Store radius of intersection
+                r_circ = math.sqrt(self.radius[i]**2 - delta**2)
+                if (r_circ > rmax):
+                    rmax = r_circ
+                rlist.append(r_circ)
+
+                # Store pressure
+                pval = self.p[i]
+                if (cbmax != None):
+                    if (pval > cbmax):
+                        pval = cbmax
+                plist.append(pval)
+
+                # Store rotational velocity data for arrows
+                # Save two arrows per particle
+                axlist.append(self.x[i,0]) # x starting point of arrow
+                axlist.append(self.x[i,0]) # x starting point of arrow
+                aylist.append(self.x[i,2] + r_circ*0.5) # y starting point of arrow
+                aylist.append(self.x[i,2] - r_circ*0.5) # y starting point of arrow
+                daxlist.append(self.angvel[i,1]*arrowscale) # delta x for arrow end point
+                daxlist.append(-self.angvel[i,1]*arrowscale) # delta x for arrow end point
+                daylist.append(0.0) # delta y for arrow end point
+                daylist.append(0.0) # delta y for arrow end point
+
+                if (r_circ > self.radius[i]):
+                    raise Exception("Error, circle radius is larger than the particle radius")
+                if (self.p[i] > pmax):
+                    pmax = self.p[i]
+
+        if (verbose == True):
+            print("Max. pressure of intersecting spheres: " + str(pmax) + " Pa")
+            if (cbmax != None):
+                print("Value limited to: " + str(cbmax) + " Pa")
+
+        # Save circle data
+        filename = '../gnuplot/data' + self.sid + '-ts-x1x3.txt'
+        fh = None
+        try :
+            fh = open(filename, 'w')
+
+            for (x, y, r, p) in zip(xlist, ylist, rlist, plist):
+                fh.write("{}\t{}\t{}\t{}\n".format(x, y, r, p))
+        
+        finally :
+            if fh is not None:
+                fh.close()
+
+        # Save angular velocity data. The arrow lengths are normalized to max. radius
+        #   Output format: x, y, deltax, deltay
+        #   gnuplot> plot '-' using 1:2:3:4 with vectors head filled lt 2
+        filename = '../gnuplot/data' + self.sid + '-ts-x1x3-arrows.txt'
+        fh = None
+        try :
+            fh = open(filename, 'w')
+
+            for (ax, ay, dax, day) in zip(axlist, aylist, daxlist, daylist):
+                fh.write("{}\t{}\t{}\t{}\n".format(ax, ay, dax, day))
+        
+        finally :
+            if fh is not None:
+                fh.close()
+
+
+        # Check whether there are slips between the particles intersecting the plane
+        sxlist = []
+        sylist = []
+        dsxlist = []
+        dsylist = []
+        anglelist = [] # angle of the slip vector
+        slipvellist = [] # velocity of the slip
+        for i in ilist:
+
+            # Loop through other particles, and check whether they are in contact
+            for j in ilist:
+                #if (i < j):
+                if (i != j):
+
+                    # positions
+                    x_i = self.x[i,:]
+                    x_j = self.x[j,:]
+
+                    # radii
+                    r_i = self.radius[i]
+                    r_j = self.radius[j]
+
+                    # Inter-particle vector
+                    x_ij = x_i - x_j
+                    x_ij_length = numpy.sqrt(x_ij.dot(x_ij))
+
+                    # Check for overlap
+                    if (x_ij_length - (r_i + r_j) < 0.0):
+
+                        # contact plane normal vector
+                        n_ij = x_ij / x_ij_length
+
+                        vel_i = self.vel[i,:]
+                        vel_j = self.vel[j,:]
+                        angvel_i = self.angvel[i,:]
+                        angvel_j = self.angvel[j,:]
+
+                        # Determine the tangential contact surface velocity in the x,z plane
+                        dot_delta = (vel_i - vel_j) \
+                                + r_i * numpy.cross(n_ij, angvel_i) \
+                                + r_j * numpy.cross(n_ij, angvel_j)
+
+                        # Subtract normal component to get tangential velocity
+                        dot_delta_n = n_ij * numpy.dot(dot_delta, n_ij)
+                        dot_delta_t = dot_delta - dot_delta_n
+
+                        # Save slip velocity data for gnuplot
+                        if (dot_delta_t[0] != 0.0 or dot_delta_t[2] != 0.0):
+
+                            # Center position of the contact
+                            cpos = x_i - x_ij * 0.5
+
+                            sxlist.append(cpos[0])
+                            sylist.append(cpos[2])
+                            dsxlist.append(dot_delta_t[0] * slipscale)
+                            dsylist.append(dot_delta_t[2] * slipscale)
+                            #anglelist.append(math.degrees(math.atan(dot_delta_t[2]/dot_delta_t[0])))
+                            anglelist.append(math.atan(dot_delta_t[2]/dot_delta_t[0]))
+                            slipvellist.append(numpy.sqrt(dot_delta_t.dot(dot_delta_t)))
+
+
+        # Write slip lines to text file
+        filename = '../gnuplot/data' + self.sid + '-ts-x1x3-slips.txt'
+        fh = None
+        try :
+            fh = open(filename, 'w')
+
+            for (sx, sy, dsx, dsy) in zip(sxlist, sylist, dsxlist, dsylist):
+                fh.write("{}\t{}\t{}\t{}\n".format(sx, sy, dsx, dsy))
+        
+        finally :
+            if fh is not None:
+                fh.close()
+
+        # Plot thinsection with gnuplot script
+        gamma = self.shearstrain()
+        subprocess.call("""gnuplot -e "sid='{}'; gamma='{:.3}'" ../gnuplot/scripts/plotts.gp""".format(self.sid, self.shearstrain()), shell=True)
+
+        # Find all particles who have a slip velocity higher than slipvel
+        slipvellimit = 0.01
+        slipvels = numpy.nonzero(numpy.array(slipvellist) > slipvellimit)
+
+
+        # Bin slip angle data for histogram
+        binno = 36/2
+        hist_ang, bins_ang = numpy.histogram(numpy.array(anglelist)[slipvels], bins=binno, density=False)
+        center_ang = (bins_ang[:-1] + bins_ang[1:]) / 2.0
+
+        center_ang_mirr = numpy.concatenate((center_ang, center_ang + math.pi))
+        hist_ang_mirr = numpy.tile(hist_ang, 2)
+
+        # Write slip angles to text file
+        #numpy.savetxt(self.sid + '-ts-x1x3-slipangles.txt', zip(center_ang, hist_ang), fmt="%f\t%f")
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, polar=True)
+        ax.bar(center_ang_mirr, hist_ang_mirr, width=30.0/180.0)
+        fig.savefig('../gnuplot/data' + self.sid + '-ts-x1x3-slipangles.png')
+        fig.clf()
 
 
 def convert(graphicsformat = "png",
@@ -1031,6 +1266,7 @@ def convert(graphicsformat = "png",
 def render(binary,
         method = "pres",
         max_val = 1e3,
+        lower_cutoff = 0.0,
         graphicsformat = "png",
         verbose=True):
     'Render target binary using the sphere raytracer.'
@@ -1042,6 +1278,7 @@ def render(binary,
     # Render images using sphere raytracer
     subprocess.call("cd .. ; ./sphere " + quiet + \
             " --method " + method + " {}".format(max_val) + \
+            " -l {}".format(lower_cutoff) + \
             " --render " + binary, shell=True)
 
 
@@ -1284,8 +1521,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             xdisp[i]    = sb.time_current[0] * shearvel
             sigma_eff[i] = sb.w_force[0] / A
             sigma_def[i] = sb.w_devs[0]
-            #dilation[i] = sb.w_x[0] - w_x0                 # dilation in meters
-            dilation[i] = (sb.w_x[0] - w_x0)/w_x0 * 100.0   # dilation in percent
+            dilation[i] = sb.w_x[0] - w_x0                 # dilation in meters
+            #dilation[i] = (sb.w_x[0] - w_x0)/w_x0 * 100.0   # dilation in percent
 
             # Test if this was the max. shear stress
             if (tau[i] > tau_u):
