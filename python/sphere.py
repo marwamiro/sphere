@@ -1118,7 +1118,7 @@ class Spherebin:
                 print("Value limited to: " + str(cbmax) + " Pa")
 
         # Save circle data
-        filename = '../gnuplot/data' + self.sid + '-ts-x1x3.txt'
+        filename = '../gnuplot/data/' + self.sid + '-ts-x1x3.txt'
         fh = None
         try :
             fh = open(filename, 'w')
@@ -1133,7 +1133,7 @@ class Spherebin:
         # Save angular velocity data. The arrow lengths are normalized to max. radius
         #   Output format: x, y, deltax, deltay
         #   gnuplot> plot '-' using 1:2:3:4 with vectors head filled lt 2
-        filename = '../gnuplot/data' + self.sid + '-ts-x1x3-arrows.txt'
+        filename = '../gnuplot/data/' + self.sid + '-ts-x1x3-arrows.txt'
         fh = None
         try :
             fh = open(filename, 'w')
@@ -1208,7 +1208,7 @@ class Spherebin:
 
 
         # Write slip lines to text file
-        filename = '../gnuplot/data' + self.sid + '-ts-x1x3-slips.txt'
+        filename = '../gnuplot/data/' + self.sid + '-ts-x1x3-slips.txt'
         fh = None
         try :
             fh = open(filename, 'w')
@@ -1222,7 +1222,7 @@ class Spherebin:
 
         # Plot thinsection with gnuplot script
         gamma = self.shearstrain()
-        subprocess.call("""gnuplot -e "sid='{}'; gamma='{:.3}'" ../gnuplot/scripts/plotts.gp""".format(self.sid, self.shearstrain()), shell=True)
+        subprocess.call("""cd ../gnuplot/scripts && gnuplot -e "sid='{}'; gamma='{:.3}'" plotts.gp""".format(self.sid, self.shearstrain()), shell=True)
 
         # Find all particles who have a slip velocity higher than slipvel
         slipvellimit = 0.01
@@ -1243,7 +1243,7 @@ class Spherebin:
         fig = plt.figure()
         ax = fig.add_subplot(111, polar=True)
         ax.bar(center_ang_mirr, hist_ang_mirr, width=30.0/180.0)
-        fig.savefig('../gnuplot/data' + self.sid + '-ts-x1x3-slipangles.png')
+        fig.savefig('../img_out/' + self.sid + '-ts-x1x3-slipangles.png')
         fig.clf()
 
 
