@@ -1308,6 +1308,40 @@ def video(project,
             + "-i " + graphics_folder + project + ".output%05d." + graphics_format + " " \
             + out_folder + "/" + project + "." + video_format, shell=True)
 
+def thinsectionVideo(project,
+        out_folder = "./",
+        video_format = "mp4",
+        fps = 25,
+        qscale = 1,
+        bitrate = 1800,
+        verbose = False):
+    ''' Use ffmpeg to combine thin section images to animation.
+        This function will start off by rendering the images.
+    '''
+
+    # Render thin section images (png)
+    lastfile = status(project)
+    sb = Spherebin()
+    for i in range(lastfile+1):
+        fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
+        sb.sid = project + ".output{:0=5}".format(i)
+        sb.readbin(fn, verbose = False)
+        sb.thinsection_x1x3(cbmax = sb.w_devs[0]*4.0)
+
+    # Combine images to animation
+    # Possible loglevels: quiet, panic, fatal, error, warning, info, verbose, debug
+    loglevel = "info" # verbose = True
+    if (verbose == False):
+        loglevel = "error"
+
+    subprocess.call(\
+            "ffmpeg -qscale {0} -r {1} -b {2} -y ".format(qscale, fps, bitrate) \
+            + "-loglevel " + loglevel + " " \
+            + "-i ../img_out/" + project + ".output%05d-ts-x1x3.png " \
+            + "-vf 'crop=((in_w/2)*2):((in_h/2)*2)' " \
+            + out_folder + "/" + project + "-ts-x1x3." + video_format, \
+            shell=True)
+
 
 def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
     """ Visualize output from the target project,
