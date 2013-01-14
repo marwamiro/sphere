@@ -354,7 +354,7 @@ void DEM::porosity(const int z_slices)
     Float porosity[z_slices];
 
     // Loop over vertical slices
-//#pragma omp parallel for if(np > 100)
+#pragma omp parallel for if(np > 100)
     for (int iz = 0; iz<z_slices; ++iz) {
 
         // The void volume equals the slice volume, with the
@@ -484,7 +484,10 @@ void DEM::findOverlaps(
                 if (delta_n < 0.0) {
 
                     // Store particle indexes and delta_n
-                    ij.push_back(std::vector<unsigned int> (i, j));
+                    std::vector<unsigned int> ij_pair(2);
+                    ij_pair[0] = i;
+                    ij_pair[1] = j;
+                    ij.push_back(ij_pair);
                     delta_n_ij.push_back(delta_n);
 
                 }
@@ -505,17 +508,23 @@ void DEM::forcechains()
     findOverlaps(ij, delta_n_ij);
 
     // Write Asymptote header
-    cout << "import three;\nsize(600);" << endl;
+    //cout << "import three;\nsize(600);" << endl;
+    
+    // Write Gnuplot header
+    //cout << "#!/usr/bin/env gnuplot" << endl;
+    
+    // Write Matlab header
+    //cout << "plot(";
 
     // Loop over found contacts, report to stdout
     unsigned int n, i, j;
-    std::vector<unsigned int> ij_pair(2);
     Float delta_n;
     for (n=0; n<ij.size(); ++n) {
 
-        ij_pair = ij[n];
-        i = ij_pair[0];
-        j = ij_pair[1];
+        // Get contact particle indexes
+        i = ij[n][0];
+        j = ij[n][1];
+        //cout << "(i,j) = " << i << ", " << j << endl;
 
         delta_n = delta_n_ij[n];
 
@@ -525,14 +534,50 @@ void DEM::forcechains()
             << j << "), delta_n = " << delta_n
             << endl;*/
 
-        cout << "path3 g=(" 
+        // Asymptote output
+        /*cout << "path3 g=(" 
             << k.x[i].x << ','
             << k.x[i].y << ',' 
             << k.x[i].z << ")..(" 
             << k.x[j].x << ',' 
             << k.x[j].y << ','
-            << k.x[j].z << ");\ndraw(g);" << endl;
+            << k.x[j].z << ");\ndraw(g);" << endl;*/
+
+        // Gnuplot output
+        /*cout << "set arrow " << n+1 << " from "
+            << k.x[i].x << ','
+            << k.x[i].y << ',' 
+            << k.x[i].z << " to " 
+            << k.x[j].x << ','
+            << k.x[j].y << ',' 
+            << k.x[j].z << " nohead "
+            << endl;*/
+
+        // Matlab output
+        /*cout << "plot::Line3d("
+            << '[' << k.x[i].x << ','
+            << k.x[i].y << ','
+            << k.x[i].z << "], "
+            << '[' << k.x[j].x << ','
+            << k.x[j].y << ','
+            << k.x[j].z << "]),";*/
+
+        cout << k.x[i].x << '\t'
+            << k.x[i].y << '\t'
+            << k.x[i].z << '\t'
+            << k.x[j].x << '\t'
+            << k.x[j].y << '\t'
+            << k.x[j].z << '\t'
+            << -delta_n*params.k_n << endl;
     }
+
+    // Write Gnuplot footer
+    /*cout << "splot "
+        << '[' << grid.origo[0] << ':' << grid.L[0] << "] "
+        << '[' << grid.origo[1] << ':' << grid.L[1] << "] "
+        << '[' << grid.origo[2] << ':' << grid.L[2] << "] "
+        << "NaN notitle" << endl;*/
+
 
 }
 
