@@ -526,11 +526,11 @@ void DEM::forcechains()
             << endl;*/
 
         cout << "path3 g=(" 
-            << k.x[i].x << ',' << 
-            << k.x[i].y << ',' << 
-            << k.x[i].z << ")..(" << 
-            << k.x[j].x << ',' << 
-            << k.x[j].y << ',' << 
+            << k.x[i].x << ','
+            << k.x[i].y << ',' 
+            << k.x[i].z << ")..(" 
+            << k.x[j].x << ',' 
+            << k.x[j].y << ','
             << k.x[j].z << "); \n draw(g);" << endl;
     }
 
