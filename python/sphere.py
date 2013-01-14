@@ -1580,7 +1580,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             # Plot dilation
             ax2 = plt.subplot2grid((2,1),(1,0))
             ax2.set_xlabel('Shear strain [-]')
-            ax2.set_ylabel('Dilation [%]')
+            ax2.set_ylabel('Dilation [m]')
             ax2.plot(xdisp/w_x0, dilation, '+-')
             ax2.grid()
 
