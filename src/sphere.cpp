@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
+#include <vector>
 
 #include "typedefs.h"
 #include "datatypes.h"
@@ -439,6 +440,98 @@ void DEM::porosity(const int z_slices)
     //std::cout << "z-pos" << '\t' << "porosity" << '\n';
     for (int i = 0; i<z_slices; ++i) {
         std::cout << z_pos[i] << '\t' << porosity[i] << '\n'; 
+    }
+
+}
+
+// Finds all overlaps between particles, 
+// returns the indexes as a 2-row vector and saves
+// the overlap size
+void DEM::findOverlaps(
+        std::vector< std::vector<unsigned int> > &ij,
+        std::vector< Float > &delta_n_ij)
+{
+    unsigned int i, j;
+    Float4 x_i, x_j; // radius is in .w component of struct
+    Float3 x_ij;
+    Float x_ij_length, delta_n;
+
+    // Loop over particles, find intersections
+    for (i=0; i<np; ++i) {
+
+        for (j=0; j<np; ++j) {
+
+            // Only check once par particle pair
+            if (i < j) {
+
+                x_i = k.x[i];
+                x_j = k.x[j];
+
+                x_ij = MAKE_FLOAT3(
+                        x_j.x - x_i.x,
+                        x_j.y - x_i.y,
+                        x_j.z - x_i.z);
+
+                x_ij_length = sqrt(
+                        x_ij.x * x_ij.x +
+                        x_ij.y * x_ij.y +
+                        x_ij.z * x_ij.z);
+
+                // Distance between spheres
+                delta_n = x_ij_length - (x_i.w + x_j.w);
+
+                // Is there overlap?
+                if (delta_n < 0.0) {
+
+                    // Store particle indexes and delta_n
+                    ij.push_back(std::vector<unsigned int> (i, j));
+                    delta_n_ij.push_back(delta_n);
+
+                }
+            }
+        }
+    }
+}
+
+// Calculate force chains and generate visualization script
+void DEM::forcechains()
+{
+    using std::cout;
+    using std::endl;
+
+    // Loop over all particles, find intersections
+    std::vector< std::vector<unsigned int> > ij;
+    std::vector< Float > delta_n_ij;
+    findOverlaps(ij, delta_n_ij);
+
+    // Write Asymptote header
+    cout << "import three; \n size(600);" << endl;
+
+    // Loop over found contacts, report to stdout
+    unsigned int n, i, j;
+    std::vector<unsigned int> ijs(1);
+    Float delta_n;
+    for (n=0; n<ij.size(); ++n) {
+
+        ijs = ij[n];
+        i = ijs[0];
+        j = ijs[1];
+
+        delta_n = delta_n_ij[n];
+
+        /*cout << "Contact n = " << n
+            << ": (i,j) = ("
+            << i << ","
+            << j << "), delta_n = " << delta_n
+            << endl;*/
+
+        cout << "path3 g=(" 
+            << k.x[i].x << ',' << 
+            << k.x[i].y << ',' << 
+            << k.x[i].z << ")..(" << 
+            << k.x[j].x << ',' << 
+            << k.x[j].y << ',' << 
+            << k.x[j].z << "); \n draw(g);" << endl;
     }
 
 }

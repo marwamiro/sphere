@@ -2,6 +2,8 @@
 #ifndef SPHERE_H_
 #define SPHERE_H_
 
+#include <vector>
+
 #include "datatypes.h"
 
 // DEM class
@@ -176,6 +178,15 @@ class DEM {
 
         // Calculate porosity with depth and save as text file
         void porosity(const int z_slices = 10);
+
+        // Find particle-particle intersections, saves the indexes
+        // and the overlap sizes
+        void findOverlaps(
+                std::vector< std::vector<unsigned int> > &ij,
+                std::vector< Float > &delta_n_ij);
+
+        // Calculate force chains and save as asymptote script
+        void forcechains(void);
 
 };
 
