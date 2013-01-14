@@ -96,6 +96,8 @@ int main(const int argc, const char *argv[])
 
         else if (argvi == "-m" || argvi == "--method") {
 
+            render = 1;
+
             // Find out which
             if (std::string(argv[i+1]) == "normal")
                 method = 0;
