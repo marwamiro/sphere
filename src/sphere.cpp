@@ -505,17 +505,17 @@ void DEM::forcechains()
     findOverlaps(ij, delta_n_ij);
 
     // Write Asymptote header
-    cout << "import three; \n size(600);" << endl;
+    cout << "import three;\nsize(600);" << endl;
 
     // Loop over found contacts, report to stdout
     unsigned int n, i, j;
-    std::vector<unsigned int> ijs(1);
+    std::vector<unsigned int> ij_pair(2);
     Float delta_n;
     for (n=0; n<ij.size(); ++n) {
 
-        ijs = ij[n];
-        i = ijs[0];
-        j = ijs[1];
+        ij_pair = ij[n];
+        i = ij_pair[0];
+        j = ij_pair[1];
 
         delta_n = delta_n_ij[n];
 
@@ -531,7 +531,7 @@ void DEM::forcechains()
             << k.x[i].z << ")..(" 
             << k.x[j].x << ',' 
             << k.x[j].y << ','
-            << k.x[j].z << "); \n draw(g);" << endl;
+            << k.x[j].z << ");\ndraw(g);" << endl;
     }
 
 }
