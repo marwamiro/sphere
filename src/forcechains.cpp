@@ -29,7 +29,8 @@ int main(const int argc, const char *argv[])
     // Default values
     int verbose = 0;
     int nfiles = 0; // number of input files
-    int slices = 10; // number of vertical slices
+    int threedim = 1; // 0 if 2d, 1 if 3d
+    std::string format = "interactive"; // gnuplot terminal type
 
     // Process input parameters
     int i;
@@ -39,25 +40,33 @@ int main(const int argc, const char *argv[])
 
         // Display help if requested
         if (argvi == "-h" || argvi == "--help") {
-            std::cout << argv[0] << ": sphere porosity calculator\n"
-                << "Usage: " << argv[0] << " [OPTION[S]]... [FILE1 ...]\nOptions:\n"
-                << "-h, --help\t\tprint help\n"
-                << "-V, --version\t\tprint version information and exit\n"
-                << "-v, --verbose\t\tdisplay in-/output file names\n"
-                << "The force chain asymptote script(s) are stored in the output/ folder"
+            std::cout << argv[0] << ": sphere force chain visualizer\n"
+                << "Usage: " << argv[0] << " [OPTION[S]]... [FILE1 ...] > outputfile\nOptions:\n"
+                << "-h, --help\t\tPrint help\n"
+                << "-V, --version\t\tPrint version information and exit\n"
+                << "-v, --verbose\t\tDisplay in-/output file names\n"
+                << "-f, --format\t\tOutput format to stdout, interactive default. Possible values:\n"
+                << "\t\t\tinteractive, png, epslatex, epslatex-color"
+                << "-2d\t\t\twrite output as 2d coordinates (3d default)"
                 << std::endl;
             return 0; // Exit with success
         }
 
         // Display version with fancy ASCII art
         else if (argvi == "-V" || argvi == "--version") {
-            std::cout << "Force chai calculator, sphere version " << VERS
+            std::cout << "Force chain calculator, sphere version " << VERS
                 << std::endl;
             return 0;
         }
 
         else if (argvi == "-v" || argvi == "--verbose")
             verbose = 1;
+
+        else if (argvi == "-f" || argvi == "--format")
+            format = argv[++i];
+
+        else if (argvi == "-2d")
+            threedim = 0;
 
         // The rest of the values must be input binary files
         else {
@@ -70,7 +79,7 @@ int main(const int argc, const char *argv[])
             DEM dem(argvi, verbose, 0, 0, 0);
 
             // Calculate porosity and save as file
-            dem.forcechains();
+            dem.forcechains(format, threedim);
 
         }
     }

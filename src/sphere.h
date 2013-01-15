@@ -121,9 +121,6 @@ class DEM {
         void transferFromGlobalDeviceMemory(void);
         void rt_transferFromGlobalDeviceMemory(void);
 
-        // Find and return the max. position of any particle in each dimension
-        float3 maxPos(void);
-
         // Find and return the max. radius
         Float r_max(void);
 
@@ -179,14 +176,22 @@ class DEM {
         // Calculate porosity with depth and save as text file
         void porosity(const int z_slices = 10);
 
+        // find and return the min. position of any particle in each dimension
+        Float3 minPos(void);
+
+        // find and return the max. position of any particle in each dimension
+        Float3 maxPos(void);
+
         // Find particle-particle intersections, saves the indexes
         // and the overlap sizes
         void findOverlaps(
                 std::vector< std::vector<unsigned int> > &ij,
                 std::vector< Float > &delta_n_ij);
 
-        // Calculate force chains and save as asymptote script
-        void forcechains(void);
+        // Calculate force chains and save as Gnuplot script
+        void forcechains(
+                const std::string format = "interactive",
+                const int threedim = 1);
 
 };
 

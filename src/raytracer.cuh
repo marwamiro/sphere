@@ -361,39 +361,6 @@ __host__ void DEM::rt_transferFromGlobalDeviceMemory(void)
     checkForCudaErrors("During rt_transferFromGlobalDeviceMemory()");
 }
 
-// Find the max. spatial positions of the particles, and return these as a vector
-__host__ float3 DEM::maxPos()
-{
-    int i;
-    float3 shared_max = make_float3(0.0f, 0.0f, 0.0f);
-
-#pragma omp parallel if(np > 100)
-    {
-        // Max. val per thread
-        float3 max = make_float3(0.0f, 0.0f, 0.0f);
-
-#pragma omp for nowait
-        // Find max val. per thread
-        for (i = 0; i<np; ++i) {
-            max.x = std::max(max.x, (float)k.x[i].x);
-            max.y = std::max(max.y, (float)k.x[i].y);
-            max.z = std::max(max.z, (float)k.x[i].z);
-        }
-
-        // Find total max, by comparing one thread with the
-        // shared result, one at a time
-#pragma omp critical
-        {
-            shared_max.x = std::max(shared_max.x, max.x);
-            shared_max.y = std::max(shared_max.y, max.y);
-            shared_max.z = std::max(shared_max.z, max.z);
-        }
-    }
-
-    // Return final result
-    return shared_max;
-}
-
 // Wrapper for the rt kernel
 __host__ void DEM::render(
         const int method,
@@ -438,7 +405,9 @@ __host__ void DEM::render(
 
     // Initialize camera values and transfer to constant memory
     float imgw = grid.L[0]*1.35f; // Screen width in world coordinates
-    float3 lookat = maxPos() / 2.0f; // Look at the centre of the mean positions
+    Float3 maxpos = maxPos();
+    // Look at the centre of the mean positions
+    float3 lookat = make_float3(maxpos.x, maxpos.y, maxpos.z) / 2.0f; 
     float3 eye = make_float3(
             grid.L[0] * 2.3f,
             grid.L[1] * -5.0f,

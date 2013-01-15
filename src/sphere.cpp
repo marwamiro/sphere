@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <vector>
+#include <algorithm>
 
 #include "typedefs.h"
 #include "datatypes.h"
@@ -444,6 +445,73 @@ void DEM::porosity(const int z_slices)
 
 }
 
+// Find the min. spatial positions of the particles, and return these as a vector
+Float3 DEM::minPos()
+{
+    unsigned int i;
+    Float3 shared_min = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
+
+#pragma omp parallel if(np > 100)
+    {
+        // Max. val per thread
+        Float3 min = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
+
+#pragma omp for nowait
+        // Find min val. per thread
+        for (i = 0; i<np; ++i) {
+            min.x = std::min(min.x, k.x[i].x);
+            min.y = std::min(min.y, k.x[i].y);
+            min.z = std::min(min.z, k.x[i].z);
+        }
+
+        // Find total min, by comparing one thread with the
+        // shared result, one at a time
+#pragma omp critical
+        {
+            shared_min.x = std::min(shared_min.x, min.x);
+            shared_min.y = std::min(shared_min.y, min.y);
+            shared_min.z = std::min(shared_min.z, min.z);
+        }
+    }
+
+    // Return final result
+    return shared_min;
+}
+
+// Find the max. spatial positions of the particles, and return these as a vector
+Float3 DEM::maxPos()
+{
+    unsigned int i;
+    Float3 shared_max = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
+
+#pragma omp parallel if(np > 100)
+    {
+        // Max. val per thread
+        Float3 max = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
+
+#pragma omp for nowait
+        // Find max val. per thread
+        for (i = 0; i<np; ++i) {
+            max.x = std::max(max.x, k.x[i].x);
+            max.y = std::max(max.y, k.x[i].y);
+            max.z = std::max(max.z, k.x[i].z);
+        }
+
+        // Find total max, by comparing one thread with the
+        // shared result, one at a time
+#pragma omp critical
+        {
+            shared_max.x = std::max(shared_max.x, max.x);
+            shared_max.y = std::max(shared_max.y, max.y);
+            shared_max.z = std::max(shared_max.z, max.z);
+        }
+    }
+
+    // Return final result
+    return shared_max;
+}
+
+
 // Finds all overlaps between particles, 
 // returns the indexes as a 2-row vector and saves
 // the overlap size
@@ -497,7 +565,7 @@ void DEM::findOverlaps(
 }
 
 // Calculate force chains and generate visualization script
-void DEM::forcechains()
+void DEM::forcechains(const std::string format, const int threedim)
 {
     using std::cout;
     using std::endl;
@@ -507,76 +575,128 @@ void DEM::forcechains()
     std::vector< Float > delta_n_ij;
     findOverlaps(ij, delta_n_ij);
 
-    // Write Asymptote header
-    //cout << "import three;\nsize(600);" << endl;
-    
-    // Write Gnuplot header
-    //cout << "#!/usr/bin/env gnuplot" << endl;
-    
-    // Write Matlab header
-    //cout << "plot(";
+    // Find minimum position
+    Float3 x_min = minPos();
+    Float3 x_max = maxPos();
+
+    // Find largest overlap, used for scaling the line thicknesses
+    Float delta_n_min = *std::min_element(delta_n_ij.begin(), delta_n_ij.end());
+    Float f_n_max = -params.k_n * delta_n_min;
+
+    // Define limits of visualization [0;1]
+    //Float lim_low = 0.1;
+    Float lim_low = 0.05;
+    Float lim_high = 0.25;
+
+    if (format == "txt") {
+        // Write text header
+        cout << "x_1, [m]\t";
+        if (threedim == 1)
+            cout << "y_1, [m]\t";
+        cout << "z_1, [m]\t";
+        cout << "x_2, [m]\t";
+        if (threedim == 1)
+            cout << "y_2, [m]\t";
+        cout << "z_2, [m]\t";
+        cout << "||f_n||, [N]" << endl;
+
+
+    } else {
+        // Write Gnuplot header
+        cout << "#!/usr/bin/env gnuplot\n" 
+            << "# This Gnuplot script is automatically generated using\n"
+            << "# the forcechain utility in sphere. For more information,\n"
+            << "# see https://github.com/anders-dc/sphere\n"
+            << "set size ratio -1\n";
+        if (format == "png") 
+            cout << "set term pngcairo size 50 cm,40 cm\n";
+        else if (format == "epslatex")
+            cout << "set term epslatex size 8.6 cm, 8.6 cm\n";
+        else if (format == "epslatex-color")
+            cout << "set term epslatex color size 8.6 cm, 8.6 cm\n";
+        cout << "set xlabel '$x^1$, [m]'\n"
+            << "set ylabel '$x^2$, [m]'\n"
+            << "set zlabel '$x^3$, [m]'\n"
+            << "set cblabel '$||f_n||$, [Pa]'\n"
+            << "set xyplane at " << x_min.z << '\n'
+            << "set pm3d\n"
+            << "set view 90.0,0.0\n"
+            //<< "set palette defined (0 'gray', 0.5 'blue', 1 'red')\n"
+            //<< "set palette defined (0 'white', 0.5 'gray', 1 'red')\n"
+            << "set palette defined ( 1 '#000fff', 2 '#0090ff', 3 '#0fffee', 4 '#90ff70', 5 '#ffee00', 6 '#ff7000', 7 '#ee0000', 8 '#7f0000')\n"
+            << "set cbrange [" << f_n_max*lim_low << ':' << f_n_max*lim_high << "]\n"
+            << endl;
+    }
 
     // Loop over found contacts, report to stdout
     unsigned int n, i, j;
-    Float delta_n;
+    Float delta_n, f_n, ratio;
+    std::string color;
     for (n=0; n<ij.size(); ++n) {
 
         // Get contact particle indexes
         i = ij[n][0];
         j = ij[n][1];
-        //cout << "(i,j) = " << i << ", " << j << endl;
 
+        // Overlap size
         delta_n = delta_n_ij[n];
 
-        /*cout << "Contact n = " << n
-            << ": (i,j) = ("
-            << i << ","
-            << j << "), delta_n = " << delta_n
-            << endl;*/
+        // Normal force on contact
+        f_n = -params.k_n * delta_n;
 
-        // Asymptote output
-        /*cout << "path3 g=(" 
-            << k.x[i].x << ','
-            << k.x[i].y << ',' 
-            << k.x[i].z << ")..(" 
-            << k.x[j].x << ',' 
-            << k.x[j].y << ','
-            << k.x[j].z << ");\ndraw(g);" << endl;*/
+        // Line weight
+        ratio = f_n/f_n_max;
 
-        // Gnuplot output
-        /*cout << "set arrow " << n+1 << " from "
-            << k.x[i].x << ','
-            << k.x[i].y << ',' 
-            << k.x[i].z << " to " 
-            << k.x[j].x << ','
-            << k.x[j].y << ',' 
-            << k.x[j].z << " nohead "
-            << endl;*/
+        if (format == "txt") {
 
-        // Matlab output
-        /*cout << "plot::Line3d("
-            << '[' << k.x[i].x << ','
-            << k.x[i].y << ','
-            << k.x[i].z << "], "
-            << '[' << k.x[j].x << ','
-            << k.x[j].y << ','
-            << k.x[j].z << "]),";*/
+            // Text output
+            cout << k.x[i].x << '\t';
+            if (threedim == 1)
+                cout << k.x[i].y << '\t';
+            cout << k.x[i].z << '\t';
+            cout << k.x[j].x << '\t';
+            if (threedim == 1)
+                cout << k.x[j].y << '\t';
+            cout << k.x[j].z << '\t';
+            cout << -delta_n*params.k_n << endl;
+        } else {
 
-        cout << k.x[i].x << '\t'
-            << k.x[i].y << '\t'
-            << k.x[i].z << '\t'
-            << k.x[j].x << '\t'
-            << k.x[j].y << '\t'
-            << k.x[j].z << '\t'
-            << -delta_n*params.k_n << endl;
+            // Gnuplot output
+            // Save contact pairs if they are above the lower limit
+            // and not fixed at their horizontal velocity
+            if (ratio > lim_low && (k.vel[i].w + k.vel[j].w) == 0.0) {
+
+                // Plot contact as arrow without tip
+                cout << "set arrow " << n+1 << " from "
+                    << k.x[i].x << ',';
+                if (threedim == 1)
+                    cout << k.x[i].y << ',';
+                cout << k.x[i].z;
+                cout << " to " << k.x[j].x << ',';
+                if (threedim == 1)
+                    cout << k.x[j].y, ',';
+                cout << k.x[j].z;
+                cout << " nohead "
+                    << "lw " << ratio * 12.0
+                    << " lc palette cb " << f_n 
+                    << endl;
+            }
+        }
+
     }
 
-    // Write Gnuplot footer
-    /*cout << "splot "
-        << '[' << grid.origo[0] << ':' << grid.L[0] << "] "
-        << '[' << grid.origo[1] << ':' << grid.L[1] << "] "
-        << '[' << grid.origo[2] << ':' << grid.L[2] << "] "
-        << "NaN notitle" << endl;*/
+    if (format != "txt") {
+        // Write Gnuplot footer
+        if (threedim == 1)
+            cout << "splot ";
+        else
+            cout << "plot ";
+
+        cout << '[' << x_min.x << ':' << x_max.x << "] ";
+        if (threedim == 1)
+            cout << '[' << x_min.y << ':' << x_max.y << "] ";
+        cout << '[' << x_min.z << ':' << x_max.z << "] " << "NaN notitle" << endl;
+    }
 
 
 }
