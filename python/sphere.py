@@ -1004,7 +1004,7 @@ class Spherebin:
             quiet = "-q"
 
         # Render images using sphere raytracer
-        subprocess.call("cd ..; ./sphere* " + quiet \
+        subprocess.call("cd ..; ./sphere " + quiet \
                 + " --method " + method + " {}".format(max_val) \
                 + " -l {}".format(lower_cutoff) \
                 + " --render output/" + self.sid + "*.bin" \
@@ -1222,7 +1222,8 @@ class Spherebin:
 
         # Plot thinsection with gnuplot script
         gamma = self.shearstrain()
-        subprocess.call("""cd ../gnuplot/scripts && gnuplot -e "sid='{}'; gamma='{:.3}'" plotts.gp""".format(self.sid, self.shearstrain()), shell=True)
+        subprocess.call("""cd ../gnuplot/scripts && gnuplot -e "sid='{}'; gamma='{:.4}'; xmin='{}'; ymin='{}'; ymax='{}'" plotts.gp""".format(\
+                self.sid, self.shearstrain(), self.origo[0], self.L[0], self.origo[2], self.L[2]), shell=True)
 
         # Find all particles who have a slip velocity higher than slipvel
         slipvellimit = 0.01
@@ -1295,7 +1296,7 @@ def video(project,
         qscale = 1,
         bitrate = 1800,
         verbose = False):
-    'Use ffmpeg to combine images to animation'
+    'Use ffmpeg to combine images to animation. All images should be rendered beforehand.'
 
     # Possible loglevels: quiet, panic, fatal, error, warning, info, verbose, debug
     loglevel = "info" # verbose = True
@@ -1341,7 +1342,6 @@ def thinsectionVideo(project,
             + "-vf 'crop=((in_w/2)*2):((in_h/2)*2)' " \
             + out_folder + "/" + project + "-ts-x1x3." + video_format, \
             shell=True)
-
 
 def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
     """ Visualize output from the target project,
