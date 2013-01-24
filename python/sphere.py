@@ -1004,10 +1004,10 @@ class Spherebin:
             quiet = "-q"
 
         # Render images using sphere raytracer
-        subprocess.call("cd ..; ./sphere " + quiet \
+        subprocess.call("cd ..; for F in `ls output/" + self.sid + "*.bin`; do ./sphere " + quiet \
                 + " --method " + method + " {}".format(max_val) \
                 + " -l {}".format(lower_cutoff) \
-                + " --render output/" + self.sid + "*.bin" \
+                + " --render $F; done" \
                 , shell=True)
 
         # Convert images to compressed format
@@ -1222,7 +1222,7 @@ class Spherebin:
 
         # Plot thinsection with gnuplot script
         gamma = self.shearstrain()
-        subprocess.call("""cd ../gnuplot/scripts && gnuplot -e "sid='{}'; gamma='{:.4}'; xmin='{}'; ymin='{}'; ymax='{}'" plotts.gp""".format(\
+        subprocess.call("""cd ../gnuplot/scripts && gnuplot -e "sid='{}'; gamma='{:.4}'; xmin='{}'; xmax='{}'; ymin='{}'; ymax='{}'" plotts.gp""".format(\
                 self.sid, self.shearstrain(), self.origo[0], self.L[0], self.origo[2], self.L[2]), shell=True)
 
         # Find all particles who have a slip velocity higher than slipvel
