@@ -140,7 +140,8 @@ class DEM {
                 const int verbosity = 1,
                 const int checkVals = 1,
                 const int dry = 0,
-                const int initCuda = 1);
+                const int initCuda = 1,
+                const int transferConstMem = 1);
 
         // Destructor
         ~DEM(void);

@@ -17,7 +17,8 @@ DEM::DEM(const std::string inputbin,
         const int verbosity,
         const int checkVals,
         const int dry,
-        const int initCuda)
+        const int initCuda,
+        const int transferConstMem)
 : verbose(verbosity)
 {
     using std::cout;
@@ -48,11 +49,14 @@ DEM::DEM(const std::string inputbin,
         exit(1);
 
     if (initCuda == 1) {
+
         // Initialize CUDA
         initializeGPU();
 
-        // Copy constant data to constant device memory
-        transferToConstantDeviceMemory();
+        if (transferConstMem == 1) {
+            // Copy constant data to constant device memory
+            transferToConstantDeviceMemory();
+        }
 
         // Allocate device memory for particle variables,
         // tied to previously declared pointers in structures
@@ -602,6 +606,11 @@ void DEM::forcechains(const std::string format, const int threedim)
 
 
     } else {
+
+        // Format sid so LaTeX won't encounter problems with the extension
+        std::string s = sid;
+        std::replace(s.begin(), s.end(), '.', '-');
+
         // Write Gnuplot header
         cout << "#!/usr/bin/env gnuplot\n" 
             << "# This Gnuplot script is automatically generated using\n"
@@ -610,14 +619,21 @@ void DEM::forcechains(const std::string format, const int threedim)
             << "set size ratio -1\n";
         if (format == "png") 
             cout << "set term pngcairo size 50 cm,40 cm\n";
-        else if (format == "epslatex")
-            cout << "set term epslatex size 8.6 cm, 8.6 cm\n";
-        else if (format == "epslatex-color")
-            cout << "set term epslatex color size 8.6 cm, 8.6 cm\n";
-        cout << "set xlabel '$x^1$, [m]'\n"
-            << "set ylabel '$x^2$, [m]'\n"
-            << "set zlabel '$x^3$, [m]'\n"
-            << "set cblabel '$||f_n||$, [Pa]'\n"
+        else if (format == "epslatex") {
+            cout << "set term epslatex size 8.6 cm, 5.6 cm\n";
+            cout << "set out 'plots/" << s << "-fc.tex'\n";
+        } else if (format == "epslatex-color") {
+            cout << "set term epslatex color size 8.6 cm, 5.6 cm\n";
+            cout << "set out 'plots/" << s << "-fc.tex'\n";
+        }
+        cout << "set xlabel '\\sffamily $x_1$, [m]'\n";
+        if (threedim == 1) {
+            cout << "set ylabel '\\sffamily $x_2$, [m]'\n"
+            << "set zlabel '\\sffamily $x_3$, [m]' offset 2\n";
+        } else
+            cout << "set ylabel '\\sffamily $x_3$, [m]' offset 2\n";
+
+        cout << "set cblabel '\\sffamily $||\\boldsymbol{f}_n||$, [N]'\n"
             << "set xyplane at " << x_min.z << '\n'
             << "set pm3d\n"
             << "set view 90.0,0.0\n"
@@ -677,7 +693,7 @@ void DEM::forcechains(const std::string format, const int threedim)
                     cout << k.x[j].y, ',';
                 cout << k.x[j].z;
                 cout << " nohead "
-                    << "lw " << ratio * 12.0
+                    << "lw " << ratio * 8.0
                     << " lc palette cb " << f_n 
                     << endl;
             }

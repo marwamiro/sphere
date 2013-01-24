@@ -141,16 +141,31 @@ int main(const int argc, const char *argv[])
             if (verbose == 1)
                 std::cout << argv[0] << ": processing input file: " << argvi << std::endl;
 
-            // Create DEM class, read data from input binary, check values
-            DEM dem(argvi, verbose, checkVals, dry);
+            if (nfiles == 1) {
 
-            // Render image if requested
-            if (render == 1)
-                dem.render(method, max_val, lower_cutoff);
+                // Create DEM class, read data from input binary, check values, init cuda, transfer const mem
+                DEM dem(argvi, verbose, checkVals, dry, 1, 1);
+                // Render image if requested
+                if (render == 1)
+                    dem.render(method, max_val, lower_cutoff);
 
-            // Otherwise, start iterating through time
-            else
-                dem.startTime();
+                // Otherwise, start iterating through time
+                else
+                    dem.startTime();
+
+            } else { 
+                
+                // Do not transfer to const. mem after the first file
+                DEM dem(argvi, verbose, checkVals, dry, 1, 0);
+
+                // Render image if requested
+                if (render == 1)
+                    dem.render(method, max_val, lower_cutoff);
+
+                // Otherwise, start iterating through time
+                else
+                    dem.startTime();
+            }
 
         }
     }
