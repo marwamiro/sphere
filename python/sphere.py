@@ -99,6 +99,8 @@ class Spherebin:
         self.w_force = numpy.zeros(self.nw, dtype=numpy.float64)
         self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
 
+        self.nb0 = numpy.zeros(1, dtype=numpy.uint32)
+
     def __cmp__(self, other):
         """ Called when to Spherebin objects are compared.
             Returns 0 if the values are identical """
@@ -152,7 +154,8 @@ class Spherebin:
                 (self.w_force == other.w_force).all() and\
                 (self.w_devs == other.w_devs).all() and\
                 self.gamma_wn == other.gamma_wn and\
-                self.gamma_wt == other.gamma_wt\
+                self.gamma_wt == other.gamma_wt and\
+                self.nb0 == other.nb0\
                 ).all() == True):
                     return 0 # All equal
         else :
@@ -174,9 +177,9 @@ class Spherebin:
             self.np = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
 
             # Read the time variables
-            self.time_dt        = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+            self.time_dt         = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.time_current    = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-            self.time_total        = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+            self.time_total      = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.time_file_dt    = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.time_step_count = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
 
@@ -191,9 +194,9 @@ class Spherebin:
             self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
             self.torque  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
             self.es_dot  = numpy.zeros(self.np, dtype=numpy.float64)
-            self.es       = numpy.zeros(self.np, dtype=numpy.float64)
+            self.es      = numpy.zeros(self.np, dtype=numpy.float64)
             self.ev_dot  = numpy.zeros(self.np, dtype=numpy.float64)
-            self.ev       = numpy.zeros(self.np, dtype=numpy.float64)
+            self.ev      = numpy.zeros(self.np, dtype=numpy.float64)
             self.p       = numpy.zeros(self.np, dtype=numpy.float64)
 
             # Read remaining data from binary
@@ -267,8 +270,12 @@ class Spherebin:
                 self.w_force[i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
                 self.w_devs[i]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
-
-            fh.close()
+            # Inter-particle bonds
+            self.nb0 = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
+            self.bonds = numpy.zeros((self.nb0, 2), dtype=numpy.uint32)
+            for i in range(self.nb0):
+                self.bonds[i,0] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
+                self.bonds[i,1] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
 
         finally:
             if fh is not None:
@@ -359,7 +366,10 @@ class Spherebin:
                 fh.write(self.w_force[i].astype(numpy.float64))
                 fh.write(self.w_devs[i].astype(numpy.float64))
 
-            fh.close()
+            fh.write(self.nb0.astype(numpy.uint32))
+            for i in range(self.nb0):
+                fh.write(self.bonds[i,0].astype(numpy.uint32))
+                fh.write(self.bonds[i,1].astype(numpy.uint32))
 
         finally:
             if fh is not None:
@@ -453,7 +463,6 @@ class Spherebin:
             from the particle boundaries.
         """
 
-
         # Cell configuration
         cellsize_min = 2.1 * numpy.amax(self.radius)
         self.num[0] = numpy.ceil((self.L[0]-self.origo[0])/cellsize_min)
@@ -471,7 +480,7 @@ class Spherebin:
 
     # Generate grid based on particle positions
     def initGridAndWorldsize(self, g = numpy.array([0.0, 0.0, -9.80665]),
-            margin = numpy.array([2.0, 2.0, 2.0]),
+            margin = 2.0,
             periodic = 1,
             contactmodel = 2):
         """ Initialize grid suitable for the particle positions set previously.
@@ -504,6 +513,10 @@ class Spherebin:
             print("Error: The grid must be at least 3 cells in each direction")
 
         self.contactmodel[0] = contactmodel
+
+        # Put upper wall at top boundary
+        if (self.nw > 0):
+            self.w_x[0] = self.L[0]
 
 
     # Initialize particle positions to regular, grid-like, non-overlapping configuration
@@ -753,7 +766,7 @@ class Spherebin:
 
     def initTemporal(self, total,
             current = 0.0,
-            file_dt = 0.01,
+            file_dt = 0.05,
             step_count = 0):
         """ Set temporal parameters for the simulation.
             Particle radii and physical parameters need to be set
@@ -853,6 +866,19 @@ class Spherebin:
 
         # Debonding distance
         self.db[0] = (1.0 + theta/2.0) * self.V_b**(1.0/3.0)
+
+
+    def bond(self, i, j):
+        """ Create a bond between particles i and j """
+        
+        if (hasattr(self, 'bonds') == False):
+            self.bonds = numpy.array([[i,j]], dtype=numpy.uint32)
+        else :
+            self.bonds = numpy.vstack((bonds, [i,j]))
+
+        # Increment the number of bonds with one
+        self.nb0 += 1
+
 
     def energy(self, method):
         """ Calculate the sum of the energy components of all particles.
