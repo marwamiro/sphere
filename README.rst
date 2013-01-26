@@ -37,8 +37,8 @@ Obtaining sphere
 The best way to keep up to date with subsequent updates, bugfixes
 and development, is to use the Git version control system.
 
-To obtain a local copy, execute:
-  ``git clone https://github.com/anders-dc/sphere.git``
+To obtain a local copy, execute::
+ git clone https://github.com/anders-dc/sphere.git
 
 Build instructions
 ------------------
@@ -50,10 +50,16 @@ the root directory::
 In some cases the CMake FindCUDA module will have troubles locating the
 CUDA SDK directory, and will complain about `cutil_math.h` not being found.
 
-In that case, modify the `NVSDKCOMPUTE_ROOT` environment variable in 
+In that case, modify the ``NVSDKCOMPUTE_ROOT`` environment variable in 
 `INSTALL.sh`, and execute it.
 
 After a successfull installation, the `sphere` executable will be located
 in the root folder. To make sure that all components are working correctly,
 execute::
  make test
+
+Updating sphere
+---------------
+To update your local version, type the following commands in the sphere root 
+directory::
+ git pull && cmake . && make
