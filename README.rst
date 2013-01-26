@@ -7,7 +7,7 @@ Sphere is licensed under the GNU General Public License, v.3.
 See license.txt for more information.
 
 See the ``doc/`` folder for general reference, by default available in the `html 
-<doc/html/index.html>` and `pdf <doc/pdf/sphere.pdf>` formats.
+<file:./doc/html/index.html>` and `pdf <file:./doc/pdf/sphere.pdf>` formats.
 
 Requirements
 ------------
