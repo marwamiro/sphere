@@ -1,0 +1,211 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Introduction &mdash; sphere 0.35 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/breathe.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.35',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="sphere 0.35 documentation" href="index.html" />
+    <link rel="next" title="Discrete element method" href="dem.html" />
+    <link rel="prev" title="Welcome to sphere’s documentation!" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="dem.html" title="Discrete element method"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to sphere’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">sphere 0.35 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
+<p>The <em>sphere</em>-software is used for three-dimensional discrete element method (DEM) particle simulations. The source code is written in C++, CUDA C and Python, and is compiled by the user. The main computations are performed on the graphics processing unit (GPU) using NVIDIA&#8217;s general purpose parallel computing architecture, CUDA. Simulation setup and data analysis is performed with the included Python API.
+The ultimate aim of the <em>sphere</em> software is to simulate soft-bedded subglacial conditions, while retaining the flexibility to perform simulations of granular material in other environments.</p>
+<p>The purpose of this documentation is to provide the user with a thorough walk-through of the installation, work-flow, data-analysis and visualization methods of <em>sphere</em>. In addition, the <em>sphere</em> internals are exposed to provide a way of understanding of the discrete element method numerical routines taking place.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Command examples in this document starting with the symbol <tt class="docutils literal"><span class="pre">$</span></tt> are meant to be executed in the shell of the operational system, and <tt class="docutils literal"><span class="pre">&gt;&gt;&gt;</span></tt> means execution in Python.</p>
+</div>
+<p>All numerical values in this document, the source code, and the configuration files are typeset with strict respect to the SI unit system.</p>
+<div class="section" id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt>The build requirements are:</dt>
+<dd><ul class="first last simple">
+<li>A Nvidia CUDA-supported version of Linux or Mac OS X (see the <a class="reference external" href="http://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html">CUDA toolkit release notes</a> for more information)</li>
+<li><a class="reference external" href="https://www.gnu.org/software/make/">GNU Make</a></li>
+<li>The <a class="reference external" href="http://gcc.gnu.org/">GNU Compiler Collection</a> (GCC)</li>
+<li>The <a class="reference external" href="https://developer.nvidia.com/cuda-downloads">Nvidia CUDA toolkit and SDK</a></li>
+</ul>
+</dd>
+<dt>The runtime requirements are:</dt>
+<dd><ul class="first last simple">
+<li>A <a class="reference external" href="http://www.nvidia.com/object/cuda_gpus.html">CUDA-enabled GPU</a> with compute capability 1.1 or greater.</li>
+<li>A Nvidia CUDA-enabled GPU and device driver</li>
+</ul>
+</dd>
+<dt>Optional tools, required for simulation setup and data processing:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://www.python.org/getit/releases/2.7/">Python 2.7</a></li>
+<li><a class="reference external" href="http://numpy.scipy.org">Numpy</a></li>
+<li><a class="reference external" href="http://matplotlib.org">Matplotlib</a></li>
+<li><a class="reference external" href="http://www.imagemagick.org/script/index.php">Imagemagick</a></li>
+<li><a class="reference external" href="http://ffmpeg.org/">ffmpeg</a></li>
+</ul>
+</dd>
+<dt>Optional tools, required for building the documentation:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://sphinx-doc.org">Sphinx</a><ul>
+<li><a class="reference external" href="http://packages.python.org/sphinxcontrib-programoutput/">sphinxcontrib-programoutput</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="http://www.stack.nl/~dimitri/doxygen/">Doxygen</a></li>
+<li><a class="reference external" href="http://michaeljones.github.com/breathe/">Breathe</a></li>
+<li><a class="reference external" href="http://www.nongnu.org/dvipng/">dvipng</a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference external" href="http://git-scm.com">Git</a> is used as the distributed version control system platform, and the source code is maintained at <a class="reference external" href="https://github.com/anders-dc/sphere/">Github</a>. <em>sphere</em> is licensed under the <a class="reference external" href="https://www.gnu.org/licenses/gpl.html">GNU Public License, v.3</a>.</p>
+</div>
+<div class="section" id="building-sphere">
+<h2>Building <em>sphere</em><a class="headerlink" href="#building-sphere" title="Permalink to this headline">¶</a></h2>
+<p>All instructions required for building <em>sphere</em> are provided in a number of <tt class="docutils literal"><span class="pre">Makefiles</span></tt>. To generate the main <em>sphere</em> command-line executable, go to the source code directory, and invoke GNU Make:</p>
+<div class="highlight-python"><pre>$ cd src
+$ make</pre>
+</div>
+<p>If successfull, the GNU Makefile will create the required data folders, object files, as well as the <em>sphere</em> executable in the root folder. The executable will be named after the host architecture, e.g. <tt class="docutils literal"><span class="pre">sphere_darwin_i386</span></tt> on a 32-bit OS X system, or <tt class="docutils literal"><span class="pre">sphere_linux_x86_64</span></tt> on a 64-bit linux system. Issue the following command to check the executable:</p>
+<div class="highlight-python"><pre>$ ./sphere_* --version</pre>
+</div>
+<p>The output should look similar to this:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/home/adc/code/sphere/doc/sphinx/introduction.rst</tt>, line 56)</p>
+Command u&#8217;../../sphere_linux_X86_64 &#8211;version&#8217; failed: [Errno 2] No such file or directory</div>
+<p>The documentation can be read in the <a class="reference external" href="http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html">reStructuredText</a>-format in the <tt class="docutils literal"><span class="pre">doc/sphinx/</span></tt> folder, or build into e.g. HTML or PDF format with the following commands:</p>
+<div class="highlight-python"><pre>$ cd doc/sphinx
+$ make html
+$ make latexpdf</pre>
+</div>
+<p>To see all available output formats, execute:</p>
+<div class="highlight-python"><pre>$ make help</pre>
+</div>
+</div>
+<div class="section" id="work-flow">
+<h2>Work flow<a class="headerlink" href="#work-flow" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt>After compiling the <em>sphere</em> binary, the procedure of a creating and handling a simulation is typically arranged in the following order:</dt>
+<dd><ul class="first last simple">
+<li>Setup of particle assemblage, physical properties and conditions using the Python API.</li>
+<li>Execution of <em>sphere</em> software, which simulates the particle behavior as a function of time, as a result of the conditions initially specified in the input file.</li>
+<li>Inspection, analysis, interpretation and visualization of <em>sphere</em> output in Python, and/or scene rendering using the built-in ray tracer.</li>
+</ul>
+</dd>
+</dl>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Introduction</a><ul>
+<li><a class="reference internal" href="#requirements">Requirements</a></li>
+<li><a class="reference internal" href="#building-sphere">Building <em>sphere</em></a></li>
+<li><a class="reference internal" href="#work-flow">Work flow</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Welcome to sphere&#8217;s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="dem.html"
+                        title="next chapter">Discrete element method</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/introduction.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="dem.html" title="Discrete element method"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to sphere’s documentation!"
+             >previous</a> |</li>
+        <li><a href="index.html">sphere 0.35 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Anders Damsgaard.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

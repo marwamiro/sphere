@@ -1,0 +1,84 @@
+\begin{theindex}
+\def\bigletter#1{{\Large\sffamily#1}\nopagebreak\vspace{1mm}}
+
+  \bigletter A
+  \item adjustUpperWall() (sphere.Spherebin method), \hyperpage{9}
+
+  \indexspace
+  \bigletter B
+  \item bond() (sphere.Spherebin method), \hyperpage{9}
+  \item bulkPorosity() (sphere.Spherebin method), \hyperpage{9}
+
+  \indexspace
+  \bigletter C
+  \item consolidate() (sphere.Spherebin method), \hyperpage{9}
+  \item convert() (in module sphere), \hyperpage{10}
+
+  \indexspace
+  \bigletter D
+  \item defaultParams() (sphere.Spherebin method), \hyperpage{9}
+
+  \indexspace
+  \bigletter E
+  \item energy() (sphere.Spherebin method), \hyperpage{9}
+
+  \indexspace
+  \bigletter G
+  \item generateRadii() (sphere.Spherebin method), \hyperpage{9}
+
+  \indexspace
+  \bigletter I
+  \item initGrid() (sphere.Spherebin method), \hyperpage{9}
+  \item initGridAndWorldsize() (sphere.Spherebin method), \hyperpage{9}
+  \item initGridPos() (sphere.Spherebin method), \hyperpage{9}
+  \item initRandomGridPos() (sphere.Spherebin method), \hyperpage{9}
+  \item initRandomPos() (sphere.Spherebin method), \hyperpage{9}
+  \item initTemporal() (sphere.Spherebin method), \hyperpage{10}
+
+  \indexspace
+  \bigletter P
+  \item porosity() (sphere.Spherebin method), \hyperpage{10}
+
+  \indexspace
+  \bigletter R
+  \item readbin() (sphere.Spherebin method), \hyperpage{10}
+  \item render() (in module sphere), \hyperpage{11}
+  \item render() (sphere.Spherebin method), \hyperpage{10}
+  \item run() (in module sphere), \hyperpage{11}
+  \item run() (sphere.Spherebin method), \hyperpage{10}
+
+  \indexspace
+  \bigletter S
+  \item shear() (sphere.Spherebin method), \hyperpage{10}
+  \item shearstrain() (sphere.Spherebin method), \hyperpage{10}
+  \item shearvel() (sphere.Spherebin method), \hyperpage{10}
+  \item sphere (module), \hyperpage{9}
+  \item Spherebin (class in sphere), \hyperpage{9}
+  \item status() (in module sphere), \hyperpage{11}
+
+  \indexspace
+  \bigletter T
+  \item thinsection\_x1x3() (sphere.Spherebin method), \hyperpage{10}
+  \item thinsectionVideo() (in module sphere), \hyperpage{11}
+  \item torqueScript() (sphere.Spherebin method), \hyperpage{10}
+
+  \indexspace
+  \bigletter U
+  \item uniaxialStrainRate() (sphere.Spherebin method), \hyperpage{10}
+
+  \indexspace
+  \bigletter V
+  \item V\_sphere() (in module sphere), \hyperpage{10}
+  \item video() (in module sphere), \hyperpage{11}
+  \item visualize() (in module sphere), \hyperpage{11}
+  \item voidRatio() (sphere.Spherebin method), \hyperpage{10}
+
+  \indexspace
+  \bigletter W
+  \item writebin() (sphere.Spherebin method), \hyperpage{10}
+
+  \indexspace
+  \bigletter Z
+  \item zeroKinematics() (sphere.Spherebin method), \hyperpage{10}
+
+\end{theindex}
