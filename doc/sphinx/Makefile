@@ -118,7 +118,7 @@ latex:	doxygen-xml
 latexpdf: doxygen-xml
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/pdf
 	@echo "Running LaTeX files through pdflatex..."
-	$(MAKE) -C $(BUILDDIR)/latex all-pdf
+	$(MAKE) -C $(BUILDDIR)/pdf all-pdf
 	@echo "pdflatex finished; the PDF files are in $(BUILDDIR)/pdf."
 
 text:
