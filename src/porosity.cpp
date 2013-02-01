@@ -77,7 +77,7 @@ int main(const int argc, const char *argv[])
                 std::cout << argv[0] << ": processing input file: " << argvi << std::endl;
 
             // Create DEM class, read data from input binary, check values
-            DEM dem(argvi, verbose, 0, 0, 0);
+            DEM dem(argvi, verbose, 0, 0, 0, 0);
 
             // Calculate porosity and save as file
             dem.porosity(slices);
