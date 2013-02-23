@@ -304,6 +304,8 @@ void DEM::reportValues()
             << grid.num[1] << " * "
             << grid.num[2];
     cout << " cells\n";
+
+    cout << "  - No. of particle bonds: " << params.nb0 << endl;
 }
 
 // Returns the volume of a spherical cap
@@ -569,7 +571,9 @@ void DEM::findOverlaps(
 }
 
 // Calculate force chains and generate visualization script
-void DEM::forcechains(const std::string format, const int threedim)
+void DEM::forcechains(const std::string format, const int threedim, 
+        const double lower_cutoff,
+        const double upper_cutoff)
 {
     using std::cout;
     using std::endl;
@@ -589,8 +593,8 @@ void DEM::forcechains(const std::string format, const int threedim)
 
     // Define limits of visualization [0;1]
     //Float lim_low = 0.1;
-    Float lim_low = 0.05;
-    Float lim_high = 0.25;
+    //Float lim_low = 0.15;
+    //Float lim_high = 0.25;
 
     if (format == "txt") {
         // Write text header
@@ -640,7 +644,8 @@ void DEM::forcechains(const std::string format, const int threedim)
             //<< "set palette defined (0 'gray', 0.5 'blue', 1 'red')\n"
             //<< "set palette defined (0 'white', 0.5 'gray', 1 'red')\n"
             << "set palette defined ( 1 '#000fff', 2 '#0090ff', 3 '#0fffee', 4 '#90ff70', 5 '#ffee00', 6 '#ff7000', 7 '#ee0000', 8 '#7f0000')\n"
-            << "set cbrange [" << f_n_max*lim_low << ':' << f_n_max*lim_high << "]\n"
+            //<< "set cbrange [" << f_n_max*lim_low << ':' << f_n_max*lim_high << "]\n"
+            << "set cbrange [" << lower_cutoff << ':' << upper_cutoff << "]\n"
             << endl;
     }
 
@@ -660,6 +665,9 @@ void DEM::forcechains(const std::string format, const int threedim)
         // Normal force on contact
         f_n = -params.k_n * delta_n;
 
+        if (f_n < lower_cutoff)
+            continue;   // skip the rest of this iteration
+
         // Line weight
         ratio = f_n/f_n_max;
 
@@ -674,13 +682,14 @@ void DEM::forcechains(const std::string format, const int threedim)
             if (threedim == 1)
                 cout << k.x[j].y << '\t';
             cout << k.x[j].z << '\t';
-            cout << -delta_n*params.k_n << endl;
+            cout << f_n << endl;
         } else {
 
             // Gnuplot output
             // Save contact pairs if they are above the lower limit
             // and not fixed at their horizontal velocity
-            if (ratio > lim_low && (k.vel[i].w + k.vel[j].w) == 0.0) {
+            //if (ratio > lim_low && (k.vel[i].w + k.vel[j].w) == 0.0) {
+            if (f_n > lower_cutoff && (k.vel[i].w + k.vel[j].w) == 0.0) {
 
                 // Plot contact as arrow without tip
                 cout << "set arrow " << n+1 << " from "

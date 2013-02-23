@@ -137,7 +137,9 @@ __global__ void checkConstantValues(int* dev_equal,
             dev_params->contactmodel != devC_params.contactmodel ||
             dev_params->kappa != devC_params.kappa ||
             dev_params->db != devC_params.db ||
-            dev_params->V_b != devC_params.V_b)
+            dev_params->V_b != devC_params.V_b ||
+            dev_params->lambda_bar != devC_params.lambda_bar ||
+            dev_params->nb0 != devC_params.nb0)
         *dev_equal = 2; // Not ok
 
 }
@@ -250,6 +252,9 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
     cudaMalloc((void**)&dev_contacts, sizeof(unsigned int)*np*NC); // Max NC contacts per particle
     cudaMalloc((void**)&dev_distmod, memSizeF4*NC);
     cudaMalloc((void**)&dev_delta_t, memSizeF4*NC);
+    cudaMalloc((void**)&dev_bonds, sizeof(uint2)*params.nb0);
+    cudaMalloc((void**)&dev_bonds_delta, sizeof(Float4)*params.nb0);
+    cudaMalloc((void**)&dev_bonds_omega, sizeof(Float4)*params.nb0);
 
     // Sorted arrays
     cudaMalloc((void**)&dev_x_sorted, memSizeF4);
@@ -311,6 +316,9 @@ __host__ void DEM::freeGlobalDeviceMemory()
     cudaFree(dev_contacts);
     cudaFree(dev_distmod);
     cudaFree(dev_delta_t);
+    cudaFree(dev_bonds);
+    cudaFree(dev_bonds_delta);
+    cudaFree(dev_bonds_omega);
 
     cudaFree(dev_es_dot);
     cudaFree(dev_es);
@@ -381,6 +389,12 @@ __host__ void DEM::transferToGlobalDeviceMemory()
             memSizeF4*NC, cudaMemcpyHostToDevice);
     cudaMemcpy( dev_delta_t, k.delta_t,
             memSizeF4*NC, cudaMemcpyHostToDevice);
+    cudaMemcpy( dev_bonds, k.bonds,
+            sizeof(uint2)*params.nb0, cudaMemcpyHostToDevice);
+    cudaMemcpy( dev_bonds_delta, k.bonds_delta,
+            sizeof(Float4)*params.nb0, cudaMemcpyHostToDevice);
+    cudaMemcpy( dev_bonds_omega, k.bonds_omega,
+            sizeof(Float4)*params.nb0, cudaMemcpyHostToDevice);
 
     // Individual particle energy values
     cudaMemcpy( dev_es_dot, e.es_dot,
@@ -447,6 +461,12 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
             memSizeF4*NC, cudaMemcpyDeviceToHost);
     cudaMemcpy( k.delta_t, dev_delta_t,
             memSizeF4*NC, cudaMemcpyDeviceToHost);
+    cudaMemcpy( k.bonds, dev_bonds,
+            sizeof(uint2)*params.nb0, cudaMemcpyDeviceToHost);
+    cudaMemcpy( k.bonds_delta, dev_bonds_delta,
+            sizeof(Float4)*params.nb0, cudaMemcpyDeviceToHost);
+    cudaMemcpy( k.bonds_omega, dev_bonds_omega,
+            sizeof(Float4)*params.nb0, cudaMemcpyDeviceToHost);
 
     // Individual particle energy values
     cudaMemcpy( e.es_dot, dev_es_dot,
@@ -467,6 +487,9 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
             sizeof(Float4)*walls.nw, cudaMemcpyDeviceToHost);
     cudaMemcpy( walls.mvfd, dev_walls_mvfd,
             sizeof(Float4)*walls.nw, cudaMemcpyDeviceToHost);
+
+    // Bond parameters
+
 
     checkForCudaErrors("End of transferFromGlobalDeviceMemory");
 }
@@ -557,6 +580,7 @@ __host__ void DEM::startTime()
     double t_reorderArrays = 0.0;
     double t_topology = 0.0;
     double t_interact = 0.0;
+    double t_bondsLinear = 0.0;
     double t_integrate = 0.0;
     double t_summation = 0.0;
     double t_integrateWalls = 0.0;
@@ -697,6 +721,25 @@ __host__ void DEM::startTime()
         if (PROFILING == 1)
             stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_interact);
         checkForCudaErrors("Post interact - often caused if particles move outside the grid", iter);
+
+        // Process particle pairs
+        if (params.nb0 > 0) {
+            bondsLinear<<< 1, params.nb0 >>>(
+                    dev_bonds,
+                    dev_bonds_delta,
+                    dev_bonds_omega,
+                    dev_x,
+                    dev_vel,
+                    dev_angvel,
+                    dev_force,
+                    dev_torque);
+            // Synchronization point
+            cudaThreadSynchronize();
+            //cudaPrintfDisplay(stdout, true);
+            if (PROFILING == 1)
+                stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_bondsLinear);
+            checkForCudaErrors("Post bondsLinear", iter);
+        }
 
 
         // Update particle kinematics
@@ -875,6 +918,8 @@ __host__ void DEM::startTime()
             << "\t(" << 100.0*t_topology/t_sum << " %)\n"
             << "  - interact:\t\t" << t_interact/1000.0 << " s"
             << "\t(" << 100.0*t_interact/t_sum << " %)\n"
+            << "  - bondsLinear:\t" << t_bondsLinear/1000.0 << " s"
+            << "\t(" << 100.0*t_bondsLinear/t_sum << " %)\n"
             << "  - integrate:\t\t" << t_integrate/1000.0 << " s"
             << "\t(" << 100.0*t_integrate/t_sum << " %)\n"
             << "  - summation:\t\t" << t_summation/1000.0 << " s"

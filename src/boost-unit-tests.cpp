@@ -7,10 +7,11 @@
 // define the name of the test suite
 BOOST_AUTO_TEST_SUITE (spheretest)
 
-BOOST_AUTO_TEST_SUITE (inittest)
+BOOST_AUTO_TEST_CASE (inittest)
 {
     DEM testDEM();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
 

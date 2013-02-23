@@ -74,9 +74,9 @@ void DEM::readbin(const char *target)
     if (verbose == 1)
         cout << "  Allocating host memory:                         ";
     // Allocate more host arrays
-    k.x	   = new Float4[np];
+    k.x	     = new Float4[np];
     k.xysum  = new Float2[np];
-    k.vel	   = new Float4[np];
+    k.vel    = new Float4[np];
     k.force  = new Float4[np];
     k.angpos = new Float4[np];
     k.angvel = new Float4[np];
@@ -86,7 +86,7 @@ void DEM::readbin(const char *target)
     e.es     = new Float[np];
     e.ev_dot = new Float[np];
     e.ev     = new Float[np];
-    e.p	   = new Float[np];
+    e.p	     = new Float[np];
 
     if (verbose == 1)
         cout << "Done\n";
@@ -203,6 +203,31 @@ void DEM::readbin(const char *target)
         ifs.read(as_bytes(walls.mvfd[i].y), sizeof(Float));
         ifs.read(as_bytes(walls.mvfd[i].z), sizeof(Float));
         ifs.read(as_bytes(walls.mvfd[i].w), sizeof(Float));
+    }
+
+    // Read bond parameters
+    ifs.read(as_bytes(params.lambda_bar), sizeof(params.lambda_bar));
+    ifs.read(as_bytes(params.nb0), sizeof(params.nb0));
+    k.bonds = new uint2[params.nb0];
+    k.bonds_delta = new Float4[np];
+    k.bonds_omega = new Float4[np];
+    for (i = 0; i<params.nb0; ++i) {
+        ifs.read(as_bytes(k.bonds[i].x), sizeof(unsigned int));
+        ifs.read(as_bytes(k.bonds[i].y), sizeof(unsigned int));
+    }
+    for (i = 0; i<params.nb0; ++i)   // Normal component
+        ifs.read(as_bytes(k.bonds_delta[i].w), sizeof(Float));
+    for (i = 0; i<params.nb0; ++i) { // Tangential component
+        ifs.read(as_bytes(k.bonds_delta[i].x), sizeof(Float));
+        ifs.read(as_bytes(k.bonds_delta[i].y), sizeof(Float));
+        ifs.read(as_bytes(k.bonds_delta[i].z), sizeof(Float));
+    }
+    for (i = 0; i<params.nb0; ++i)   // Normal component
+        ifs.read(as_bytes(k.bonds_omega[i].w), sizeof(Float));
+    for (i = 0; i<params.nb0; ++i) { // Tangential component
+        ifs.read(as_bytes(k.bonds_omega[i].x), sizeof(Float));
+        ifs.read(as_bytes(k.bonds_omega[i].y), sizeof(Float));
+        ifs.read(as_bytes(k.bonds_omega[i].z), sizeof(Float));
     }
 
     // Close file if it is still open
@@ -337,12 +362,35 @@ void DEM::writebin(const char *target)
             ofs.write(as_bytes(walls.mvfd[i].w), sizeof(Float));
         }
 
+        // Write bond parameters
+        ofs.write(as_bytes(params.lambda_bar), sizeof(params.lambda_bar));
+        ofs.write(as_bytes(params.nb0), sizeof(params.nb0));
+        for (i = 0; i<params.nb0; ++i) {
+            ofs.write(as_bytes(k.bonds[i].x), sizeof(unsigned int));
+            ofs.write(as_bytes(k.bonds[i].y), sizeof(unsigned int));
+        }
+        for (i = 0; i<params.nb0; ++i)   // Normal component
+            ofs.write(as_bytes(k.bonds_delta[i].w), sizeof(Float));
+        for (i = 0; i<params.nb0; ++i) { // Tangential component
+            ofs.write(as_bytes(k.bonds_delta[i].x), sizeof(Float));
+            ofs.write(as_bytes(k.bonds_delta[i].y), sizeof(Float));
+            ofs.write(as_bytes(k.bonds_delta[i].z), sizeof(Float));
+        }
+        for (i = 0; i<params.nb0; ++i)   // Normal component
+            ofs.write(as_bytes(k.bonds_omega[i].w), sizeof(Float));
+        for (i = 0; i<params.nb0; ++i) { // Tangential component
+            ofs.write(as_bytes(k.bonds_omega[i].x), sizeof(Float));
+            ofs.write(as_bytes(k.bonds_omega[i].y), sizeof(Float));
+            ofs.write(as_bytes(k.bonds_omega[i].z), sizeof(Float));
+        }
+
         // Close file if it is still open
         if (ofs.is_open())
             ofs.close();
 
     } else {
         std::cerr << "Can't write output when in single precision mode.\n";
+        exit(1);
     }
 }
 

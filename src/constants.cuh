@@ -12,6 +12,7 @@ __constant__ unsigned int devC_np;   // Number of particles
 __constant__ unsigned int devC_nw;   // Number of dynamic walls
 __constant__ int	  devC_nc;   // Max. number of contacts a particle can have
 __constant__ Float	  devC_dt;   // Computational time step length
+__constant__ unsigned int devC_nb0;  // Number of inter-particle bonds at t=0
 
 // Device constant memory structures
 __constant__ Params 	  devC_params;

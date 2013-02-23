@@ -30,6 +30,8 @@ int main(const int argc, const char *argv[])
     int verbose = 0;
     int nfiles = 0; // number of input files
     int threedim = 1; // 0 if 2d, 1 if 3d
+    double lowercutoff = 0.0;
+    double uppercutoff = 1.0e9;
     std::string format = "interactive"; // gnuplot terminal type
 
     // Process input parameters
@@ -45,9 +47,12 @@ int main(const int argc, const char *argv[])
                 << "-h, --help\t\tPrint help\n"
                 << "-V, --version\t\tPrint version information and exit\n"
                 << "-v, --verbose\t\tDisplay in-/output file names\n"
+                << "-lc <val>, --lower-cutoff <val>\t\tOnly show contacts where the force value is greater\n"
+                << "-uc <val>, --upper-cutoff <val>\t\tOnly show contacts where the force value is greater\n"
                 << "-f, --format\t\tOutput format to stdout, interactive default. Possible values:\n"
-                << "\t\t\tinteractive, png, epslatex, epslatex-color"
-                << "-2d\t\t\twrite output as 2d coordinates (3d default)"
+                << "\t\t\tinteractive, png, epslatex, epslatex-color\n"
+                << "-2d\t\t\twrite output as 2d coordinates (3d default)\n"
+                << "The values below the cutoff are not visualized, the values above are truncated to the upper limit\n"
                 << std::endl;
             return 0; // Exit with success
         }
@@ -65,6 +70,12 @@ int main(const int argc, const char *argv[])
         else if (argvi == "-f" || argvi == "--format")
             format = argv[++i];
 
+        else if (argvi == "-lc" || argvi == "--lower-cutoff")
+            lowercutoff = atof(argv[++i]);
+
+        else if (argvi == "-uc" || argvi == "--upper-cutoff")
+            uppercutoff = atof(argv[++i]);
+
         else if (argvi == "-2d")
             threedim = 0;
 
@@ -79,7 +90,7 @@ int main(const int argc, const char *argv[])
             DEM dem(argvi, verbose, 0, 0, 0);
 
             // Calculate porosity and save as file
-            dem.forcechains(format, threedim);
+            dem.forcechains(format, threedim, lowercutoff, uppercutoff);
 
         }
     }

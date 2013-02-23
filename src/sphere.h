@@ -85,6 +85,9 @@ class DEM {
         Float *dev_walls_force_partial; // Pre-sum per wall
         Float *dev_walls_force_pp; // Force per particle per wall
         Float *dev_walls_vel0; // Half-step velocity
+        uint2 *dev_bonds;   // Particle bond pairs
+        Float4 *dev_bonds_delta; // Particle bond displacement
+        Float4 *dev_bonds_omega; // Particle bond rotation
         unsigned char *dev_img;
         float4 *dev_ray_origo;	// Ray data always single precision
         float4 *dev_ray_direction;
@@ -192,7 +195,9 @@ class DEM {
         // Calculate force chains and save as Gnuplot script
         void forcechains(
                 const std::string format = "interactive",
-                const int threedim = 1);
+                const int threedim = 1,
+                const double lower_cutoff = 0.0,
+                const double upper_cutoff = 1.0e9);
 
 };
 

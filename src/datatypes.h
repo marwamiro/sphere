@@ -15,18 +15,21 @@
 
 // Structure containing kinematic particle values
 struct Kinematics {
-    Float4 *x;		  // Positions + radii (w)
-    Float2 *xysum;	  // Horizontal distance traveled
-    Float4 *vel;		  // Translational velocities + fixvels (w)
-    Float4 *acc;		  // Translational accelerations
-    Float4 *force;	  // Sums of forces
-    Float4 *angpos;	  // Angular positions
-    Float4 *angvel;	  // Angular velocities
-    Float4 *angacc;	  // Angular accelerations
-    Float4 *torque;	  // Sums of torques
+    Float4 *x;              // Positions + radii (w)
+    Float2 *xysum;          // Horizontal distance traveled
+    Float4 *vel;            // Translational velocities + fixvels (w)
+    Float4 *acc;            // Translational accelerations
+    Float4 *force;	    // Sums of forces
+    Float4 *angpos;         // Angular positions
+    Float4 *angvel;         // Angular velocities
+    Float4 *angacc;         // Angular accelerations
+    Float4 *torque;         // Sums of torques
     unsigned int *contacts; // List of contacts per particle
-    Float4 *distmod;	  // Distance modifiers for contacts across periodic boundaries
-    Float4 *delta_t;	  // Accumulated shear distance of contacts
+    Float4 *distmod;        // Distance modifiers for contacts across periodic boundaries
+    Float4 *delta_t;        // Accumulated shear distance of contacts
+    uint2  *bonds;          // Particle bond pairs
+    Float4 *bonds_delta;    // Particle bond displacement
+    Float4 *bonds_omega;    // Particle bond rotation
 };
 
 // Structure containing individual particle energies
@@ -68,25 +71,27 @@ struct Time {
 
 // Structure containing constant, global physical parameters
 struct Params {
-    Float g[ND];		// Gravitational acceleration
-    Float k_n;		// Normal stiffness
-    Float k_t;		// Tangential stiffness
-    Float k_r;		// Rotational stiffness
-    Float gamma_n;	// Normal viscosity
-    Float gamma_t;	// Tangential viscosity
-    Float gamma_r;	// Rotational viscosity
-    Float mu_s; 		// Static friction coefficient
-    Float mu_d;		// Dynamic friction coefficient
-    Float mu_r;		// Rotational friction coefficient
-    Float gamma_wn;	// Wall normal viscosity
-    Float gamma_wt;	// Wall tangential viscosity
-    Float mu_ws; 		// Wall static friction coefficient
-    Float mu_wd;		// Wall dynamic friction coefficient
-    Float rho;		// Material density
+    Float g[ND];	  // Gravitational acceleration
+    Float k_n;		  // Normal stiffness
+    Float k_t;		  // Tangential stiffness
+    Float k_r;		  // Rotational stiffness
+    Float gamma_n;	  // Normal viscosity
+    Float gamma_t;	  // Tangential viscosity
+    Float gamma_r;	  // Rotational viscosity
+    Float mu_s; 	  // Static friction coefficient
+    Float mu_d;		  // Dynamic friction coefficient
+    Float mu_r;		  // Rotational friction coefficient
+    Float gamma_wn;	  // Wall normal viscosity
+    Float gamma_wt;	  // Wall tangential viscosity
+    Float mu_ws; 	  // Wall static friction coefficient
+    Float mu_wd;	  // Wall dynamic friction coefficient
+    Float rho;		  // Material density
     unsigned int contactmodel; // Inter-particle contact model
-    Float kappa;		// Capillary bond prefactor
-    Float db;		// Capillary bond debonding distance
-    Float V_b;		// Volume of fluid in capillary bond
+    Float kappa;	  // Capillary bond prefactor
+    Float db;		  // Capillary bond debonding distance
+    Float V_b;		  // Volume of fluid in capillary bond
+    Float lambda_bar;     // Radius multiplier to parallel-bond radii
+    unsigned int nb0;     // Number of inter-particle bonds at t=0
 };
 
 // Structure containing wall parameters

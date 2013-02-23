@@ -50,15 +50,15 @@ class Spherebin:
         self.periodic = numpy.zeros(1, dtype=numpy.uint32)
 
         # Particle data
-        self.x       = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+        self.x       = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
         self.radius  = numpy.ones(self.np, dtype=numpy.float64)
-        self.xysum   = numpy.zeros(self.np*2, dtype=numpy.float64).reshape(self.np,2)
-        self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+        self.xysum   = numpy.zeros((self.np, 2), dtype=numpy.float64)
+        self.vel     = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
         self.fixvel  = numpy.zeros(self.np, dtype=numpy.float64)
-        self.force   = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
-        self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
-        self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
-        self.torque  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+        self.force   = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
+        self.angpos  = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
+        self.angvel  = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
+        self.torque  = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
 
         self.es_dot  = numpy.zeros(self.np, dtype=numpy.float64)
         self.es      = numpy.zeros(self.np, dtype=numpy.float64)
@@ -90,7 +90,7 @@ class Spherebin:
         self.nw      = numpy.ones(1, dtype=numpy.uint32) * nw
         self.wmode   = numpy.zeros(self.nw, dtype=numpy.int32)
 
-        self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
+        self.w_n     = numpy.zeros((self.nw, self.nd), dtype=numpy.float64)
         if (self.nw > 0):
             self.w_n[0,2] = -1.0
         self.w_x     = numpy.ones(self.nw, dtype=numpy.float64)
@@ -99,7 +99,13 @@ class Spherebin:
         self.w_force = numpy.zeros(self.nw, dtype=numpy.float64)
         self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
 
+        self.lambda_bar = numpy.ones(1, dtype=numpy.float64)
         self.nb0 = numpy.zeros(1, dtype=numpy.uint32)
+        self.bonds = numpy.zeros((self.nb0, 2), dtype=numpy.uint32)
+        self.bonds_delta_n = numpy.zeros(self.nb0, dtype=numpy.float64)
+        self.bonds_delta_t = numpy.zeros((self.nb0, self.nd), dtype=numpy.float64)
+        self.bonds_omega_n = numpy.zeros(self.nb0, dtype=numpy.float64)
+        self.bonds_omega_t = numpy.zeros((self.nb0, self.nd), dtype=numpy.float64)
 
     def __cmp__(self, other):
         """ Called when to Spherebin objects are compared.
@@ -155,7 +161,13 @@ class Spherebin:
                 (self.w_devs == other.w_devs).all() and\
                 self.gamma_wn == other.gamma_wn and\
                 self.gamma_wt == other.gamma_wt and\
-                self.nb0 == other.nb0\
+                self.lambda_bar == other.lambda_bar and\
+                self.nb0 == other.nb0 and\
+                self.bonds == other.bonds and\
+                self.bonds_delta_n == other.bonds_delta_n and\
+                self.bonds_delta_t == other.bonds_delta_t and\
+                self.bonds_omega_n == other.bonds_omega_n and\
+                self.bonds_omega_t == other.bonds_omega_t\
                 ).all() == True):
                     return 0 # All equal
         else :
@@ -184,15 +196,15 @@ class Spherebin:
             self.time_step_count = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
 
             # Allocate array memory for particles
-            self.x       = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+            self.x       = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
             self.radius  = numpy.zeros(self.np, dtype=numpy.float64)
-            self.xysum   = numpy.zeros(self.np*2, dtype=numpy.float64).reshape(self.np, 2)
-            self.vel     = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+            self.xysum   = numpy.zeros((self.np, 2), dtype=numpy.float64)
+            self.vel     = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
             self.fixvel  = numpy.zeros(self.np, dtype=numpy.float64)
-            self.force   = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
-            self.angpos  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
-            self.angvel  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
-            self.torque  = numpy.zeros(self.np*self.nd, dtype=numpy.float64).reshape(self.np,self.nd)
+            #self.force   = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
+            #self.angpos  = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
+            #self.angvel  = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
+            #self.torque  = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
             self.es_dot  = numpy.zeros(self.np, dtype=numpy.float64)
             self.es      = numpy.zeros(self.np, dtype=numpy.float64)
             self.ev_dot  = numpy.zeros(self.np, dtype=numpy.float64)
@@ -271,11 +283,20 @@ class Spherebin:
                 self.w_devs[i]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
             # Inter-particle bonds
+            self.lambda_bar = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.nb0 = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
             self.bonds = numpy.zeros((self.nb0, 2), dtype=numpy.uint32)
             for i in range(self.nb0):
                 self.bonds[i,0] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
                 self.bonds[i,1] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
+            #self.bonds_delta_n = numpy.zeros(self.nb0, dtype=numpy.float64)
+            #self.bonds_delta_t = numpy.zeros((self.nb0, seld.nd), dtype=numpy.float64)
+            #self.bonds_omega_n = numpy.zeros(self.nb0, dtype=numpy.float64)
+            #self.bonds_omega_t = numpy.zeros((self.nb0, seld.nd), dtype=numpy.float64)
+            self.bonds_delta_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
+            self.bonds_delta_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
+            self.bonds_omega_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
+            self.bonds_omega_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
 
         finally:
             if fh is not None:
@@ -366,14 +387,25 @@ class Spherebin:
                 fh.write(self.w_force[i].astype(numpy.float64))
                 fh.write(self.w_devs[i].astype(numpy.float64))
 
+            fh.write(self.lambda_bar.astype(numpy.float64))
             fh.write(self.nb0.astype(numpy.uint32))
             for i in range(self.nb0):
                 fh.write(self.bonds[i,0].astype(numpy.uint32))
                 fh.write(self.bonds[i,1].astype(numpy.uint32))
+            fh.write(self.bonds_delta_n.astype(numpy.float64))
+            fh.write(self.bonds_delta_t.astype(numpy.float64))
+            fh.write(self.bonds_omega_n.astype(numpy.float64))
+            fh.write(self.bonds_omega_t.astype(numpy.float64))
+
 
         finally:
             if fh is not None:
                 fh.close()
+
+    def readlast(self, verbose=True):
+        lastfile = status(self.sid)
+        fn = "../output/{0}.output{1:0=5}.bin".format(self.sid, lastfile)
+        self.readbin(fn, verbose)
 
     def generateRadii(self, psd = 'logn',
             radius_mean = 440e-6,
@@ -870,11 +902,35 @@ class Spherebin:
 
     def bond(self, i, j):
         """ Create a bond between particles i and j """
+
+        self.lambda_bar[0] = 1.0 # Radius multiplier to parallel-bond radii
         
         if (hasattr(self, 'bonds') == False):
             self.bonds = numpy.array([[i,j]], dtype=numpy.uint32)
         else :
-            self.bonds = numpy.vstack((bonds, [i,j]))
+            self.bonds = numpy.vstack((self.bonds, [i,j]))
+
+        if (hasattr(self, 'bonds_delta_n') == False):
+            self.bonds_delta_n = numpy.array([0.0], dtype=numpy.uint32)
+        else :
+            #self.bonds_delta_n = numpy.vstack((self.bonds_delta_n, [0.0]))
+            self.bonds_delta_n = numpy.append(self.bonds_delta_n, [0.0])
+
+        if (hasattr(self, 'bonds_delta_t') == False):
+            self.bonds_delta_t = numpy.array([[0.0, 0.0, 0.0]], dtype=numpy.uint32)
+        else :
+            self.bonds_delta_t = numpy.vstack((self.bonds_delta_t, [0.0, 0.0, 0.0]))
+
+        if (hasattr(self, 'bonds_omega_n') == False):
+            self.bonds_omega_n = numpy.array([0.0], dtype=numpy.uint32)
+        else :
+            #self.bonds_omega_n = numpy.vstack((self.bonds_omega_n, [0.0]))
+            self.bonds_omega_n = numpy.append(self.bonds_omega_n, [0.0])
+
+        if (hasattr(self, 'bonds_omega_t') == False):
+            self.bonds_omega_t = numpy.array([[0.0, 0.0, 0.0]], dtype=numpy.uint32)
+        else :
+            self.bonds_omega_t = numpy.vstack((self.bonds_omega_t, [0.0, 0.0, 0.0]))
 
         # Increment the number of bonds with one
         self.nb0 += 1
@@ -983,20 +1039,27 @@ class Spherebin:
         return numpy.array(porosity), numpy.array(depth)
 
 
-    def run(self, verbose=True, hideinputfile=False, dry=False):
+    def run(self, verbose=True, hideinputfile=False, dry=False, valgrind=False, cudamemcheck=False):
         'Execute sphere with target project'
 
         quiet = ""
         stdout = ""
         dryarg = ""
+        valgrindbin = ""
+        cudamemchk = ""
         if (verbose == False):
             quiet = "-q "
         if (hideinputfile == True):
             stdout = " > /dev/null"
         if (dry == True):
             dryarg = "--dry "
+        if (valgrind == True):
+            valgrindbin = "valgrind -q "
+        if (cudamemcheck == True):
+            cudamemchk = "cuda-memcheck "
 
-        subprocess.call("cd ..; ./sphere " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
+
+        subprocess.call("cd ..; " + valgrindbin + cudamemchk + "./sphere " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
 
 
     def torqueScript(self, 
@@ -1030,11 +1093,16 @@ class Spherebin:
             quiet = "-q"
 
         # Render images using sphere raytracer
-        subprocess.call("cd ..; for F in `ls output/" + self.sid + "*.bin`; do ./sphere " + quiet \
-                + " --method " + method + " {}".format(max_val) \
-                + " -l {}".format(lower_cutoff) \
-                + " --render $F; done" \
-                , shell=True)
+        if (method == "normal"):
+            subprocess.call("cd ..; for F in `ls output/" + self.sid + "*.bin`; do ./sphere " + quiet \
+                    + " --render $F; done" \
+                    , shell=True)
+        else :
+            subprocess.call("cd ..; for F in `ls output/" + self.sid + "*.bin`; do ./sphere " + quiet \
+                    + " --method " + method + " {}".format(max_val) \
+                    + " -l {}".format(lower_cutoff) \
+                    + " --render $F; done" \
+                    , shell=True)
 
         # Convert images to compressed format
         convert()
@@ -1066,6 +1134,7 @@ class Spherebin:
             graphicsformat = 'png',
             cbmax = None,
             arrowscale = 0.01,
+            velarrowscale = 1.0,
             slipscale = 1.0,
             verbose = False):
         ''' Produce a 2D image of particles on a x1,x3 plane, intersecting the second axis at x2.
@@ -1094,6 +1163,8 @@ class Spherebin:
         aylist = []
         daxlist = []
         daylist = []
+        dvxlist = []
+        dvylist = []
 
         # Loop over all particles, find intersections
         for i in range(self.np):
@@ -1133,6 +1204,10 @@ class Spherebin:
                 daylist.append(0.0) # delta y for arrow end point
                 daylist.append(0.0) # delta y for arrow end point
 
+                # Store linear velocity data
+                dvxlist.append(self.vel[i,0]*velarrowscale) # delta x for arrow end point
+                dvylist.append(self.vel[i,2]*velarrowscale) # delta y for arrow end point
+
                 if (r_circ > self.radius[i]):
                     raise Exception("Error, circle radius is larger than the particle radius")
                 if (self.p[i] > pmax):
@@ -1170,6 +1245,22 @@ class Spherebin:
         finally :
             if fh is not None:
                 fh.close()
+
+        # Save linear velocity data
+        #   Output format: x, y, deltax, deltay
+        #   gnuplot> plot '-' using 1:2:3:4 with vectors head filled lt 2
+        filename = '../gnuplot/data/' + self.sid + '-ts-x1x3-velarrows.txt'
+        fh = None
+        try :
+            fh = open(filename, 'w')
+
+            for (x, y, dvx, dvy) in zip(xlist, ylist, dvxlist, dvylist):
+                fh.write("{}\t{}\t{}\t{}\n".format(x, y, dvx, dvy))
+        
+        finally :
+            if fh is not None:
+                fh.close()
+
 
 
         # Check whether there are slips between the particles intersecting the plane
@@ -1303,11 +1394,14 @@ def render(binary,
         quiet = "-q"
 
     # Render images using sphere raytracer
-    subprocess.call("cd .. ; ./sphere " + quiet + \
-            " --method " + method + " {}".format(max_val) + \
-            " -l {}".format(lower_cutoff) + \
-            " --render " + binary, shell=True)
-
+    if (method == "normal"):
+        subprocess.call("cd .. ; ./sphere " + quiet + \
+                " --render " + binary, shell=True)
+    else :
+        subprocess.call("cd .. ; ./sphere " + quiet + \
+                " --method " + method + " {}".format(max_val) + \
+                " -l {}".format(lower_cutoff) + \
+                " --render " + binary, shell=True)
 
     # Convert images to compressed format
     convert()
@@ -1670,6 +1764,11 @@ def status(project):
         if fh is not None:
             fh.close()
 
+def cleanup(spherebin):
+    'Remove input/output files and images from simulation'
+    subprocess.call("rm -f ../input/" + spherebin.sid + ".bin", shell=True)
+    subprocess.call("rm -f ../output/" + spherebin.sid + ".*.bin", shell=True)
+    subprocess.call("rm -f ../img_out/" + spherebin.sid + ".*", shell=True)
 
 def V_sphere(r):
     """ Returns the volume of a sphere with radius r
