@@ -541,8 +541,9 @@ class Spherebin:
         self.num[1] = numpy.ceil((self.L[1]-self.origo[1])/cellsize_min)
         self.num[2] = numpy.ceil((self.L[2]-self.origo[2])/cellsize_min)
 
-        if (self.num[0] < 4 or self.num[1] < 4 or self.num[2]):
+        if (self.num[0] < 4 or self.num[1] < 4 or self.num[2] < 4):
             print("Error: The grid must be at least 3 cells in each direction")
+            print(self.num)
 
         self.contactmodel[0] = contactmodel
 
@@ -669,6 +670,43 @@ class Spherebin:
         self.num[1] = numpy.ceil(y_max/cellsize)
         self.num[2] = numpy.ceil(z_max/cellsize)
         self.L = self.num * cellsize
+
+    def createBondPair(self, i, j, spacing=0.1):
+        """ Bond particles i and j. Particle j is moved adjacent to particle i,
+        and oriented randomly. 
+        @param spacing (float) The inter-particle distance prescribed. Positive 
+        values result in a inter-particle distance, negative equal an overlap.
+        """
+
+        x_i = self.x[i]
+        r_i = self.radius[i]
+        r_j = self.radius[j]
+        dist_ij = (r_i + r_j)*(1.0 + spacing)
+
+        dazi = numpy.random.rand(1) * 360.0  # azimuth
+        azi = numpy.radians(dazi)
+        dang = numpy.random.rand(1) * 180.0 - 90.0 # angle
+        ang = numpy.radians(dang)
+
+        x_j = numpy.copy(x_i)
+        x_j[0] = x_j[0] + dist_ij * numpy.cos(azi) * numpy.cos(ang)
+        x_j[1] = x_j[1] + dist_ij * numpy.sin(azi) * numpy.cos(ang)
+        x_j[2] = x_j[2] + dist_ij * numpy.sin(ang) * numpy.cos(azi)
+        self.x[j] = x_j
+
+        self.bond(i,j)     # register bond
+        
+        # Check that the spacing is correct
+        x_ij = self.x[i] - self.x[j]
+        x_ij_length = numpy.sqrt(x_ij.dot(x_ij))
+        if ((x_ij_length - dist_ij) > dist_ij*0.01):
+            print(x_i); print(r_i)
+            print(x_j); print(r_j)
+            print(x_ij_length); print(dist_ij)
+            raise Exception("Error, something went wrong in createBondPair")
+
+
+
    
 
     def zeroKinematics(self):
@@ -970,6 +1008,17 @@ class Spherebin:
 
         elif method == 'visc_n_rate':
             return numpy.sum(self.ev_dot)
+
+        elif method == 'bondpot':
+            R_bar = self.lambda_bar * numpy.min(self.radius[self.bonds[:,0]], self.radius[self.bonds[:,1]])
+            A = numpy.pi * R_bar**2
+            I = 0.25 * numpy.pi * R_bar**4
+            J = I*2.0
+            bondpot_fn = numpy.sum(0.5 * A * self.k_n * numpy.abs(self.bonds_delta_n)**2)
+            bondpot_ft = numpy.sum(0.5 * A * self.k_t * numpy.linalg.norm(self.bonds_delta_t)**2)
+            bondpot_tn = numpy.sum(0.5 * J * self.k_t * numpy.abs(self.bonds_omega_n)**2)
+            bondpot_tt = numpy.sum(0.5 * I * self.k_n * numpy.linalg.norm(self.bonds_omega_t)**2)
+            return bondpot_fn + bondpot_ft + bondpot_tn + bondpot_tt
 
     def voidRatio(self):
         'Returns the current void ratio'
@@ -1487,6 +1536,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
         Ev  = numpy.zeros(lastfile+1)
         Es_dot = numpy.zeros(lastfile+1)
         Ev_dot = numpy.zeros(lastfile+1)
+        Ebondpot = numpy.zeros(lastfile+1)
         Esum = numpy.zeros(lastfile+1)
 
         # Read energy values from project binaries
@@ -1502,7 +1552,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             Ev[i]   = sb.energy("visc_n")
             Es_dot[i] = sb.energy("shearrate")
             Ev_dot[i] = sb.energy("visc_n_rate")
-            Esum[i] = Epot[i] + Ekin[i] + Erot[i] + Es[i] + Ev[i]
+            Ebondpot[i] = sb.energy("bondpot")
+            Esum[i] = Epot[i] + Ekin[i] + Erot[i] + Es[i] + Ev[i] + Ebondpot[i]
 
             t = numpy.linspace(0.0, sb.time_current, lastfile+1)
 
@@ -1528,51 +1579,58 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             ax3.plot(t, Erot, '+-')
             ax3.grid()
 
-            # Total energy
+            # Bond energy
             ax4 = plt.subplot2grid((2,5),(0,3))
             ax4.set_xlabel('Time [s]')
-            ax4.set_ylabel('Total energy [J]')
-            ax4.plot(t, Esum, '+-')
+            ax4.set_ylabel('Bond energy [J]')
+            ax4.plot(t, Ebondpot, '+-')
             ax4.grid()
 
-            # Shear energy rate
-            ax5 = plt.subplot2grid((2,5),(1,0))
+            # Total energy
+            ax5 = plt.subplot2grid((2,5),(0,4))
             ax5.set_xlabel('Time [s]')
-            ax5.set_ylabel('Frictional dissipation rate [W]')
-            ax5.plot(t, Es_dot, '+-')
+            ax5.set_ylabel('Total energy [J]')
+            ax5.plot(t, Esum, '+-')
             ax5.grid()
 
-            # Shear energy
-            ax6 = plt.subplot2grid((2,5),(1,1))
+            # Shear energy rate
+            ax6 = plt.subplot2grid((2,5),(1,0))
             ax6.set_xlabel('Time [s]')
-            ax6.set_ylabel('Total frictional dissipation [J]')
-            ax6.plot(t, Es, '+-')
+            ax6.set_ylabel('Frictional dissipation rate [W]')
+            ax6.plot(t, Es_dot, '+-')
             ax6.grid()
 
-            # Visc_n energy rate
-            ax7 = plt.subplot2grid((2,5),(1,2))
+            # Shear energy
+            ax7 = plt.subplot2grid((2,5),(1,1))
             ax7.set_xlabel('Time [s]')
-            ax7.set_ylabel('Viscous dissipation rate [W]')
-            ax7.plot(t, Ev_dot, '+-')
+            ax7.set_ylabel('Total frictional dissipation [J]')
+            ax7.plot(t, Es, '+-')
             ax7.grid()
 
-            # Visc_n energy
-            ax8 = plt.subplot2grid((2,5),(1,3))
+            # Visc_n energy rate
+            ax8 = plt.subplot2grid((2,5),(1,2))
             ax8.set_xlabel('Time [s]')
-            ax8.set_ylabel('Total viscous dissipation [J]')
-            ax8.plot(t, Ev, '+-')
+            ax8.set_ylabel('Viscous dissipation rate [W]')
+            ax8.plot(t, Ev_dot, '+-')
             ax8.grid()
+
+            # Visc_n energy
+            ax9 = plt.subplot2grid((2,5),(1,3))
+            ax9.set_xlabel('Time [s]')
+            ax9.set_ylabel('Total viscous dissipation [J]')
+            ax9.plot(t, Ev, '+-')
+            ax9.grid()
 
 
             # Combined view
-            ax9 = plt.subplot2grid((2,5),(1,4))
-            ax9.set_xlabel('Time [s]')
-            ax9.set_ylabel('Energy [J]')
-            ax9.plot(t, Epot, '+-g')
-            ax9.plot(t, Ekin, '+-b')
-            ax9.plot(t, Erot, '+-r')
-            ax9.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
-            ax9.grid()
+            ax10 = plt.subplot2grid((2,5),(1,4))
+            ax10.set_xlabel('Time [s]')
+            ax10.set_ylabel('Energy [J]')
+            ax10.plot(t, Epot, '+-g')
+            ax10.plot(t, Ekin, '+-b')
+            ax10.plot(t, Erot, '+-r')
+            ax10.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
+            ax10.grid()
 
     elif method == 'walls':
 
