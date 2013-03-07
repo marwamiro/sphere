@@ -53,15 +53,18 @@ __global__ void bondsLinear(
     const Float4 x_j = dev_x[bond.y];
     const Float4 vel_i = dev_vel[bond.x];
     const Float4 vel_j = dev_vel[bond.y];
-    const Float4 angvel_i = dev_angvel[bond.x];
-    const Float4 angvel_j = dev_angvel[bond.y];
+    const Float4 angvel4_i = dev_angvel[bond.x];
+    const Float4 angvel4_j = dev_angvel[bond.y];
+
+    const Float3 angvel_i = MAKE_FLOAT3(angvel4_i.x, angvel4_i.y, angvel4_i.z);
+    const Float3 angvel_j = MAKE_FLOAT3(angvel4_j.x, angvel4_j.y, angvel4_j.z);
 
     // Initialize force- and torque vectors
     Float3 f, t, f_n, f_t, t_n, t_t;
 
 
     //// Bond geometry and inertia
-    
+
     // Parallel-bond radius (Potyondy and Cundall 2004, eq. 12)
     const Float R_bar = devC_params.lambda_bar * fmin(x_i.w, x_j.w);
 
@@ -72,7 +75,8 @@ __global__ void bondsLinear(
     const Float I = 0.25 * PI * R_bar*R_bar*R_bar*R_bar;
 
     // Bond polar moment of inertia (Potyondy and Cundall 2004, eq. 15)
-    const Float J = 0.50 * PI * R_bar*R_bar*R_bar*R_bar;
+    //const Float J = 0.50 * PI * R_bar*R_bar*R_bar*R_bar;
+    const Float J = I*2.0;
 
     // Inter-particle vector
     const Float3 x = MAKE_FLOAT3(
@@ -80,6 +84,9 @@ __global__ void bondsLinear(
             x_i.y - x_j.y,
             x_i.z - x_j.z);
     const Float x_length = length(x);
+
+    // Find overlap (negative value if overlapping)
+    const Float overlap = fmin(0.0, x_length - (x_i.w + x_j.w));
     
     // Normal vector of contact (points from i to j)
     const Float3 n = x/x_length;
@@ -91,11 +98,15 @@ __global__ void bondsLinear(
     //const Float3 delta_t0 = delta_t0_uncor - dot(delta_t0_uncor, n);
     const Float3 delta_t0 = delta_t0_uncor - (n * dot(n, delta_t0_uncor));
 
-    // Contact displacement (should this include rolling?)
-    const Float3 ddelta = MAKE_FLOAT3(
-            vel_i.x - vel_j.x,
-            vel_i.y - vel_j.y,
-            vel_i.z - vel_j.z) * devC_dt;
+    // Contact displacement
+    const Float3 ddelta = (
+            MAKE_FLOAT3(
+                vel_i.x - vel_j.x,
+                vel_i.y - vel_j.y,
+                vel_i.z - vel_j.z) 
+            + (x_i.w + overlap/2.0) * cross(n, angvel_i)
+            + (x_j.w + overlap/2.0) * cross(n, angvel_j)
+            ) * devC_dt;
 
     // Normal component of the displacement increment
     //const Float ddelta_n = dot(ddelta, n);
@@ -111,11 +122,14 @@ __global__ void bondsLinear(
     // Tangential component of the total displacement
     const Float3 delta_t = delta_t0 + ddelta_t;
 
-    // Normal force: Elastic contact model
+    // Normal force: Visco-elastic contact model
+    // The elastic component caused by the overlap is subtracted.
     //f_n = devC_params.k_n * A * delta_n * n;
     f_n = (devC_params.k_n * A * delta_n + devC_params.gamma_n * ddelta_n/devC_dt) * n;
+    //f_n += devC_params.k_n * overlap * n;
 
-    // Tangential force: Elastic contact model
+
+    // Tangential force: Visco-elastic contact model
     //f_t = -devC_params.k_t * A * delta_t;
     f_t = -devC_params.k_t * A * delta_t - devC_params.gamma_t * ddelta_t/devC_dt;
 
@@ -149,11 +163,11 @@ __global__ void bondsLinear(
     // Tangential component of the total displacement
     const Float3 omega_t = omega_t0 + domega_t;
 
-    // Twisting torque: Elastic contact model
-    //t_n = -devC_params.k_t * J * omega_n * n;
-    t_n = (devC_params.k_t * J * omega_n + devC_params.gamma_t * domega_n/devC_dt) * n;
+    // Twisting torque: Visco-elastic contact model
+    t_n = -devC_params.k_t * J * omega_n * n;
+    //t_n = (devC_params.k_t * J * omega_n + devC_params.gamma_t * domega_n/devC_dt) * n;
 
-    // Bending torque: Elastic contact model
+    // Bending torque: Visco-elastic contact model
     //t_t = -devC_params.k_n * I * omega_t;
     //t_t = -devC_params.k_n * I * omega_t - devC_params.gamma_n * domega_t/devC_dt;
     t_t = devC_params.k_n * I * omega_t - devC_params.gamma_n * domega_t/devC_dt;

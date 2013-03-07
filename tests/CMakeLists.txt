@@ -9,3 +9,6 @@ add_test(porosity_tests ${PYTHON_EXECUTABLE}
 
 add_test(memory_tests ${PYTHON_EXECUTABLE} 
     ${CMAKE_CURRENT_BINARY_DIR}/memcheck_tests.py)
+
+add_test(bond_tests ${PYTHON_EXECUTABLE} 
+    ${CMAKE_CURRENT_BINARY_DIR}/bond_tests.py)
