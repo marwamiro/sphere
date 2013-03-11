@@ -719,11 +719,12 @@ class Spherebin:
         bondparticles = numpy.unique(numpy.random.random_integers(0, high=self.np[0], size=int(self.np*ratio)))
         if (bondparticles.size % 2 > 0):
             bondparticles = bondparticles[:-1].copy()
-        bondparticles.reshape(int(bondparticles.size/2), 2)
-        self.nb0[0] = bonds_i.size/2
+        bondparticles = bondparticles.reshape(int(bondparticles.size/2), 2).copy()
 
+        print(bondparticles.size)
+        print(bondparticles.shape)
         for n in numpy.arange(self.nb0):
-            createBondPair(bondparticles[n,0], bondparticles[n,1], spacing)
+            self.createBondPair(bondparticles[n,0], bondparticles[n,1], spacing)
    
 
     def zeroKinematics(self):
