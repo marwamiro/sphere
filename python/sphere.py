@@ -706,8 +706,24 @@ class Spherebin:
             print(x_ij_length); print(dist_ij)
             raise Exception("Error, something went wrong in createBondPair")
 
+    def random2bonds(self, ratio=0.3, spacing=-0.1):
+        """ Bond an amount of particles in two-particle clusters
+        @param ratio: The amount of particles to bond, values in ]0.0;1.0] (float)
+        @param spacing: The distance relative to the sum of radii between bonded 
+        particles, neg. values denote an overlap. Values in ]0.0,inf[ (float).
+        The particles should be initialized beforehand.
+        Note: The actual number of bonds is likely to be somewhat smaller than 
+        specified, due to the random selection algorithm.
+        """
+        
+        bondparticles = numpy.unique(numpy.random.random_integers(0, high=self.np[0], size=int(self.np*ratio)))
+        if (bondparticles.size % 2 > 0):
+            bondparticles = bondparticles[:-1].copy()
+        bondparticles.reshape(int(bondparticles.size/2), 2)
+        self.nb0[0] = bonds_i.size/2
 
-
+        for n in numpy.arange(self.nb0):
+            createBondPair(bondparticles[n,0], bondparticles[n,1], spacing)
    
 
     def zeroKinematics(self):
