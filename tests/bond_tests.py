@@ -27,7 +27,7 @@ s2_1 = numpy.ones((2,1))*smallval
 
 # Inter-particle distances to try (neg. for overlap)
 distances = [0.2, 0.0, -0.2]
-#distances = [-0.2]
+#distances = [0.2]
 
 for d in distances:
 
@@ -39,7 +39,6 @@ for d in distances:
 
     # setup particles, bond, and simulation
     sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
-    #sb.x[1,:] = numpy.array((2.2, 2.0, 2.0))
     sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
     sb.radius = numpy.ones(sb.np)*radii
     sb.initGridAndWorldsize(margin = 10, periodic = 1, contactmodel = 2, g = numpy.array([0.0, 0.0, 0.0]))
@@ -51,6 +50,8 @@ for d in distances:
     #visualize(sb.sid, "energy")
 
     print("# Stability test")
+    sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
+    sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
     sb.zeroKinematics()
     sb.initTemporal(total=0.2, file_dt=0.01)
     #sb.initTemporal(total=0.01, file_dt=0.0001)
@@ -67,9 +68,10 @@ for d in distances:
     #printKinematics(sb)
 
     print("# Normal expansion")
+    sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
+    sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
     sb.zeroKinematics()
-    #sb.initTemporal(total=0.2, file_dt=0.01)
-    sb.initTemporal(total=0.2, file_dt=0.001)
+    sb.initTemporal(total=0.2, file_dt=0.01)
     sb.vel[1,0] = 1e-4
     Ekinrot0 = sb.energy("kin") + sb.energy("rot")
     sb.writebin(verbose=False)
@@ -105,6 +107,8 @@ for d in distances:
     #printKinematics(sb)
 
     print("# Shear")
+    sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
+    sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
     sb.zeroKinematics()
     sb.initTemporal(total=0.2, file_dt=0.01)
     sb.vel[1,2] = 1e-4
@@ -135,53 +139,54 @@ for d in distances:
     #visualize(sb.sid, "energy")
 
 
-    print("# Bend")
-    sb.zeroKinematics()
-    sb.initTemporal(total=0.2, file_dt=0.01)
-    sb.angvel[1,1] = 1e-4
-    Ekinrot0 = sb.energy("kin") + sb.energy("rot")
-    sb.writebin(verbose=False)
-    sb.run(verbose=False)
-    sb.readlast(verbose=False)
-    compareFloats(Ekinrot0, sb.energy("kin") + sb.energy("rot") + sb.energy("bondpot"), "Energy cons.")
-    print("vel[:,0]"),
-    if (sb.vel[0,0] <= 0.0) or (sb.vel[1,0] >= 0.0):
-        print(failed())
-    else :
-        print(passed())
-    compareNumpyArrays(sb.vel[:,1], z2_1, "vel[:,1]")
-    print("vel[:,2]"),
-    if ((sb.vel[0,2] <= 0.0) or (sb.vel[1,2] >= 0.0)):
-        print(failed())
-    else :
-        print(passed())
-    compareNumpyArrays(sb.angvel[:,0:2:2], z2_2, "angvel[:,0:2:2]")
-    print("angvel[:,1]"),
-    if ((sb.angvel[0,1] <= 0.0) or (sb.angvel[1,1] <= 0.0)):
-        print(failed())
-    else :
-        print(passed())
-    #printKinematics(sb)
-    #visualize(sb.sid, "energy")
-
-
+    #'''
     print("# Twist")
+    sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
+    sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
     sb.zeroKinematics()
     sb.initTemporal(total=0.2, file_dt=0.01)
+    #sb.initTemporal(total=0.001, file_dt=0.00001)
     sb.angvel[1,0] = 1e-4
     Ekinrot0 = sb.energy("kin") + sb.energy("rot")
     sb.writebin(verbose=False)
     sb.run(verbose=False)
     sb.readlast(verbose=False)
     compareFloats(Ekinrot0, sb.energy("kin") + sb.energy("rot") + sb.energy("bondpot"), "Energy cons.")
-    compareNumpyArrays(sb.vel, z2_3, "vel\t")
-    print("angvel[:,1]"),
-    if ((sb.angvel[0,1] <= 0.0) or (sb.angvel[0,1] <= 0.0)):
+    #compareNumpyArrays(sb.vel, z2_3, "vel\t")
+    print("angvel[:,0]"),
+    if ((sb.angvel[0,0] <= 0.0) or (sb.angvel[1,0] <= 0.0)):
+        raise Exception("Failed")
         print(failed())
     else :
         print(passed())
-    compareNumpyArrays(sb.angvel[:,0:2:2], z2_2, "angvel[:,0:2:2]")
-    printKinematics(sb)
-    visualize(sb.sid, "energy")
+    compareNumpyArrays(sb.angvel[:,1:2], z2_2, "angvel[:,1:2]")
+    #printKinematics(sb)
+    #visualize(sb.sid, "energy")
+    
 
-#cleanup(sb)
+    #'''
+    print("# Bend")
+    sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
+    sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
+    sb.zeroKinematics()
+    sb.initTemporal(total=0.2, file_dt=0.01)
+    sb.angvel[0,1] = -1e-4
+    sb.angvel[1,1] = 1e-4
+    Ekinrot0 = sb.energy("kin") + sb.energy("rot")
+    sb.writebin(verbose=False)
+    sb.run(verbose=False)
+    sb.readlast(verbose=False)
+    compareFloats(Ekinrot0, sb.energy("kin") + sb.energy("rot") + sb.energy("bondpot"), "Energy cons.")
+    #compareNumpyArrays(sb.vel, z2_3, "vel\t")
+    #compareNumpyArrays(sb.angvel[:,0:2:2], z2_2, "angvel[:,0:2:2]")
+    print("angvel[:,1]"),
+    if ((sb.angvel[0,1] == 0.0) or (sb.angvel[1,1] == 0.0)):
+        raise Exception("Failed")
+        print(failed())
+    else :
+        print(passed())
+    #printKinematics(sb)
+    #visualize(sb.sid, "energy")
+    #'''
+
+cleanup(sb)

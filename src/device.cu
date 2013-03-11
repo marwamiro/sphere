@@ -800,6 +800,13 @@ __host__ void DEM::startTime()
             stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_integrateWalls);
         checkForCudaErrors("Post integrateWalls");
 
+        /*for (int a=0; a<params.nb0; ++a)
+            std::cout << "bond " << a << ":\n"
+                << k.bonds_delta[a].x << ", "
+                << k.bonds_delta[a].y << ", "
+                << k.bonds_delta[a].z << ", "
+                << k.bonds_delta[a].w << std::endl;
+        break;*/
 
         // Update timers and counters
         time.current  += time.dt;

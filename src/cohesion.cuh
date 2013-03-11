@@ -32,21 +32,23 @@ __global__ void bondsLinear(
     if (bond.x >= devC_np)
         return;
 
-    const Float4 delta_t0_4 = dev_bonds_delta[idx];
-    const Float4 omega_t0_4 = dev_bonds_omega[idx];
+    const Float4 delta0_4 = dev_bonds_delta[idx];
+    const Float4 omega0_4 = dev_bonds_omega[idx];
 
     // Convert tangential vectors to Float3's
-    const Float3 delta_t0_uncor = MAKE_FLOAT3(
-            delta_t0_4.x,
-            delta_t0_4.y,
-            delta_t0_4.z);
-    const Float delta_t0_n = delta_t0_4.w;
+    // Uncorrected tangential component of displacement
+    Float3 delta0_t = MAKE_FLOAT3(
+            delta0_4.x,
+            delta0_4.y,
+            delta0_4.z);
+    const Float delta0_n = delta0_4.w;
 
-    const Float3 omega_t0_uncor = MAKE_FLOAT3(
-            omega_t0_4.x,
-            omega_t0_4.y,
-            omega_t0_4.z);
-    const Float omega_t0_n = omega_t0_4.w;
+    // Uncorrected tangential component of rotation
+    Float3 omega0_t = MAKE_FLOAT3(
+            omega0_4.x,
+            omega0_4.y,
+            omega0_4.z);
+    const Float omega0_n = omega0_4.w;
 
     // Read particle data
     const Float4 x_i = dev_x[bond.x];
@@ -58,9 +60,6 @@ __global__ void bondsLinear(
 
     const Float3 angvel_i = MAKE_FLOAT3(angvel4_i.x, angvel4_i.y, angvel4_i.z);
     const Float3 angvel_j = MAKE_FLOAT3(angvel4_j.x, angvel4_j.y, angvel4_j.z);
-
-    // Initialize force- and torque vectors
-    Float3 f, t, f_n, f_t, t_n, t_t;
 
 
     //// Bond geometry and inertia
@@ -89,16 +88,16 @@ __global__ void bondsLinear(
     const Float overlap = fmin(0.0, x_length - (x_i.w + x_j.w));
     
     // Normal vector of contact (points from i to j)
-    const Float3 n = x/x_length;
+    Float3 n = x/x_length;
 
 
     //// Force
 
     // Correct tangential displacement vector for rotation of the contact plane
     //const Float3 delta_t0 = delta_t0_uncor - dot(delta_t0_uncor, n);
-    const Float3 delta_t0 = delta_t0_uncor - (n * dot(n, delta_t0_uncor));
+    delta0_t = delta0_t - (n * dot(n, delta0_t));
 
-    // Contact displacement
+    // Contact displacement, Luding 2008 eq. 10
     const Float3 ddelta = (
             MAKE_FLOAT3(
                 vel_i.x - vel_j.x,
@@ -113,68 +112,84 @@ __global__ void bondsLinear(
     const Float ddelta_n = -dot(ddelta, n);
 
     // Normal component of the total displacement
-    const Float delta_n = delta_t0_n + ddelta_n;
+    const Float delta_n = delta0_n + ddelta_n;
 
     // Tangential component of the displacement increment
-    //const Float3 ddelta_t = ddelta - dot(ddelta, n);
+    // Luding 2008, eq. 9
     const Float3 ddelta_t = ddelta - n * dot(n, ddelta);
 
     // Tangential component of the total displacement
-    const Float3 delta_t = delta_t0 + ddelta_t;
+    const Float3 delta_t = delta0_t + ddelta_t;
 
     // Normal force: Visco-elastic contact model
     // The elastic component caused by the overlap is subtracted.
     //f_n = devC_params.k_n * A * delta_n * n;
-    f_n = (devC_params.k_n * A * delta_n + devC_params.gamma_n * ddelta_n/devC_dt) * n;
+    const Float3 f_n = (devC_params.k_n * A * delta_n + devC_params.gamma_n * ddelta_n/devC_dt) * n;
     //f_n += devC_params.k_n * overlap * n;
 
 
     // Tangential force: Visco-elastic contact model
     //f_t = -devC_params.k_t * A * delta_t;
-    f_t = -devC_params.k_t * A * delta_t - devC_params.gamma_t * ddelta_t/devC_dt;
+    const Float3 f_t = -devC_params.k_t * A * delta_t - devC_params.gamma_t * ddelta_t/devC_dt;
 
     // Force vector
-    f = f_n + f_t;
+    const Float3 f = f_n + f_t;
 
 
     //// Torque
 
     // Correct tangential rotational vector for rotation of the contact plane
-    //Float3 omega_t0 = omega_t0_uncor - dot(omega_t0_uncor, n);
-    Float3 omega_t0 = omega_t0_uncor - (n * dot(n, omega_t0_uncor));
+    omega0_t = omega0_t - (-n) * dot(omega0_t, -n);
+    //omega0_t = omega0_t - (n * dot(n, omega0_t));
 
     // Contact rotational velocity
     Float3 domega = MAKE_FLOAT3(
                 angvel_j.x - angvel_i.x,
                 angvel_j.y - angvel_i.y,
                 angvel_j.z - angvel_i.z) * devC_dt;
+    /*const Float3 domega = MAKE_FLOAT3(
+                angvel_i.x - angvel_j.x,
+                angvel_i.y - angvel_j.y,
+                angvel_i.z - angvel_j.z) * devC_dt;*/
 
     // Normal component of the rotational increment
-    //const Float domega_n = dot(domega, n);
-    const Float domega_n = -dot(n, domega);
+    const Float domega_n = dot(domega, -n);
+    //const Float domega_n = dot(-n, domega);
+    //const Float domega_n = -dot(n, domega);
 
-    // Normal component of the total displacement
-    const Float omega_n = omega_t0_n + domega_n;
+    // Normal component of the total rotation
+    const Float omega_n = omega0_n + domega_n;
 
-    // Tangential component of the displacement increment
-    //const Float3 domega_t = domega - dot(domega, n);
-    const Float3 domega_t = domega - n * dot(n, domega);
+    // Tangential component of the rotational increment
+    //const Float3 domega_t = domega - (-n) * dot(domega, -n);
+    const Float3 domega_t = domega - domega_n * (-n);
+    //const Float3 domega_t = domega - n * dot(n, domega);
 
-    // Tangential component of the total displacement
-    const Float3 omega_t = omega_t0 + domega_t;
+    // Tangential component of the total rotation
+    const Float3 omega_t = omega0_t + domega_t;
 
     // Twisting torque: Visco-elastic contact model
-    t_n = -devC_params.k_t * J * omega_n * n;
+    //const Float3 t_n = -devC_params.k_t * J * omega_n * n;
+    const Float3 t_n = -devC_params.k_t * J * omega_n * -n;
+    //t_n = devC_params.k_t * J * omega_n * n;
     //t_n = (devC_params.k_t * J * omega_n + devC_params.gamma_t * domega_n/devC_dt) * n;
 
     // Bending torque: Visco-elastic contact model
     //t_t = -devC_params.k_n * I * omega_t;
+    //const Float3 t_t = devC_params.k_n * I * omega_t;
+    const Float3 t_t = -devC_params.k_n * I * omega_t;
     //t_t = -devC_params.k_n * I * omega_t - devC_params.gamma_n * domega_t/devC_dt;
-    t_t = devC_params.k_n * I * omega_t - devC_params.gamma_n * domega_t/devC_dt;
+    //t_t = devC_params.k_n * I * omega_t - devC_params.gamma_n * domega_t/devC_dt;
 
     // Torque vector
-    t = t_n + t_t;
-
+    //t = t_n + t_t;
+    //Float3 t_i = t_n + cross(-(x_i.w + overlap*0.5) * n, t_t);
+    //Float3 t_j = t_n + cross(-(x_j.w + overlap*0.5) * n, t_t);
+    //const Float3 t_i = t_n + cross(-(x_i.w + overlap*0.5) * n, f_t + t_t);
+    //const Float3 t_j = t_n + cross(-(x_j.w + overlap*0.5) * n, f_t - t_t);
+    const Float3 t_j = t_n + t_t;
+    //const Float3 t_i = t_n - t_t; //t_n - t_t;
+    //const Float3 t_j = t_n + t_t;
 
     //// Save values
     __syncthreads();
@@ -186,8 +201,14 @@ __global__ void bondsLinear(
     // Save forces and torques to the particle pairs
     dev_force[bond.x] += MAKE_FLOAT4(f.x, f.y, f.z, 0.0);
     dev_force[bond.y] -= MAKE_FLOAT4(f.x, f.y, f.z, 0.0);
-    dev_torque[bond.x] += MAKE_FLOAT4(t.x, t.y, t.z, 0.0);
-    dev_torque[bond.y] -= MAKE_FLOAT4(t.x, t.y, t.z, 0.0);
+    //dev_torque[bond.x] += MAKE_FLOAT4(t.x, t.y, t.z, 0.0);
+    //dev_torque[bond.y] += MAKE_FLOAT4(t.x, t.y, t.z, 0.0);
+    //dev_torque[bond.x] += MAKE_FLOAT4(t_i.x, t_i.y, t_i.z, 0.0);
+    dev_torque[bond.x] -= MAKE_FLOAT4(t_j.x, t_j.y, t_j.z, 0.0);
+    dev_torque[bond.y] += MAKE_FLOAT4(t_j.x, t_j.y, t_j.z, 0.0);
+    //dev_torque[bond.y] += MAKE_FLOAT4(t_j.x, t_j.y, t_j.z, 0.0);
+    //dev_torque[bond.y] -= MAKE_FLOAT4(t_j.x, t_j.y, t_j.z, 0.0);
+    //dev_torque[bond.y] -= MAKE_FLOAT4(t.x, t.y, t.z, 0.0);
     // make sure to remove write conflicts
 }
 

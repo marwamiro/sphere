@@ -627,14 +627,17 @@ void DEM::forcechains(const std::string format, const int threedim,
             cout << "set term epslatex size 8.6 cm, 5.6 cm\n";
             cout << "set out 'plots/" << s << "-fc.tex'\n";
         } else if (format == "epslatex-color") {
-            cout << "set term epslatex color size 8.6 cm, 5.6 cm\n";
+            //cout << "set term epslatex color size 12 cm, 8.6 cm\n";
+            cout << "set term epsla color size 8.6 cm, 5.6 cm\n";
             cout << "set out 'plots/" << s << "-fc.tex'\n";
         }
         cout << "set xlabel '\\sffamily $x_1$, [m]'\n";
         if (threedim == 1) {
             cout << "set ylabel '\\sffamily $x_2$, [m]'\n"
             << "set zlabel '\\sffamily $x_3$, [m]' offset 2\n";
+            //<< "set zlabel '\\sffamily $x_3$, [m]' offset 0\n";
         } else
+            //cout << "set ylabel '\\sffamily $x_3$, [m]' offset 0\n";
             cout << "set ylabel '\\sffamily $x_3$, [m]' offset 2\n";
 
         cout << "set cblabel '\\sffamily $||\\boldsymbol{f}_n||$, [N]'\n"

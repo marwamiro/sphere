@@ -2,11 +2,13 @@
 
 from sphere import *
 import subprocess
+import sys
 
 def passed():
     return "\tPassed"
 
 def failed():
+    raise Exception("Failed")
     return "\tFailed"
 
 def compare(first, second, string):
@@ -20,6 +22,16 @@ def compareFloats(first, second, string, criterion=1e-5):
         print(string + passed())
     else :
         print(string + failed())
+        print("First: " + str(first))
+        print("Second: " + str(second))
+        print("Difference: " + str(second-first))
+
+def compareNumpyArrays(first, second, string):
+    if ((first == second).all()):
+        print(string + passed())
+    else :
+        print(string + failed())
+
 
 def cleanup(spherebin):
     'Remove temporary files'
