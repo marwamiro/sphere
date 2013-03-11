@@ -671,11 +671,12 @@ class Spherebin:
         self.num[2] = numpy.ceil(z_max/cellsize)
         self.L = self.num * cellsize
 
-    def createBondPair(self, i, j, spacing=0.1):
+    def createBondPair(self, i, j, spacing=-0.1):
         """ Bond particles i and j. Particle j is moved adjacent to particle i,
         and oriented randomly. 
         @param spacing (float) The inter-particle distance prescribed. Positive 
         values result in a inter-particle distance, negative equal an overlap.
+        The value is relative to the sum of the two radii.
         """
 
         x_i = self.x[i]
