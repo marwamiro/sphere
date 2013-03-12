@@ -695,6 +695,20 @@ class Spherebin:
         x_j[2] = x_j[2] + dist_ij * numpy.sin(ang) * numpy.cos(azi)
         self.x[j] = x_j
 
+        if (self.x[j,0] < self.origo[0]):
+            self.x[j,0] += x_i[0] - x_j[0]
+        if (self.x[j,1] < self.origo[1]):
+            self.x[j,1] += x_i[1] - x_j[1]
+        if (self.x[j,2] < self.origo[2]):
+            self.x[j,2] += x_i[2] - x_j[2]
+
+        if (self.x[j,0] > self.L[0]):
+            self.x[j,0] -= abs(x_j[0] - x_i[0])
+        if (self.x[j,1] > self.L[1]):
+            self.x[j,1] -= abs(x_j[1] - x_i[1])
+        if (self.x[j,2] > self.L[2]):
+            self.x[j,2] -= abs(x_j[2] - x_i[2])
+
         self.bond(i,j)     # register bond
         
         # Check that the spacing is correct
@@ -706,6 +720,7 @@ class Spherebin:
             print(x_ij_length); print(dist_ij)
             raise Exception("Error, something went wrong in createBondPair")
 
+
     def random2bonds(self, ratio=0.3, spacing=-0.1):
         """ Bond an amount of particles in two-particle clusters
         @param ratio: The amount of particles to bond, values in ]0.0;1.0] (float)
@@ -716,14 +731,12 @@ class Spherebin:
         specified, due to the random selection algorithm.
         """
         
-        bondparticles = numpy.unique(numpy.random.random_integers(0, high=self.np[0], size=int(self.np*ratio)))
+        bondparticles = numpy.unique(numpy.random.random_integers(0, high=self.np, size=int(self.np*ratio)))
         if (bondparticles.size % 2 > 0):
             bondparticles = bondparticles[:-1].copy()
         bondparticles = bondparticles.reshape(int(bondparticles.size/2), 2).copy()
 
-        print(bondparticles.size)
-        print(bondparticles.shape)
-        for n in numpy.arange(self.nb0):
+        for n in numpy.arange(bondparticles.shape[0]):
             self.createBondPair(bondparticles[n,0], bondparticles[n,1], spacing)
    
 
@@ -1028,15 +1041,18 @@ class Spherebin:
             return numpy.sum(self.ev_dot)
 
         elif method == 'bondpot':
-            R_bar = self.lambda_bar * numpy.min(self.radius[self.bonds[:,0]], self.radius[self.bonds[:,1]])
-            A = numpy.pi * R_bar**2
-            I = 0.25 * numpy.pi * R_bar**4
-            J = I*2.0
-            bondpot_fn = numpy.sum(0.5 * A * self.k_n * numpy.abs(self.bonds_delta_n)**2)
-            bondpot_ft = numpy.sum(0.5 * A * self.k_t * numpy.linalg.norm(self.bonds_delta_t)**2)
-            bondpot_tn = numpy.sum(0.5 * J * self.k_t * numpy.abs(self.bonds_omega_n)**2)
-            bondpot_tt = numpy.sum(0.5 * I * self.k_n * numpy.linalg.norm(self.bonds_omega_t)**2)
-            return bondpot_fn + bondpot_ft + bondpot_tn + bondpot_tt
+            if (self.nb0 > 0):
+                R_bar = self.lambda_bar * numpy.min(self.radius[self.bonds[:,0]], self.radius[self.bonds[:,1]])
+                A = numpy.pi * R_bar**2
+                I = 0.25 * numpy.pi * R_bar**4
+                J = I*2.0
+                bondpot_fn = numpy.sum(0.5 * A * self.k_n * numpy.abs(self.bonds_delta_n)**2)
+                bondpot_ft = numpy.sum(0.5 * A * self.k_t * numpy.linalg.norm(self.bonds_delta_t)**2)
+                bondpot_tn = numpy.sum(0.5 * J * self.k_t * numpy.abs(self.bonds_omega_n)**2)
+                bondpot_tt = numpy.sum(0.5 * I * self.k_n * numpy.linalg.norm(self.bonds_omega_t)**2)
+                return bondpot_fn + bondpot_ft + bondpot_tn + bondpot_tt
+            else :
+                return 0.0
 
     def voidRatio(self):
         'Returns the current void ratio'
@@ -1185,7 +1201,7 @@ class Spherebin:
 
 
     def shearstrain(self):
-        'Calculates and returns the shear strain (gamma) value of the experiment'
+        'Calculates and returns the current shear strain (gamma) value of the experiment'
 
         # Current height
         w_x0 = self.w_x[0]
@@ -1195,6 +1211,29 @@ class Spherebin:
 
         # Return shear strain
         return xdisp/w_x0
+
+    def forcechains(self, lc=200.0, uc=650.0, outformat='png', disp='2d'):
+        ''' Visualizes the force chains in the system from the magnitude of the
+        normal contact forces, and produces an image of them.
+        @param lc: Lower cutoff of contact forces. Contacts below are not 
+        visualized (float)
+        @param uc: Upper cutoff of contact forces. Contacts above are 
+        visualized with this value (float)
+        @param outformat: Format of output image. Possible values are
+        'interactive', 'png', 'epslatex', 'epslatex-color'
+        @param disp: Display forcechains in '2d' or '3d'
+        Warning: Will segfault if no contacts are found.
+        '''
+
+        self.writebin()
+
+        nd = ''
+        if (disp == '2d'):
+            nd = '-2d '
+
+        subprocess.call("cd .. && ./forcechains " + nd + "-f " + outformat + " -lc " + str(lc) + " -uc " + str(uc) + " input/" + self.sid + ".bin > python/tmp.gp", shell=True)
+        subprocess.call("gnuplot tmp.gp && rm tmp.bin && rm tmp.gp", shell=True)
+
 
     def thinsection_x1x3(self,
             x2 = 'center',
