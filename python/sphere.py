@@ -1392,6 +1392,10 @@ class Spherebin:
         daylist = []
         dvxlist = []
         dvylist = []
+        # Black circle at periphery of particles with angvel[:,1] > 0.0
+        cxlist = []
+        cylist = []
+        crlist = []
 
         # Loop over all particles, find intersections
         for i in range(self.np):
@@ -1412,6 +1416,12 @@ class Spherebin:
                 if (r_circ > rmax):
                     rmax = r_circ
                 rlist.append(r_circ)
+
+                # Store pos. and radius if it is spinning around pos. y
+                if (self.angvel[i,1] > 0.0):
+                    cxlist.append(self.x[i,0])
+                    cylist.append(self.x[i,1])
+                    crlist.append(r_circ)
 
                 # Store pressure
                 pval = self.p[i]
@@ -1453,6 +1463,19 @@ class Spherebin:
 
             for (x, y, r, p) in zip(xlist, ylist, rlist, plist):
                 fh.write("{}\t{}\t{}\t{}\n".format(x, y, r, p))
+        
+        finally :
+            if fh is not None:
+                fh.close()
+
+        # Save circle data for articles spinning with pos. y
+        filename = '../gnuplot/data/' + self.sid + '-ts-x1x3-circ.txt'
+        fh = None
+        try :
+            fh = open(filename, 'w')
+
+            for (x, y, r) in zip(cxlist, cylist, crlist):
+                fh.write("{}\t{}\t{}\t{}\n".format(x, y, r))
         
         finally :
             if fh is not None:
