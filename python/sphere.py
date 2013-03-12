@@ -1042,7 +1042,7 @@ class Spherebin:
 
         elif method == 'bondpot':
             if (self.nb0 > 0):
-                R_bar = self.lambda_bar * numpy.min(self.radius[self.bonds[:,0]], self.radius[self.bonds[:,1]])
+                R_bar = self.lambda_bar * numpy.minimum(self.radius[self.bonds[:,0]], self.radius[self.bonds[:,1]])
                 A = numpy.pi * R_bar**2
                 I = 0.25 * numpy.pi * R_bar**4
                 J = I*2.0
