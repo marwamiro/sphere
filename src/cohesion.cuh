@@ -191,6 +191,26 @@ __global__ void bondsLinear(
     //const Float3 t_i = t_n - t_t; //t_n - t_t;
     //const Float3 t_j = t_n + t_t;
 
+
+    //// Bond strength (Potyondy & Cundall 2004)
+    // Extensions of Euler-Bernoulli beam bending theory
+    // Max. stresses in bond periphery
+
+    // Tensile stress
+    const Float sigma_max = length(f_n) / A + length(t_t) * R_bar / I;
+
+    // Shear stress
+    const Float tau_max = length(f_t) / A + length(t_n) * R_bar / J;
+
+    // Break bond if tensile and shear stresses exceed strengths
+    if (sigma_max >= devC_params.sigma_b || tau_max >= devC_params.tau_b) {
+        __syncthreads();
+        dev_bonds[idx].x = devC_params.nb0;
+        return;
+    }
+
+
+
     //// Save values
     __syncthreads();
 

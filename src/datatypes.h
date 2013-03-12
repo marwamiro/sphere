@@ -92,6 +92,8 @@ struct Params {
     Float V_b;		  // Volume of fluid in capillary bond
     Float lambda_bar;     // Radius multiplier to parallel-bond radii
     unsigned int nb0;     // Number of inter-particle bonds at t=0
+    Float sigma_b;        // Bond tensile strength
+    Float tau_b;          // Bond shear strength
 };
 
 // Structure containing wall parameters

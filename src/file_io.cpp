@@ -208,6 +208,8 @@ void DEM::readbin(const char *target)
     // Read bond parameters
     ifs.read(as_bytes(params.lambda_bar), sizeof(params.lambda_bar));
     ifs.read(as_bytes(params.nb0), sizeof(params.nb0));
+    ifs.read(as_bytes(params.sigma_b), sizeof(params.sigma_b));
+    ifs.read(as_bytes(params.tau_b), sizeof(params.tau_b));
     k.bonds = new uint2[params.nb0];
     k.bonds_delta = new Float4[np];
     k.bonds_omega = new Float4[np];
@@ -365,6 +367,8 @@ void DEM::writebin(const char *target)
         // Write bond parameters
         ofs.write(as_bytes(params.lambda_bar), sizeof(params.lambda_bar));
         ofs.write(as_bytes(params.nb0), sizeof(params.nb0));
+        ofs.write(as_bytes(params.sigma_b), sizeof(params.sigma_b));
+        ofs.write(as_bytes(params.tau_b), sizeof(params.tau_b));
         for (i = 0; i<params.nb0; ++i) {
             ofs.write(as_bytes(k.bonds[i].x), sizeof(unsigned int));
             ofs.write(as_bytes(k.bonds[i].y), sizeof(unsigned int));
