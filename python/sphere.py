@@ -1234,6 +1234,70 @@ class Spherebin:
         subprocess.call("cd .. && ./forcechains " + nd + "-f " + outformat + " -lc " + str(lc) + " -uc " + str(uc) + " input/" + self.sid + ".bin > python/tmp.gp", shell=True)
         subprocess.call("gnuplot tmp.gp && rm tmp.bin && rm tmp.gp", shell=True)
 
+    def forcechainsRose(self):
+        ''' Visualize strike- and dip angles of the strongest force chains in a
+        rose plot.
+        '''
+        self.writebin()
+
+        subprocess.call("cd .. && ./forcechains -f txt input/" + self.sid + ".bin > python/fc-tmp.txt", shell=True)
+
+        # data will have the shape (numcontacts, 7)
+        data = numpy.loadtxt("fc-tmp.txt", skiprows=1)
+
+        # find the max. value of the normal force
+        f_n_max = numpy.amax(data[:,6])
+
+        # specify the lower limit of force chains to do statistics on
+        f_n_lim = 0.25 * f_n_max * 0.6
+
+        # find the indexes of these contacts
+        I = numpy.nonzero(data[:,6] > f_n_lim)
+
+        # loop through these contacts and find the strike and dip of the contacts
+        strikelist = [] # strike direction of the normal vector, [0:360[
+        diplist = [] # dip of the normal vector, [0:90]
+        for i in I[0]:
+            
+            x1 = data[i,0]
+            y1 = data[i,1]
+            z1 = data[i,2]
+            x2 = data[i,3]
+            y2 = data[i,4]
+            z2 = data[i,5]
+
+            if (z1 < z2):
+                xlower = x1; ylower = y1; zlower = z1
+                xupper = x2; yupper = y2; zupper = z2
+            else :
+                xlower = x2; ylower = y2; zlower = z2
+                xupper = x1; yupper = y1; zupper = z1
+
+            # Vector pointing downwards
+            dx = xlower - xupper
+            dy = ylower - yupper
+            dz = zlower - zupper
+            dhoriz = numpy.sqrt(dx**2 + dy**2)
+
+            # Find dip angle
+            diplist.append(math.degrees(math.atan((zupper - zlower)/dhoriz)))
+            
+            # Find strike angle
+            if (ylower >= yupper): # in first two quadrants
+                strikelist.append(math.acos(dx/dhoriz))
+            else :
+                strikelist.append(2.0*numpy.pi - math.acos(dx/dhoriz))
+
+            
+        plt.figure(figsize=[4,4])
+        ax = plt.subplot(111, polar=True, axisbg="w")
+        ax.scatter(strikelist, diplist, c='k', marker='+')
+        ax.set_rmax(90)
+        ax.set_rticks([])
+        plt.savefig("fc-" + self.sid + "-rose.pdf", transparent=True)
+
+        subprocess.call("rm fc-tmp.txt", shell=True)
+
 
     def thinsection_x1x3(self,
             x2 = 'center',
