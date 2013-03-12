@@ -1234,7 +1234,7 @@ class Spherebin:
         subprocess.call("cd .. && ./forcechains " + nd + "-f " + outformat + " -lc " + str(lc) + " -uc " + str(uc) + " input/" + self.sid + ".bin > python/tmp.gp", shell=True)
         subprocess.call("gnuplot tmp.gp && rm tmp.bin && rm tmp.gp", shell=True)
 
-    def forcechainsRose(self):
+    def forcechainsRose(self, lower_limit=0.25):
         ''' Visualize strike- and dip angles of the strongest force chains in a
         rose plot.
         '''
@@ -1249,7 +1249,7 @@ class Spherebin:
         f_n_max = numpy.amax(data[:,6])
 
         # specify the lower limit of force chains to do statistics on
-        f_n_lim = 0.25 * f_n_max * 0.6
+        f_n_lim = lower_limit * f_n_max * 0.6
 
         # find the indexes of these contacts
         I = numpy.nonzero(data[:,6] > f_n_lim)
@@ -1297,6 +1297,55 @@ class Spherebin:
         plt.savefig("fc-" + self.sid + "-rose.pdf", transparent=True)
 
         subprocess.call("rm fc-tmp.txt", shell=True)
+
+    def bondsRose(self):
+        ''' Visualize strike- and dip angles of the bond pairs in a rose plot.
+        '''
+        # loop through these contacts and find the strike and dip of the contacts
+        strikelist = [] # strike direction of the normal vector, [0:360[
+        diplist = [] # dip of the normal vector, [0:90]
+        for n in numpy.arange(self.nb0):
+            
+            i = self.bonds[n,0] 
+            j = self.bonds[n,1] 
+
+            x1 = self.x[i,0]
+            y1 = self.x[i,1]
+            z1 = self.x[i,2]
+            x2 = self.x[j,0]
+            y2 = self.x[j,1]
+            z2 = self.x[j,2]
+
+            if (z1 < z2):
+                xlower = x1; ylower = y1; zlower = z1
+                xupper = x2; yupper = y2; zupper = z2
+            else :
+                xlower = x2; ylower = y2; zlower = z2
+                xupper = x1; yupper = y1; zupper = z1
+
+            # Vector pointing downwards
+            dx = xlower - xupper
+            dy = ylower - yupper
+            dz = zlower - zupper
+            dhoriz = numpy.sqrt(dx**2 + dy**2)
+
+            # Find dip angle
+            diplist.append(math.degrees(math.atan((zupper - zlower)/dhoriz)))
+            
+            # Find strike angle
+            if (ylower >= yupper): # in first two quadrants
+                strikelist.append(math.acos(dx/dhoriz))
+            else :
+                strikelist.append(2.0*numpy.pi - math.acos(dx/dhoriz))
+
+            
+        plt.figure(figsize=[4,4])
+        ax = plt.subplot(111, polar=True, axisbg="w")
+        ax.scatter(strikelist, diplist, c='k', marker='+')
+        ax.set_rmax(90)
+        ax.set_rticks([])
+        plt.savefig("bonds-" + self.sid + "-rose.pdf", transparent=True)
+
 
 
     def thinsection_x1x3(self,
