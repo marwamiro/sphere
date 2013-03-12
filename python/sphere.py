@@ -304,6 +304,8 @@ class Spherebin:
                 self.bonds_delta_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
                 self.bonds_omega_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
                 self.bonds_omega_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
+            else:
+                self.nb0 = 0
 
         finally:
             if fh is not None:
