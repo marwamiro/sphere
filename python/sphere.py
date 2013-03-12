@@ -179,7 +179,7 @@ class Spherebin:
 
 
 
-    def readbin(self, targetbin, verbose = True):
+    def readbin(self, targetbin, verbose = True, bonds = True):
         'Reads a target SPHERE binary file'
 
         fh = None
@@ -286,23 +286,24 @@ class Spherebin:
                 self.w_force[i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
                 self.w_devs[i]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
-            # Inter-particle bonds
-            self.lambda_bar = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-            self.nb0 = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
-            self.sigma_b = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-            self.tau_b = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-            self.bonds = numpy.zeros((self.nb0, 2), dtype=numpy.uint32)
-            for i in range(self.nb0):
-                self.bonds[i,0] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
-                self.bonds[i,1] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
-            #self.bonds_delta_n = numpy.zeros(self.nb0, dtype=numpy.float64)
-            #self.bonds_delta_t = numpy.zeros((self.nb0, seld.nd), dtype=numpy.float64)
-            #self.bonds_omega_n = numpy.zeros(self.nb0, dtype=numpy.float64)
-            #self.bonds_omega_t = numpy.zeros((self.nb0, seld.nd), dtype=numpy.float64)
-            self.bonds_delta_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
-            self.bonds_delta_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
-            self.bonds_omega_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
-            self.bonds_omega_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
+            if (bonds == True):
+                # Inter-particle bonds
+                self.lambda_bar = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                self.nb0 = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
+                self.sigma_b = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                self.tau_b = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                self.bonds = numpy.zeros((self.nb0, 2), dtype=numpy.uint32)
+                for i in range(self.nb0):
+                    self.bonds[i,0] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
+                    self.bonds[i,1] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
+                #self.bonds_delta_n = numpy.zeros(self.nb0, dtype=numpy.float64)
+                #self.bonds_delta_t = numpy.zeros((self.nb0, seld.nd), dtype=numpy.float64)
+                #self.bonds_omega_n = numpy.zeros(self.nb0, dtype=numpy.float64)
+                #self.bonds_omega_t = numpy.zeros((self.nb0, seld.nd), dtype=numpy.float64)
+                self.bonds_delta_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
+                self.bonds_delta_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
+                self.bonds_omega_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
+                self.bonds_omega_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
 
         finally:
             if fh is not None:
