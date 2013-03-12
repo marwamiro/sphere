@@ -101,6 +101,8 @@ class Spherebin:
 
         self.lambda_bar = numpy.ones(1, dtype=numpy.float64)
         self.nb0 = numpy.zeros(1, dtype=numpy.uint32)
+        self.sigma_b = numpy.ones(1, dtype=numpy.uint32) * numpy.infty
+        self.tau_b = numpy.ones(1, dtype=numpy.uint32) * numpy.infty
         self.bonds = numpy.zeros((self.nb0, 2), dtype=numpy.uint32)
         self.bonds_delta_n = numpy.zeros(self.nb0, dtype=numpy.float64)
         self.bonds_delta_t = numpy.zeros((self.nb0, self.nd), dtype=numpy.float64)
@@ -163,6 +165,8 @@ class Spherebin:
                 self.gamma_wt == other.gamma_wt and\
                 self.lambda_bar == other.lambda_bar and\
                 self.nb0 == other.nb0 and\
+                self.sigma_b == other.sigma_b and\
+                self.tau_b == other.tau_b and\
                 self.bonds == other.bonds and\
                 self.bonds_delta_n == other.bonds_delta_n and\
                 self.bonds_delta_t == other.bonds_delta_t and\
@@ -285,6 +289,8 @@ class Spherebin:
             # Inter-particle bonds
             self.lambda_bar = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.nb0 = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
+            self.sigma_b = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+            self.tau_b = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.bonds = numpy.zeros((self.nb0, 2), dtype=numpy.uint32)
             for i in range(self.nb0):
                 self.bonds[i,0] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
@@ -389,6 +395,8 @@ class Spherebin:
 
             fh.write(self.lambda_bar.astype(numpy.float64))
             fh.write(self.nb0.astype(numpy.uint32))
+            fh.write(self.sigma_b.astype(numpy.float64))
+            fh.write(self.tau_b.astype(numpy.float64))
             for i in range(self.nb0):
                 fh.write(self.bonds[i,0].astype(numpy.uint32))
                 fh.write(self.bonds[i,1].astype(numpy.uint32))
@@ -731,7 +739,7 @@ class Spherebin:
         specified, due to the random selection algorithm.
         """
         
-        bondparticles = numpy.unique(numpy.random.random_integers(0, high=self.np, size=int(self.np*ratio)))
+        bondparticles = numpy.unique(numpy.random.random_integers(0, high=self.np-1, size=int(self.np*ratio)))
         if (bondparticles.size % 2 > 0):
             bondparticles = bondparticles[:-1].copy()
         bondparticles = bondparticles.reshape(int(bondparticles.size/2), 2).copy()
@@ -1238,7 +1246,7 @@ class Spherebin:
         ''' Visualize strike- and dip angles of the strongest force chains in a
         rose plot.
         '''
-        self.writebin()
+        self.writebin(verbose=False)
 
         subprocess.call("cd .. && ./forcechains -f txt input/" + self.sid + ".bin > python/fc-tmp.txt", shell=True)
 
