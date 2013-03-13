@@ -27,7 +27,6 @@ enable_testing()
 #set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Release)
 
-
 # Add source directory to project.
 add_subdirectory(src)
 
