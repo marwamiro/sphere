@@ -3,7 +3,8 @@
 #include <string>
 #include <cstdio>
 #include <cuda.h>
-#include <cutil_math.h>
+//#include <cutil_math.h>
+#include <helper_math.h>
 
 #include "vector_arithmetic.h"	// for arbitrary prec. vectors
 //#include <vector_functions.h>	// for single prec. vectors

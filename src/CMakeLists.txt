@@ -1,8 +1,9 @@
 # Link with libcutil (expected to be in ${CUDA_SDK_ROOT_DIR}/C/lib)
 #LINK_LIBRARIES("-L${CUDA_SDK_ROOT_DIR}/lib -lcutil")        # For 32 bit systems
-LINK_LIBRARIES("-L${CUDA_SDK_ROOT_DIR}/lib -lcutil_x86_64") # For 64 bit systems
+#LINK_LIBRARIES("-L${CUDA_SDK_ROOT_DIR}/lib -lcutil_x86_64") # For 64 bit systems
 
 # Ohter folders to include
+SET(CUDA_SDK_ROOT_DIR "/usr/local/cuda-5.0/samples")
 INCLUDE_DIRECTORIES("${CUDA_SDK_ROOT_DIR}/common/inc")
 INCLUDE_DIRECTORIES("${CMAKE_BINARY_DIR}/src")
 

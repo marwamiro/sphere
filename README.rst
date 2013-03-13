@@ -9,6 +9,8 @@ See license.txt for more information.
 See the ``doc/`` folder for general reference, by default available in the `html 
 <doc/html/index.html>`_ and `pdf <doc/pdf/sphere.pdf>`_ formats.
 
+*Update* (2013-03-13): Sphere has been updated to work with CUDA 5.0 *only*.
+
 Requirements
 ------------
 The build requirements are:
@@ -18,7 +20,7 @@ The build requirements are:
   * `CMake <http://cmake.org>`_, version 2.8 or higher
   * A C/C++ compiler toolkit, e.g. the `GNU Compiler Collection 
     <http://gcc.gnu.org/>`_ (GCC)
-  * The `Nvidia CUDA toolkit and SDK <https://developer.nvidia.com/cuda-downloads>`_
+  * The `Nvidia CUDA toolkit and samples <https://developer.nvidia.com/cuda-downloads>`_, version 5.0
 
 The runtime requirements are:
   * A `CUDA-enabled GPU <http://www.nvidia.com/object/cuda_gpus.html>`_ 
@@ -52,10 +54,12 @@ the root directory::
  cmake . && make
 
 In some cases the CMake FindCUDA module will have troubles locating the
-CUDA SDK directory, and will complain about `cutil_math.h` not being found.
+CUDA samples directory, and will complain about `helper_math.h` not being 
+found.
 
-In that case, modify the ``NVSDKCOMPUTE_ROOT`` environment variable in 
-`INSTALL.sh`, and execute it.
+In that case, modify the ``CUDA_SDK_ROOT_DIR`` variable in `src/CMakeLists.txt`
+to the path where you installed the CUDA samples, and run ``cmake . && make``
+again.
 
 After a successfull installation, the `sphere` executable will be located
 in the root folder. To make sure that all components are working correctly,
