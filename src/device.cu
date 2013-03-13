@@ -200,11 +200,17 @@ __host__ void DEM::transferToConstantDeviceMemory()
     if (verbose == 1)
         cout << "  Transfering data to constant device memory:     ";
 
+    /*// Reference by string deprecated in cuda 5.0
     cudaMemcpyToSymbol("devC_nd", &nd, sizeof(nd));
     cudaMemcpyToSymbol("devC_np", &np, sizeof(np));
     cudaMemcpyToSymbol("devC_nw", &walls.nw, sizeof(unsigned int));
     cudaMemcpyToSymbol("devC_nc", &NC, sizeof(int));
-    cudaMemcpyToSymbol("devC_dt", &time.dt, sizeof(Float));
+    cudaMemcpyToSymbol("devC_dt", &time.dt, sizeof(Float));*/
+    cudaMemcpyToSymbol(devC_nd, &nd, sizeof(nd));
+    cudaMemcpyToSymbol(devC_np, &np, sizeof(np));
+    cudaMemcpyToSymbol(devC_nw, &walls.nw, sizeof(unsigned int));
+    cudaMemcpyToSymbol(devC_nc, &NC, sizeof(int));
+    cudaMemcpyToSymbol(devC_dt, &time.dt, sizeof(Float));
     cudaMemcpyToSymbol(devC_grid, &grid, sizeof(Grid));
     cudaMemcpyToSymbol(devC_params, &params, sizeof(Params));
 
