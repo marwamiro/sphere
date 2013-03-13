@@ -9,7 +9,7 @@ See license.txt for more information.
 See the ``doc/`` folder for general reference, by default available in the `html 
 <doc/html/index.html>`_ and `pdf <doc/pdf/sphere.pdf>`_ formats.
 
-*Update* (2013-03-13): Sphere has been updated to work with CUDA 5.0 *only*.
+**Update** (2013-03-13): Sphere has been updated to work with CUDA 5.0 *only*.
 
 Requirements
 ------------
