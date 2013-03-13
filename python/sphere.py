@@ -296,16 +296,12 @@ class Spherebin:
                 for i in range(self.nb0):
                     self.bonds[i,0] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
                     self.bonds[i,1] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
-                #self.bonds_delta_n = numpy.zeros(self.nb0, dtype=numpy.float64)
-                #self.bonds_delta_t = numpy.zeros((self.nb0, seld.nd), dtype=numpy.float64)
-                #self.bonds_omega_n = numpy.zeros(self.nb0, dtype=numpy.float64)
-                #self.bonds_omega_t = numpy.zeros((self.nb0, seld.nd), dtype=numpy.float64)
                 self.bonds_delta_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
                 self.bonds_delta_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
                 self.bonds_omega_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
                 self.bonds_omega_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
             else:
-                self.nb0 = 0
+                self.nb0 = numpy.zeros(1, dtype=numpy.uint32)
 
         finally:
             if fh is not None:
@@ -1423,7 +1419,7 @@ class Spherebin:
                 # Store pos. and radius if it is spinning around pos. y
                 if (self.angvel[i,1] > 0.0):
                     cxlist.append(self.x[i,0])
-                    cylist.append(self.x[i,1])
+                    cylist.append(self.x[i,2])
                     crlist.append(r_circ)
 
                 # Store pressure
@@ -1478,7 +1474,7 @@ class Spherebin:
             fh = open(filename, 'w')
 
             for (x, y, r) in zip(cxlist, cylist, crlist):
-                fh.write("{}\t{}\t{}\t{}\n".format(x, y, r))
+                fh.write("{}\t{}\t{}\n".format(x, y, r))
         
         finally :
             if fh is not None:
