@@ -529,6 +529,8 @@ __host__ void DEM::startTime()
     unsigned int blocksPerGrid = iDivUp(np, threadsPerBlock); 
     dim3 dimGrid(blocksPerGrid, 1, 1); // Blocks arranged in 1D grid
     dim3 dimBlock(threadsPerBlock, 1, 1); // Threads arranged in 1D block
+    unsigned int blocksPerGridBonds = iDivUp(params.nb0, threadsPerBlock); 
+    dim3 dimGridBonds(blocksPerGridBonds, 1, 1); // Blocks arranged in 1D grid
     // Shared memory per block
     unsigned int smemSize = sizeof(unsigned int)*(threadsPerBlock+1);
 
@@ -731,7 +733,8 @@ __host__ void DEM::startTime()
 
         // Process particle pairs
         if (params.nb0 > 0) {
-            bondsLinear<<< 1, params.nb0 >>>(
+            //bondsLinear<<< 1, params.nb0 >>>(
+            bondsLinear<<<dimGridBonds, dimBlock>>>(
                     dev_bonds,
                     dev_bonds_delta,
                     dev_bonds_omega,
