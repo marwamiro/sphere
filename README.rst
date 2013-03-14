@@ -59,7 +59,10 @@ found.
 
 In that case, modify the ``CUDA_SDK_ROOT_DIR`` variable in `src/CMakeLists.txt`
 to the path where you installed the CUDA samples, and run ``cmake . && make``
-again.
+again. Alternatively, copy `helper_math.h` from the CUDA sample subdirectory 
+`common/inc/helper_math.h` into the sphere `src/` directory, and run `cmake` 
+and `make` again. Due to license restrictions, sphere cannot be distributed
+with this file.
 
 After a successfull installation, the `sphere` executable will be located
 in the root folder. To make sure that all components are working correctly,
