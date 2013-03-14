@@ -2059,6 +2059,50 @@ def run(binary, verbose=True, hideinputfile=False):
         stdout = " > /dev/null"
     subprocess.call("cd ..; ./sphere " + quiet + " " + binary + " " + stdout, shell=True)
 
+def torqueScript3(obj1, obj2, obj3,
+        email="adc@geo.au.dk", 
+        email_alerts="ae",
+        walltime="24:00:00",
+        queue="qfermi",
+        cudapath="/com/cuda/4.0.17/cuda",
+        spheredir="/home/adc/code/sphere",
+        workdir="/scratch"):
+    '''Create job script for the Torque queue manager for three binaries
+    '''
+
+    filename = self.sid + ".sh"
+    fh = None
+    try :
+        fh = open(filename, "w")
+
+        fh.write('#!/bin/sh\n')
+        fh.write('#PBS -N ' + obj1.sid + '_' + obj2.sid + '_' + obj3.sid + '\n')
+        fh.write('#PBS -l nodes=1:ppn=1\n')
+        fh.write('#PBS -l walltime=' + walltime + '\n')
+        fh.write('#PBS -q ' + queue + '\n')
+        fh.write('#PBS -M ' + email + '\n')
+        fh.write('#PBS -m ' + email_alerts + '\n')
+        fh.write('CUDAPATH=' + cudapath + '\n')
+        fh.write('export PATH=$CUDAPATH/bin:$PATH\n')
+        fh.write('export LD_LIBRARY_PATH=$CUDAPATH/lib64:$CUDAPATH/lib:$LD_LIBRARY_PATH\n')
+        fh.write('echo "`whoami`@`hostname`"\n')
+        fh.write('echo "Start at `date`"\n')
+        fh.write('ORIGDIR=' + spheredir + '\n')
+        fh.write('WORKDIR=' + workdir + "/$PBS_JOBID\n")
+        fh.write('cp -r $ORIGDIR/* $WORKDIR\n')
+        fh.write('cd $WORKDIR\n')
+        fh.write('cmake . && make\n')
+        fh.write('./sphere input/' + obj1.sid + '.bin > /dev/null &\n')
+        fh.write('./sphere input/' + obj2.sid + '.bin > /dev/null &\n')
+        fh.write('./sphere input/' + obj3.sid + '.bin > /dev/null &\n')
+        fh.write('wait\n')
+        fh.write('cp $WORKDIR/output/* $ORIGDIR/output/\n')
+        fh.write('echo "End at `date`"\n')
+
+    finally :
+        if fh is not None:
+            fh.close()
+
 
 
 def status(project):
