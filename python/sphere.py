@@ -450,6 +450,38 @@ class Spherebin:
             fig.clf()
 
 
+    def generateBimodalRadii(self,
+            r_small = 0.005,
+            r_large = 0.05,
+            ratio = 0.2,
+            verbose = True):
+        """ Draw radii from two sizes
+            @param r_small: Radii of small population (float), in ]0;r_large[
+            @param r_large: Radii of large population (float), in ]r_small;inf[
+            @param ratio: Approximate volumetric ratio between the two 
+            populations (large/small).
+        """
+        if (r_small >= r_large):
+            raise Exception("r_large should be larger than r_small")
+
+        V_small = V_sphere(r_small)
+        V_large = V_sphere(r_large)
+        nlarge = int(V_small/V_large * ratio * self.np[0])  # ignore void volume
+
+        self.radius[:] = r_small
+        self.radius[0:nlarge] = r_large
+        numpy.random.shuffle(self.radius)
+
+        # Test volumetric ratio
+        V_small_total = V_small * (self.np - nlarge)
+        V_large_total = V_large * nlarge
+        if (abs(V_large_total/V_small_total - ratio) > 1.0e5):
+            raise Exception("Volumetric ratio seems wrong")
+
+        if (verbose == True):
+            print("generateBimodalRadii created " + str(nlarge) + " large particles, and " + str(nlarge-self.np[0]) + " small")
+
+
     def initRandomPos(self, g = numpy.array([0.0, 0.0, -9.80665]), 
             gridnum = numpy.array([12, 12, 36]),
             periodic = 1,
@@ -1155,7 +1187,11 @@ class Spherebin:
     def torqueScript(self, 
             email="adc@geo.au.dk", 
             email_alerts="ae",
-            walltime="8:00:00"):
+            walltime="24:00:00",
+            queue="qfermi",
+            cudapath="/com/cuda/4.0.17/cuda",
+            spheredir="/home/adc/code/sphere",
+            workdir="/scratch"):
         'Create job script for the Torque queue manager for the binary'
 
         filename = self.sid + ".sh"
@@ -1163,7 +1199,27 @@ class Spherebin:
         try :
             fh = open(filename, "w")
 
-            # write stuff
+            fh.write('#!/bin/sh\n')
+            fh.write('#PBS -N ' + self.sid + '\n')
+            fh.write('#PBS -l nodes=1:ppn=1\n')
+            fh.write('#PBS -l walltime=' + walltime + '\n')
+            fh.write('#PBS -q ' + queue + '\n')
+            fh.write('#PBS -M ' + email + '\n')
+            fh.write('#PBS -m ' + email_alerts + '\n')
+            fh.write('CUDAPATH=' + cudapath + '\n')
+            fh.write('export PATH=$CUDAPATH/bin:$PATH\n')
+            fh.write('export LD_LIBRARY_PATH=$CUDAPATH/lib64:$CUDAPATH/lib:$LD_LIBRARY_PATH\n')
+            fh.write('echo "`whoami`@`hostname`"\n')
+            fh.write('echo "Start at `date`"\n')
+            fh.write('ORIGDIR=' + spheredir + '\n')
+            fh.write('WORKDIR=' + workdir + "/$PBS_JOBID\n")
+            fh.write('cp -r $ORIGDIR/* $WORKDIR\n')
+            fh.write('cd $WORKDIR\n')
+            fh.write('cmake . && make\n')
+            fh.write('./sphere input/' + self.sid + '.bin > /dev/null &\n')
+            fh.write('wait\n')
+            fh.write('cp $WORKDIR/output/* $ORIGDIR/output/\n')
+            fh.write('echo "End at `date`"\n')
 
         finally :
             if fh is not None:
