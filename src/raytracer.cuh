@@ -309,6 +309,7 @@ __host__ void DEM::cameraInit(
     if (verbose == 1)
         std::cout << "  Transfering camera values to constant memory: ";
 
+    /* Reference by string removed in cuda 5.0
     cudaMemcpyToSymbol("devC_u", &u, sizeof(u));
     cudaMemcpyToSymbol("devC_v", &v, sizeof(v));
     cudaMemcpyToSymbol("devC_w", &w, sizeof(w));
@@ -316,7 +317,15 @@ __host__ void DEM::cameraInit(
     cudaMemcpyToSymbol("devC_imgplane", &imgplane, sizeof(imgplane));
     cudaMemcpyToSymbol("devC_d", &d, sizeof(d));
     cudaMemcpyToSymbol("devC_light", &light, sizeof(light));
-    cudaMemcpyToSymbol("devC_pixels", &pixels, sizeof(pixels));
+    cudaMemcpyToSymbol("devC_pixels", &pixels, sizeof(pixels));*/
+    cudaMemcpyToSymbol(devC_u, &u, sizeof(u));
+    cudaMemcpyToSymbol(devC_v, &v, sizeof(v));
+    cudaMemcpyToSymbol(devC_w, &w, sizeof(w));
+    cudaMemcpyToSymbol(devC_eye, &eye, sizeof(eye));
+    cudaMemcpyToSymbol(devC_imgplane, &imgplane, sizeof(imgplane));
+    cudaMemcpyToSymbol(devC_d, &d, sizeof(d));
+    cudaMemcpyToSymbol(devC_light, &light, sizeof(light));
+    cudaMemcpyToSymbol(devC_pixels, &pixels, sizeof(pixels));
 
     if (verbose == 1)
         std::cout << "Done" << std::endl;
