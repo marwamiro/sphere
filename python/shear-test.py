@@ -5,13 +5,13 @@ from sphere import *
 
 ### EXPERIMENT SETUP ###
 initialization = True
-consolidation  = True
-shearing       = True
-rendering      = True
-plots	       = True
+consolidation  = False
+shearing       = False
+rendering      = False
+plots	       = False
 
 # Number of particles
-np = 2e3
+np = 1e4
 
 # Common simulation id
 sim_id = "shear-test"
@@ -35,7 +35,7 @@ init.defaultParams(gamma_n = 0.0, mu_s = 0.4, mu_d = 0.4)
 init.initRandomGridPos(gridnum = numpy.array([12, 12, 1000]), periodic = 1, contactmodel = 2)
 
 # Set duration of simulation
-init.initTemporal(total = 5.0)
+init.initTemporal(total = 0.2)
 
 if (initialization == True):
   # Write input file for sphere

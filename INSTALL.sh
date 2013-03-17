@@ -1,2 +1,2 @@
-export NVSDKCOMPUTE_ROOT=/home/adc/NVIDIA_GPU_Computing_SDK
+export NVSDKCOMPUTE_ROOT=/home/adc/NVIDIA_CUDA-5.0_Samples
 cmake . && make

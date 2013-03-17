@@ -179,7 +179,7 @@ Returns porosity values and depth</p>
 
 <dl class="method">
 <dt id="sphere.Spherebin.run">
-<tt class="descname">run</tt><big>(</big><em>verbose=True</em>, <em>hideinputfile=False</em>, <em>dry=False</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.run" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">run</tt><big>(</big><em>verbose=True</em>, <em>hideinputfile=False</em>, <em>dry=False</em>, <em>valgrind=False</em>, <em>cudamemcheck=False</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Execute sphere with target project</p>
 </dd></dl>
 
@@ -206,7 +206,7 @@ initial height per second.</p>
 
 <dl class="method">
 <dt id="sphere.Spherebin.thinsection_x1x3">
-<tt class="descname">thinsection_x1x3</tt><big>(</big><em>x2='center'</em>, <em>graphicsformat='png'</em>, <em>cbmax=None</em>, <em>arrowscale=0.01</em>, <em>slipscale=1.0</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.thinsection_x1x3" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">thinsection_x1x3</tt><big>(</big><em>x2='center'</em>, <em>graphicsformat='png'</em>, <em>cbmax=None</em>, <em>arrowscale=0.01</em>, <em>velarrowscale=1.0</em>, <em>slipscale=1.0</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.thinsection_x1x3" title="Permalink to this definition">¶</a></dt>
 <dd><p>Produce a 2D image of particles on a x1,x3 plane, intersecting the second axis at x2.
 Output is saved as &#8216;&lt;sid&gt;-ts-x1x3.txt&#8217; in the current folder.</p>
 <p>An upper limit to the pressure color bar range can be set by the cbmax parameter.</p>
@@ -255,6 +255,12 @@ velocity in m/s, default value is -0.001 m/s (i.e. downwards).</p>
 <dt id="sphere.V_sphere">
 <tt class="descclassname">sphere.</tt><tt class="descname">V_sphere</tt><big>(</big><em>r</em><big>)</big><a class="headerlink" href="#sphere.V_sphere" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the volume of a sphere with radius r</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sphere.cleanup">
+<tt class="descclassname">sphere.</tt><tt class="descname">cleanup</tt><big>(</big><em>spherebin</em><big>)</big><a class="headerlink" href="#sphere.cleanup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove input/output files and images from simulation</p>
 </dd></dl>
 
 <dl class="function">

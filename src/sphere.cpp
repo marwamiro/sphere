@@ -621,15 +621,18 @@ void DEM::forcechains(const std::string format, const int threedim,
             << "# the forcechain utility in sphere. For more information,\n"
             << "# see https://github.com/anders-dc/sphere\n"
             << "set size ratio -1\n";
-        if (format == "png") 
-            cout << "set term pngcairo size 50 cm,40 cm\n";
-        else if (format == "epslatex") {
+        if (format == "png") {
+            cout << "set term pngcairo size 30 cm,20 cm\n";
+            cout << "set out '" << s << "-fc.png'\n";
+        } else if (format == "epslatex") {
             cout << "set term epslatex size 8.6 cm, 5.6 cm\n";
-            cout << "set out 'plots/" << s << "-fc.tex'\n";
+            //cout << "set out 'plots/" << s << "-fc.tex'\n";
+            cout << "set out '" << s << "-fc.tex'\n";
         } else if (format == "epslatex-color") {
             //cout << "set term epslatex color size 12 cm, 8.6 cm\n";
-            cout << "set term epsla color size 8.6 cm, 5.6 cm\n";
+            cout << "set term epslatex color size 8.6 cm, 5.6 cm\n";
             cout << "set out 'plots/" << s << "-fc.tex'\n";
+            //cout << "set out '" << s << "-fc.tex'\n";
         }
         cout << "set xlabel '\\sffamily $x_1$, [m]'\n";
         if (threedim == 1) {

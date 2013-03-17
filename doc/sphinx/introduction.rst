@@ -14,6 +14,7 @@ Requirements
 The build requirements are:
   * A Nvidia CUDA-supported version of Linux or Mac OS X (see the `CUDA toolkit release notes <http://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html>`_ for more information)
   * `GNU Make <https://www.gnu.org/software/make/>`_
+  * `CMake <http://www.cmake.org>`_
   * The `GNU Compiler Collection <http://gcc.gnu.org/>`_ (GCC)
   * The `Nvidia CUDA toolkit and SDK <https://developer.nvidia.com/cuda-downloads>`_
 
@@ -42,18 +43,21 @@ Optional tools, required for building the documentation:
 
 Building *sphere*
 -----------------
-All instructions required for building *sphere* are provided in a number of ``Makefiles``. To generate the main *sphere* command-line executable, go to the source code directory, and invoke GNU Make::
+All instructions required for building *sphere* are provided in a number of ``Makefiles``. To generate the main *sphere* command-line executable, go to the root directory, and invoke CMake and GNU Make::
 
- $ cd src
- $ make
+ $ cmake . && make
 
-If successfull, the GNU Makefile will create the required data folders, object files, as well as the *sphere* executable in the root folder. The executable will be named after the host architecture, e.g. ``sphere_darwin_i386`` on a 32-bit OS X system, or ``sphere_linux_x86_64`` on a 64-bit linux system. Issue the following command to check the executable::
+If successfull, the Makefiles will create the required data folders, object files, as well as the *sphere* executable in the root folder. Issue the following commands to check the executable::
 
- $ ./sphere_* --version
+ $ ./sphere --version
 
 The output should look similar to this:
 
-.. program-output:: ../../sphere_linux_X86_64 --version
+.. program-output:: ../../sphere --version
+
+The build can be verified by running a number of automated tests::
+
+ $ make test
 
 The documentation can be read in the `reStructuredText <http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html>`_-format in the ``doc/sphinx/`` folder, or build into e.g. HTML or PDF format with the following commands::
 

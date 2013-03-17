@@ -50,7 +50,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'sphere'
-copyright = u'2012, Anders Damsgaard Christensen'
+copyright = u'2012, Anders Damsgaard'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -193,7 +193,7 @@ latex_elements = {
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
   ('index', 'sphere.tex', u'sphere Documentation',
-   u'Anders Damsgaard Christensen', 'manual'),
+   u'Anders Damsgaard', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -223,7 +223,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'sphere', u'sphere Documentation',
-     [u'Anders Damsgaard Christensen'], 1)
+     [u'Anders Damsgaard'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -237,7 +237,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'sphere', u'sphere Documentation',
-   u'Anders Damsgaard Christensen', 'sphere', 'One line description of project.',
+   u'Anders Damsgaard', 'sphere', 'One line description of project.',
    'Miscellaneous'),
 ]
 

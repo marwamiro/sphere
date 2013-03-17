@@ -72,6 +72,7 @@ The ultimate aim of the <em>sphere</em> software is to simulate soft-bedded subg
 <dd><ul class="first last simple">
 <li>A Nvidia CUDA-supported version of Linux or Mac OS X (see the <a class="reference external" href="http://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html">CUDA toolkit release notes</a> for more information)</li>
 <li><a class="reference external" href="https://www.gnu.org/software/make/">GNU Make</a></li>
+<li><a class="reference external" href="http://www.cmake.org">CMake</a></li>
 <li>The <a class="reference external" href="http://gcc.gnu.org/">GNU Compiler Collection</a> (GCC)</li>
 <li>The <a class="reference external" href="https://developer.nvidia.com/cuda-downloads">Nvidia CUDA toolkit and SDK</a></li>
 </ul>
@@ -107,17 +108,30 @@ The ultimate aim of the <em>sphere</em> software is to simulate soft-bedded subg
 </div>
 <div class="section" id="building-sphere">
 <h2>Building <em>sphere</em><a class="headerlink" href="#building-sphere" title="Permalink to this headline">¶</a></h2>
-<p>All instructions required for building <em>sphere</em> are provided in a number of <tt class="docutils literal"><span class="pre">Makefiles</span></tt>. To generate the main <em>sphere</em> command-line executable, go to the source code directory, and invoke GNU Make:</p>
-<div class="highlight-python"><pre>$ cd src
-$ make</pre>
+<p>All instructions required for building <em>sphere</em> are provided in a number of <tt class="docutils literal"><span class="pre">Makefiles</span></tt>. To generate the main <em>sphere</em> command-line executable, go to the root directory, and invoke CMake and GNU Make:</p>
+<div class="highlight-python"><pre>$ cmake . &amp;&amp; make</pre>
 </div>
-<p>If successfull, the GNU Makefile will create the required data folders, object files, as well as the <em>sphere</em> executable in the root folder. The executable will be named after the host architecture, e.g. <tt class="docutils literal"><span class="pre">sphere_darwin_i386</span></tt> on a 32-bit OS X system, or <tt class="docutils literal"><span class="pre">sphere_linux_x86_64</span></tt> on a 64-bit linux system. Issue the following command to check the executable:</p>
-<div class="highlight-python"><pre>$ ./sphere_* --version</pre>
+<p>If successfull, the Makefiles will create the required data folders, object files, as well as the <em>sphere</em> executable in the root folder. Issue the following commands to check the executable:</p>
+<div class="highlight-python"><pre>$ ./sphere --version</pre>
 </div>
 <p>The output should look similar to this:</p>
-<div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/home/adc/code/sphere/doc/sphinx/introduction.rst</tt>, line 56)</p>
-Command u&#8217;../../sphere_linux_X86_64 &#8211;version&#8217; failed: [Errno 2] No such file or directory</div>
+<div class="highlight-text"><div class="highlight"><pre>.-------------------------------------.
+|              _    Compiled for 3D   |
+|             | |                     |
+|    ___ _ __ | |__   ___ _ __ ___    |
+|   / __| &#39;_ \| &#39;_ \ / _ \ &#39;__/ _ \   |
+|   \__ \ |_) | | | |  __/ | |  __/   |
+|   |___/ .__/|_| |_|\___|_|  \___|   |
+|       | |                           |
+|       |_|           Version: 0.35   |
+`-------------------------------------´
+ A discrete element method particle dynamics simulator.
+ Written by Anders Damsgaard Christensen, license GPLv3+.
+</pre></div>
+</div>
+<p>The build can be verified by running a number of automated tests:</p>
+<div class="highlight-python"><pre>$ make test</pre>
+</div>
 <p>The documentation can be read in the <a class="reference external" href="http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html">reStructuredText</a>-format in the <tt class="docutils literal"><span class="pre">doc/sphinx/</span></tt> folder, or build into e.g. HTML or PDF format with the following commands:</p>
 <div class="highlight-python"><pre>$ cd doc/sphinx
 $ make html
