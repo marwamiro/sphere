@@ -213,7 +213,6 @@ void DEM::readbin(const char *target)
     ifs.read(as_bytes(params.nb0), sizeof(params.nb0));
     ifs.read(as_bytes(params.sigma_b), sizeof(params.sigma_b));
     ifs.read(as_bytes(params.tau_b), sizeof(params.tau_b));
-    std::cout << "\nparams.nb0 = " << params.nb0 << std::endl;
     if (params.nb0 > 0) 
         k.bonds = new uint2[params.nb0];
     k.bonds_delta = new Float4[np];
