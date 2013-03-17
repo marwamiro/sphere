@@ -46,7 +46,7 @@ DEM::DEM(const std::string inputbin,
 
     // If this is a dry run, exit
     if (dry == 1)
-        exit(1);
+        exit(0);
 
     if (initCuda == 1) {
 
