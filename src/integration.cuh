@@ -221,12 +221,14 @@ __global__ void summation(Float* in, Float *out)
 }
 
 // Update wall positions
-__global__ void integrateWalls(Float4* dev_walls_nx,
+__global__ void integrateWalls(
+        Float4* dev_walls_nx,
         Float4* dev_walls_mvfd,
         int* dev_walls_wmode,
         Float* dev_walls_force_partial,
         Float* dev_walls_vel0,
-        unsigned int blocksPerGrid)
+        unsigned int blocksPerGrid,
+        Float t_current)
 {
     unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
 
@@ -253,10 +255,11 @@ __global__ void integrateWalls(Float4* dev_walls_nx,
 
         // Normal load = Deviatoric stress times wall surface area,
         // directed downwards.
-        Float N = -w_mvfd.w*devC_grid.L[0]*devC_grid.L[1];
+        Float sigma_0 = w_mvfd.w + devC_params.devs_A * sin(2.0 * 3.141596654 * devC_params.devs_f * t_current);
+        Float N = -sigma_0*devC_grid.L[0]*devC_grid.L[1];
 
         // Calculate resulting acceleration of wall
-        // (Wall mass is stored in w component of position Float4)
+        // (Wall mass is stored in x component of position Float4)
         acc = (w_mvfd.z + N)/w_mvfd.x;
 
         // If Wall BC is controlled by velocity, it should not change

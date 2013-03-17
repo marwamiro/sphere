@@ -94,6 +94,8 @@ struct Params {
     unsigned int nb0;     // Number of inter-particle bonds at t=0
     Float sigma_b;        // Bond tensile strength
     Float tau_b;          // Bond shear strength
+    Float devs_A;         // Amplitude of modulations in deviatoric normal stress
+    Float devs_f;         // Frequency of modulations in deviatoric normal stress
 };
 
 // Structure containing wall parameters
