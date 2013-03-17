@@ -801,7 +801,8 @@ __host__ void DEM::startTime()
                     dev_walls_wmode,
                     dev_walls_force_partial,
                     dev_walls_vel0,
-                    blocksPerGrid);
+                    blocksPerGrid,
+                    time.current);
         }
 
         // Synchronization point

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from sphere import *
+from ../python/sphere import *
 import subprocess
 import sys
 

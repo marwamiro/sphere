@@ -98,6 +98,8 @@ class Spherebin:
         self.w_vel   = numpy.zeros(self.nw, dtype=numpy.float64)
         self.w_force = numpy.zeros(self.nw, dtype=numpy.float64)
         self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
+        self.w_devs_A = numpy.zeros(1, dtype=numpy.float64)
+        self.w_devs_f = numpy.zeros(1, dtype=numpy.float64)
 
         self.lambda_bar = numpy.ones(1, dtype=numpy.float64)
         self.nb0 = numpy.zeros(1, dtype=numpy.uint32)
@@ -161,6 +163,8 @@ class Spherebin:
                 (self.w_vel == other.w_vel).all() and\
                 (self.w_force == other.w_force).all() and\
                 (self.w_devs == other.w_devs).all() and\
+                self.w_devs_A == other.w_devs_A and\
+                self.w_devs_f == other.w_devs_f and\
                 self.gamma_wn == other.gamma_wn and\
                 self.gamma_wt == other.gamma_wt and\
                 self.lambda_bar == other.lambda_bar and\
@@ -179,7 +183,7 @@ class Spherebin:
 
 
 
-    def readbin(self, targetbin, verbose = True, bonds = True):
+    def readbin(self, targetbin, verbose = True, bonds = True, devsmod = True):
         'Reads a target SPHERE binary file'
 
         fh = None
@@ -285,6 +289,9 @@ class Spherebin:
                 self.w_vel[i]   = numpy.fromfile(fh, dtype=numpy.float64, count=1)
                 self.w_force[i] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
                 self.w_devs[i]  = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+            if (devsmod == True):
+                self.w_devs_A = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                self.w_devs_f = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
             if (bonds == True):
                 # Inter-particle bonds
@@ -391,6 +398,8 @@ class Spherebin:
                 fh.write(self.w_vel[i].astype(numpy.float64))
                 fh.write(self.w_force[i].astype(numpy.float64))
                 fh.write(self.w_devs[i].astype(numpy.float64))
+            fh.write(self.w_devs_A.astype(numpy.float64))
+            fh.write(self.w_devs_f.astype(numpy.float64))
 
             fh.write(self.lambda_bar.astype(numpy.float64))
             fh.write(self.nb0.astype(numpy.uint32))
@@ -1043,6 +1052,10 @@ class Spherebin:
         # Increment the number of bonds with one
         self.nb0 += 1
 
+    def currentDevs(self):
+        ''' Return current magnitude of the deviatoric normal stress '''
+        return w_devs[0] + w_devs_A * numpy.sin(2.0 * numpy.pi * self.time_current)
+
 
     def energy(self, method):
         """ Calculate the sum of the energy components of all particles.
@@ -1180,8 +1193,10 @@ class Spherebin:
         if (cudamemcheck == True):
             cudamemchk = "cuda-memcheck "
 
+        status = subprocess.call("cd ..; " + valgrindbin + cudamemchk + "./sphere " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
 
-        subprocess.call("cd ..; " + valgrindbin + cudamemchk + "./sphere " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
+        if (status != 0):
+            raise Exception("Error, the sphere run returned with status " + str(status))
 
 
     def torqueScript(self, 

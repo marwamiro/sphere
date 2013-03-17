@@ -204,13 +204,18 @@ void DEM::readbin(const char *target)
         ifs.read(as_bytes(walls.mvfd[i].z), sizeof(Float));
         ifs.read(as_bytes(walls.mvfd[i].w), sizeof(Float));
     }
+    ifs.read(as_bytes(params.devs_A), sizeof(params.devs_A));
+    ifs.read(as_bytes(params.devs_f), sizeof(params.devs_f));
+
 
     // Read bond parameters
     ifs.read(as_bytes(params.lambda_bar), sizeof(params.lambda_bar));
     ifs.read(as_bytes(params.nb0), sizeof(params.nb0));
     ifs.read(as_bytes(params.sigma_b), sizeof(params.sigma_b));
     ifs.read(as_bytes(params.tau_b), sizeof(params.tau_b));
-    k.bonds = new uint2[params.nb0];
+    std::cout << "\nparams.nb0 = " << params.nb0 << std::endl;
+    if (params.nb0 > 0) 
+        k.bonds = new uint2[params.nb0];
     k.bonds_delta = new Float4[np];
     k.bonds_omega = new Float4[np];
     for (i = 0; i<params.nb0; ++i) {
@@ -363,6 +368,8 @@ void DEM::writebin(const char *target)
             ofs.write(as_bytes(walls.mvfd[i].z), sizeof(Float));
             ofs.write(as_bytes(walls.mvfd[i].w), sizeof(Float));
         }
+        ofs.write(as_bytes(params.devs_A), sizeof(params.devs_A));
+        ofs.write(as_bytes(params.devs_f), sizeof(params.devs_f));
 
         // Write bond parameters
         ofs.write(as_bytes(params.lambda_bar), sizeof(params.lambda_bar));
