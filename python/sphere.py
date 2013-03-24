@@ -2001,7 +2001,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 if (sb.vel[j,0] > 0.0):
                     tau[i] += -sb.force[j,0]
 
-            xdisp[i]    = sb.time_current[0] * shearvel
+            if (i > 0):
+                xdisp[i]    = xdisp[i-1] + sb.time_file_dt[0] * shearvel
             sigma_eff[i] = sb.w_force[0] / A
             sigma_def[i] = sb.w_devs[0]
             dilation[i] = sb.w_x[0] - w_x0                 # dilation in meters
