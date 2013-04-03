@@ -10,9 +10,9 @@ import subprocess
 numpy.seterr(all='warn', over='raise')
 
 class Spherebin:
-    """ 
+    """
     Class containing all data SPHERE data.
-    
+
     Contains functions for reading and writing binaries, as well as simulation
     setup and data analysis.
     """
@@ -181,8 +181,6 @@ class Spherebin:
         else :
             return 1
 
-
-
     def readbin(self, targetbin, verbose = True, bonds = True, devsmod = True):
         'Reads a target SPHERE binary file'
 
@@ -257,13 +255,13 @@ class Spherebin:
             self.gamma_n      = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.gamma_t      = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.gamma_r      = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-            self.mu_s         = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
-            self.mu_d         = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
+            self.mu_s         = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+            self.mu_d         = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.mu_r         = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.gamma_wn     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.gamma_wt     = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-            self.mu_ws        = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
-            self.mu_wd        = numpy.fromfile(fh, dtype=numpy.float64, count=1) 
+            self.mu_ws        = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+            self.mu_wd        = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.rho          = numpy.fromfile(fh, dtype=numpy.float64, count=1)
             self.contactmodel = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
             self.kappa        = numpy.fromfile(fh, dtype=numpy.float64, count=1)
@@ -458,7 +456,6 @@ class Spherebin:
             fig.savefig('psd.png')
             fig.clf()
 
-
     def generateBimodalRadii(self,
             r_small = 0.005,
             r_large = 0.05,
@@ -467,7 +464,7 @@ class Spherebin:
         """ Draw radii from two sizes
             @param r_small: Radii of small population (float), in ]0;r_large[
             @param r_large: Radii of large population (float), in ]r_small;inf[
-            @param ratio: Approximate volumetric ratio between the two 
+            @param ratio: Approximate volumetric ratio between the two
             populations (large/small).
         """
         if (r_small >= r_large):
@@ -491,7 +488,7 @@ class Spherebin:
             print("generateBimodalRadii created " + str(nlarge) + " large particles, and " + str(self.np[0] - nlarge) + " small")
 
 
-    def initRandomPos(self, g = numpy.array([0.0, 0.0, -9.80665]), 
+    def initRandomPos(self, g = numpy.array([0.0, 0.0, -9.80665]),
             gridnum = numpy.array([12, 12, 36]),
             periodic = 1,
             contactmodel = 2):
@@ -584,7 +581,7 @@ class Spherebin:
             numpy.amax(self.x[:,2] + self.radius[:])]) \
                     + margin*r_max
 
-        cellsize_min = 2.1 * r_max    
+        cellsize_min = 2.1 * r_max
         self.num[0] = numpy.ceil((self.L[0]-self.origo[0])/cellsize_min)
         self.num[1] = numpy.ceil((self.L[1]-self.origo[1])/cellsize_min)
         self.num[2] = numpy.ceil((self.L[2]-self.origo[2])/cellsize_min)
@@ -601,7 +598,7 @@ class Spherebin:
 
 
     # Initialize particle positions to regular, grid-like, non-overlapping configuration
-    def initGridPos(self, g = numpy.array([0.0, 0.0, -9.80665]), 
+    def initGridPos(self, g = numpy.array([0.0, 0.0, -9.80665]),
             gridnum = numpy.array([12, 12, 36]),
             periodic = 1,
             contactmodel = 2):
@@ -621,7 +618,7 @@ class Spherebin:
         cellsize = 2.1 * r_max
         self.L = self.num * cellsize
 
-        # Check whether there are enough grid cells 
+        # Check whether there are enough grid cells
         if ((self.num[0]*self.num[1]*self.num[2]-(2**3)) < self.np):
             print("Error! The grid is not sufficiently large.")
             raise NameError('Error! The grid is not sufficiently large.')
@@ -633,7 +630,7 @@ class Spherebin:
             self.num[0] -= 1
             self.num[1] -= 1
 
-        # Check whether there are enough grid cells 
+        # Check whether there are enough grid cells
         if ((self.num[0]*self.num[1]*self.num[2]-(2*3*3)) < self.np):
             print("Error! The grid is not sufficiently large.")
             raise NameError('Error! The grid is not sufficiently large.')
@@ -666,7 +663,7 @@ class Spherebin:
             self.num[1] += 1
 
 
-    def initRandomGridPos(self, g = numpy.array([0.0, 0.0, -9.80665]), 
+    def initRandomGridPos(self, g = numpy.array([0.0, 0.0, -9.80665]),
             gridnum = numpy.array([12, 12, 32]),
             periodic = 1,
             contactmodel = 2):
@@ -679,13 +676,13 @@ class Spherebin:
         self.periodic[0] = periodic
 
         # Calculate cells in grid
-        coarsegrid = numpy.floor(gridnum/2) 
+        coarsegrid = numpy.floor(gridnum/2)
 
-        # World size 
+        # World size
         r_max = numpy.amax(self.radius)
         cellsize = 2.1 * r_max * 2 # Cells in grid 2*size to make space for random offset
 
-        # Check whether there are enough grid cells 
+        # Check whether there are enough grid cells
         if (((coarsegrid[0]-1)*(coarsegrid[1]-1)*(coarsegrid[2]-1)) < self.np):
             print("Error! The grid is not sufficiently large.")
             raise NameError('Error! The grid is not sufficiently large.')
@@ -721,8 +718,8 @@ class Spherebin:
 
     def createBondPair(self, i, j, spacing=-0.1):
         """ Bond particles i and j. Particle j is moved adjacent to particle i,
-        and oriented randomly. 
-        @param spacing (float) The inter-particle distance prescribed. Positive 
+        and oriented randomly.
+        @param spacing (float) The inter-particle distance prescribed. Positive
         values result in a inter-particle distance, negative equal an overlap.
         The value is relative to the sum of the two radii.
         """
@@ -758,7 +755,7 @@ class Spherebin:
             self.x[j,2] -= abs(x_j[2] - x_i[2])
 
         self.bond(i,j)     # register bond
-        
+
         # Check that the spacing is correct
         x_ij = self.x[i] - self.x[j]
         x_ij_length = numpy.sqrt(x_ij.dot(x_ij))
@@ -772,13 +769,13 @@ class Spherebin:
     def random2bonds(self, ratio=0.3, spacing=-0.1):
         """ Bond an amount of particles in two-particle clusters
         @param ratio: The amount of particles to bond, values in ]0.0;1.0] (float)
-        @param spacing: The distance relative to the sum of radii between bonded 
+        @param spacing: The distance relative to the sum of radii between bonded
         particles, neg. values denote an overlap. Values in ]0.0,inf[ (float).
         The particles should be initialized beforehand.
-        Note: The actual number of bonds is likely to be somewhat smaller than 
+        Note: The actual number of bonds is likely to be somewhat smaller than
         specified, due to the random selection algorithm.
         """
-        
+
         bondparticles = numpy.unique(numpy.random.random_integers(0, high=self.np-1, size=int(self.np*ratio)))
         if (bondparticles.size % 2 > 0):
             bondparticles = bondparticles[:-1].copy()
@@ -786,7 +783,6 @@ class Spherebin:
 
         for n in numpy.arange(bondparticles.shape[0]):
             self.createBondPair(bondparticles[n,0], bondparticles[n,1], spacing)
-   
 
     def zeroKinematics(self):
         'Zero kinematics of particles'
@@ -801,7 +797,6 @@ class Spherebin:
         self.ev = numpy.zeros(self.np, dtype=numpy.float64)
         self.xysum = numpy.zeros(self.np*2, dtype=numpy.float64)\
                 .reshape(self.np, 2)
-
 
     def adjustUpperWall(self, z_adjust = 1.1):
         'Adjust grid and dynamic upper wall to max. particle height'
@@ -822,13 +817,12 @@ class Spherebin:
         self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
         self.w_vel = numpy.zeros(1)
         self.w_force = numpy.zeros(1)
-        self.w_devs = numpy.zeros(1) 
+        self.w_devs = numpy.zeros(1)
 
 
-
-    def consolidate(self, deviatoric_stress = 10e3, 
+    def consolidate(self, deviatoric_stress = 10e3,
             periodic = 1):
-        """ Setup consolidation experiment. Specify the upper wall 
+        """ Setup consolidation experiment. Specify the upper wall
             deviatoric stress in Pascal, default value is 10 kPa.
         """
 
@@ -842,10 +836,9 @@ class Spherebin:
         self.wmode = numpy.array([1])
         self.w_devs = numpy.ones(1) * deviatoric_stress
 
-
     def uniaxialStrainRate(self, wvel = -0.001,
             periodic = 1):
-        """ Setup consolidation experiment. Specify the upper wall 
+        """ Setup consolidation experiment. Specify the upper wall
             velocity in m/s, default value is -0.001 m/s (i.e. downwards).
         """
 
@@ -857,11 +850,10 @@ class Spherebin:
         self.wmode = numpy.array([2]) # strain rate BC
         self.w_vel = numpy.array([wvel])
 
-
     def shear(self,
             shear_strain_rate = 1,
             periodic = 1):
-        """ Setup shear experiment. Specify the upper wall 
+        """ Setup shear experiment. Specify the upper wall
             deviatoric stress in Pascal, default value is 10 kPa.
             The shear strain rate is the shear length divided by the
             initial height per second.
@@ -912,7 +904,6 @@ class Spherebin:
         self.mu_ws[0] = 0.0
         self.mu_wd[0] = 0.0
 
-
     def initTemporal(self, total,
             current = 0.0,
             file_dt = 0.05,
@@ -935,8 +926,7 @@ class Spherebin:
         self.time_file_dt[0] = file_dt
         self.time_step_count[0] = 0
 
-
-    def defaultParams(self, 
+    def defaultParams(self,
 	    mu_s = 0.4,
             mu_d = 0.4,
             mu_r = 0.0,
@@ -1021,7 +1011,7 @@ class Spherebin:
         """ Create a bond between particles i and j """
 
         self.lambda_bar[0] = 1.0 # Radius multiplier to parallel-bond radii
-        
+
         if (hasattr(self, 'bonds') == False):
             self.bonds = numpy.array([[i,j]], dtype=numpy.uint32)
         else :
@@ -1055,7 +1045,6 @@ class Spherebin:
     def currentDevs(self):
         ''' Return current magnitude of the deviatoric normal stress '''
         return w_devs[0] + w_devs_A * numpy.sin(2.0 * numpy.pi * self.time_current)
-
 
     def energy(self, method):
         """ Calculate the sum of the energy components of all particles.
@@ -1121,7 +1110,6 @@ class Spherebin:
         e = (V_t - V_s)/V_s
         return e
 
-
     def bulkPorosity(self):
         """ Calculate and return the bulk porosity """
 
@@ -1135,7 +1123,6 @@ class Spherebin:
         # Find the volume of solids
         V_solid = numpy.sum(V_sphere(self.radius))
         return (V_total - V_solid) / V_total
-   
 
     def porosity(self,
             slices = 10,
@@ -1173,7 +1160,6 @@ class Spherebin:
 
         return numpy.array(porosity), numpy.array(depth)
 
-
     def run(self, verbose=True, hideinputfile=False, dry=False, valgrind=False, cudamemcheck=False):
         'Execute sphere with target project'
 
@@ -1198,9 +1184,8 @@ class Spherebin:
         if (status != 0):
             raise Exception("Error, the sphere run returned with status " + str(status))
 
-
-    def torqueScript(self, 
-            email="adc@geo.au.dk", 
+    def torqueScript(self,
+            email="adc@geo.au.dk",
             email_alerts="ae",
             walltime="24:00:00",
             queue="qfermi",
@@ -1240,7 +1225,6 @@ class Spherebin:
             if fh is not None:
                 fh.close()
 
-
     def render(self,
             method = "pres",
             max_val = 1e3,
@@ -1277,7 +1261,6 @@ class Spherebin:
         # The shear velocity is the x-axis velocity value of the upper particles
         return self.vel[fixvel,0].max()
 
-
     def shearstrain(self):
         'Calculates and returns the current shear strain (gamma) value of the experiment'
 
@@ -1293,9 +1276,9 @@ class Spherebin:
     def forcechains(self, lc=200.0, uc=650.0, outformat='png', disp='2d'):
         ''' Visualizes the force chains in the system from the magnitude of the
         normal contact forces, and produces an image of them.
-        @param lc: Lower cutoff of contact forces. Contacts below are not 
+        @param lc: Lower cutoff of contact forces. Contacts below are not
         visualized (float)
-        @param uc: Upper cutoff of contact forces. Contacts above are 
+        @param uc: Upper cutoff of contact forces. Contacts above are
         visualized with this value (float)
         @param outformat: Format of output image. Possible values are
         'interactive', 'png', 'epslatex', 'epslatex-color'
@@ -1336,7 +1319,7 @@ class Spherebin:
         strikelist = [] # strike direction of the normal vector, [0:360[
         diplist = [] # dip of the normal vector, [0:90]
         for i in I[0]:
-            
+
             x1 = data[i,0]
             y1 = data[i,1]
             z1 = data[i,2]
@@ -1359,14 +1342,14 @@ class Spherebin:
 
             # Find dip angle
             diplist.append(math.degrees(math.atan((zupper - zlower)/dhoriz)))
-            
+
             # Find strike angle
             if (ylower >= yupper): # in first two quadrants
                 strikelist.append(math.acos(dx/dhoriz))
             else :
                 strikelist.append(2.0*numpy.pi - math.acos(dx/dhoriz))
 
-            
+
         plt.figure(figsize=[4,4])
         ax = plt.subplot(111, polar=True, axisbg="w")
         ax.scatter(strikelist, diplist, c='k', marker='+')
@@ -1383,9 +1366,9 @@ class Spherebin:
         strikelist = [] # strike direction of the normal vector, [0:360[
         diplist = [] # dip of the normal vector, [0:90]
         for n in numpy.arange(self.nb0):
-            
-            i = self.bonds[n,0] 
-            j = self.bonds[n,1] 
+
+            i = self.bonds[n,0]
+            j = self.bonds[n,1]
 
             x1 = self.x[i,0]
             y1 = self.x[i,1]
@@ -1409,21 +1392,20 @@ class Spherebin:
 
             # Find dip angle
             diplist.append(math.degrees(math.atan((zupper - zlower)/dhoriz)))
-            
+
             # Find strike angle
             if (ylower >= yupper): # in first two quadrants
                 strikelist.append(math.acos(dx/dhoriz))
             else :
                 strikelist.append(2.0*numpy.pi - math.acos(dx/dhoriz))
 
-            
+
         plt.figure(figsize=[4,4])
         ax = plt.subplot(111, polar=True, axisbg="w")
         ax.scatter(strikelist, diplist, c='k', marker='+')
         ax.set_rmax(90)
         ax.set_rticks([])
         plt.savefig("bonds-" + self.sid + "-rose.pdf", transparent=True)
-
 
 
     def thinsection_x1x3(self,
@@ -1469,14 +1451,14 @@ class Spherebin:
 
         # Loop over all particles, find intersections
         for i in range(self.np):
-            
+
             delta = abs(self.x[i,1] - x2)   # distance between centre and plane
 
             if (delta < self.radius[i]): # if the sphere intersects the plane
 
                 # Store particle index
                 ilist.append(i)
-                
+
                 # Store position on plane
                 xlist.append(self.x[i,0])
                 ylist.append(self.x[i,2])
@@ -1533,7 +1515,7 @@ class Spherebin:
 
             for (x, y, r, p) in zip(xlist, ylist, rlist, plist):
                 fh.write("{}\t{}\t{}\t{}\n".format(x, y, r, p))
-        
+
         finally :
             if fh is not None:
                 fh.close()
@@ -1546,7 +1528,7 @@ class Spherebin:
 
             for (x, y, r) in zip(cxlist, cylist, crlist):
                 fh.write("{}\t{}\t{}\n".format(x, y, r))
-        
+
         finally :
             if fh is not None:
                 fh.close()
@@ -1561,7 +1543,7 @@ class Spherebin:
 
             for (ax, ay, dax, day) in zip(axlist, aylist, daxlist, daylist):
                 fh.write("{}\t{}\t{}\t{}\n".format(ax, ay, dax, day))
-        
+
         finally :
             if fh is not None:
                 fh.close()
@@ -1576,7 +1558,7 @@ class Spherebin:
 
             for (x, y, dvx, dvy) in zip(xlist, ylist, dvxlist, dvylist):
                 fh.write("{}\t{}\t{}\t{}\n".format(x, y, dvx, dvy))
-        
+
         finally :
             if fh is not None:
                 fh.close()
@@ -1652,7 +1634,7 @@ class Spherebin:
 
             for (sx, sy, dsx, dsy) in zip(sxlist, sylist, dsxlist, dsylist):
                 fh.write("{}\t{}\t{}\t{}\n".format(sx, sy, dsx, dsy))
-        
+
         finally :
             if fh is not None:
                 fh.close()
@@ -2033,7 +2015,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             ax2.plot(xdisp/w_x0, dilation, '+-')
             ax2.grid()
 
-        else : 
+        else :
             # Write values to textfile
             filename = "shear-stresses-{0}.txt".format(project)
             #print("Writing stress data to " + filename)
@@ -2075,7 +2057,7 @@ def run(binary, verbose=True, hideinputfile=False):
     subprocess.call("cd ..; ./sphere " + quiet + " " + binary + " " + stdout, shell=True)
 
 def torqueScriptParallel3(obj1, obj2, obj3,
-        email="adc@geo.au.dk", 
+        email="adc@geo.au.dk",
         email_alerts="ae",
         walltime="24:00:00",
         queue="qfermi",
@@ -2124,7 +2106,7 @@ def torqueScriptParallel3(obj1, obj2, obj3,
 
 
 def torqueScriptSerial3(obj1, obj2, obj3,
-        email="adc@geo.au.dk", 
+        email="adc@geo.au.dk",
         email_alerts="ae",
         walltime="24:00:00",
         queue="qfermi",
@@ -2172,7 +2154,7 @@ def status(project):
     """ Check the status.dat file for the target project,
         and return the last file numer.
     """
-    
+
     fh = None
     try :
         filepath = "../output/{0}.status.dat".format(project)
