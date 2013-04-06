@@ -783,6 +783,10 @@ class Spherebin:
 
         for n in numpy.arange(bondparticles.shape[0]):
             self.createBondPair(bondparticles[n,0], bondparticles[n,1], spacing)
+<<<<<<< HEAD
+=======
+
+>>>>>>> a4966d0106281e3fbecd21a0a132f7e76e851ad0
 
     def zeroKinematics(self):
         'Zero kinematics of particles'
@@ -818,6 +822,10 @@ class Spherebin:
         self.w_vel = numpy.zeros(1)
         self.w_force = numpy.zeros(1)
         self.w_devs = numpy.zeros(1)
+<<<<<<< HEAD
+=======
+
+>>>>>>> a4966d0106281e3fbecd21a0a132f7e76e851ad0
 
 
     def consolidate(self, deviatoric_stress = 10e3,
@@ -926,6 +934,10 @@ class Spherebin:
         self.time_file_dt[0] = file_dt
         self.time_step_count[0] = 0
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> a4966d0106281e3fbecd21a0a132f7e76e851ad0
     def defaultParams(self,
 	    mu_s = 0.4,
             mu_d = 0.4,
@@ -1123,6 +1135,10 @@ class Spherebin:
         # Find the volume of solids
         V_solid = numpy.sum(V_sphere(self.radius))
         return (V_total - V_solid) / V_total
+<<<<<<< HEAD
+=======
+
+>>>>>>> a4966d0106281e3fbecd21a0a132f7e76e851ad0
 
     def porosity(self,
             slices = 10,
@@ -1184,6 +1200,10 @@ class Spherebin:
         if (status != 0):
             raise Exception("Error, the sphere run returned with status " + str(status))
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> a4966d0106281e3fbecd21a0a132f7e76e851ad0
     def torqueScript(self,
             email="adc@geo.au.dk",
             email_alerts="ae",
@@ -1983,7 +2003,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
                 if (sb.vel[j,0] > 0.0):
                     tau[i] += -sb.force[j,0]
 
-            xdisp[i]    = sb.time_current[0] * shearvel
+            if (i > 0):
+                xdisp[i]    = xdisp[i-1] + sb.time_file_dt[0] * shearvel
             sigma_eff[i] = sb.w_force[0] / A
             sigma_def[i] = sb.w_devs[0]
             dilation[i] = sb.w_x[0] - w_x0                 # dilation in meters
@@ -1998,18 +2019,19 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
         # Plot stresses
         if (outformat != 'txt'):
             shearinfo = "$\\tau_u$ = {:.3} Pa at $\gamma$ = {:.3}".format(tau_u, tau_u_shearstrain)
-            fig.text(0.5,0.03,shearinfo,horizontalalignment='center',fontproperties=FontProperties(size=14))
-            ax1 = plt.subplot2grid((2,1),(0,0))
+            fig.text(0.5, 0.03, shearinfo, horizontalalignment='center',
+                     fontproperties=FontProperties(size=14))
+            ax1 = plt.subplot2grid((1, 2), (0, 0))
             ax1.set_xlabel('Shear strain [-]')
             ax1.set_ylabel('Stress [Pa]')
-            ax1.plot(xdisp/w_x0, sigma_eff, '+-g', label="$\sigma'$")
-            ax1.plot(xdisp/w_x0, sigma_def, '+-b', label="$\sigma_0$")
-            ax1.plot(xdisp/w_x0, tau, '+-r', label="$\\tau$")
-            ax1.legend(loc = 4)
+            ax1.plot(xdisp / w_x0, sigma_eff, '+-g', label="$\sigma'$")
+            ax1.plot(xdisp / w_x0, sigma_def, '+-b', label="$\sigma_0$")
+            ax1.plot(xdisp / w_x0, tau, '+-r', label="$\\tau$")
+            ax1.legend(loc=4)
             ax1.grid()
 
             # Plot dilation
-            ax2 = plt.subplot2grid((2,1),(1,0))
+            ax2 = plt.subplot2grid((1,2),(1,0))
             ax2.set_xlabel('Shear strain [-]')
             ax2.set_ylabel('Dilation [m]')
             ax2.plot(xdisp/w_x0, dilation, '+-')
