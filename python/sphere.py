@@ -1440,10 +1440,13 @@ class Spherebin:
 
 
         plt.figure(figsize=[4, 4])
-        ax = subplot(111)
-        ax.scatter(self.xysum[:,0], self.x[:,2], c='k', marker='+')
-        ax.errorbar(xdisp, zpos, xerr=err, linestyle='-')
-        plt.savefit(self.sid + '-sheardisp.' + outformat, transparent=True)
+        ax = plt.subplot(111)
+        ax.scatter(self.xysum[:,0], self.x[:,2], c='gray', marker='+')
+        ax.errorbar(xdisp, zpos, xerr=err,
+                    c='black', linestyle='-', linewidth=1.4)
+        ax.set_xlabel("Horizontal particle displacement, [m]")
+        ax.set_ylabel("Vertical position, [m]")
+        plt.savefig(self.sid + '-sheardisp.' + outformat, transparent=True)
 
 
 
