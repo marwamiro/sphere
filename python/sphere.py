@@ -1295,6 +1295,7 @@ class Spherebin:
         subprocess.call("cd .. && ./forcechains " + nd + "-f " + outformat + " -lc " + str(lc) + " -uc " + str(uc) + " input/" + self.sid + ".bin > python/tmp.gp", shell=True)
         subprocess.call("gnuplot tmp.gp && rm tmp.bin && rm tmp.gp", shell=True)
 
+
     def forcechainsRose(self, lower_limit=0.25):
         ''' Visualize strike- and dip angles of the strongest force chains in a
         rose plot.
@@ -1406,6 +1407,44 @@ class Spherebin:
         ax.set_rmax(90)
         ax.set_rticks([])
         plt.savefig("bonds-" + self.sid + "-rose.pdf", transparent=True)
+
+
+    def sheardisp(self, outformat='pdf', zslices=32):
+        ''' Show particle x-displacement vs. the z-pos '''
+
+        # Bin data and error bars for alternative visualization
+        h_total = numpy.max(self.x[:,2]) - numpy.min(self.x[:,2])
+        h_slice = h_total / zslices
+
+        zpos = numpy.zeros(zslices)
+        xdisp = numpy.zeros(zslices)
+        err = numpy.zeros(zslices)
+
+        for iz in range(zslices):
+
+            # Find upper and lower boundaries of bin
+            zlower = iz * h_slice
+            zupper = zlower + h_slice
+
+            # Save depth
+            zpos[iz] = zlower + 0.5*h_slice
+
+            # Find particle indexes within that slice
+            I = numpy.nonzero((self.x[:,2] > zlower) & (self.x[:,2] < zupper))
+
+            # Save mean x displacement
+            xdisp[iz] = numpy.mean(self.xysum[I,0])
+
+            # Save x displacement standard deviation
+            err[iz] = numpy.std(self.xysum[I,0])
+
+
+        plt.figure(figsize=[4, 4])
+        ax = subplot(111)
+        ax.scatter(self.xysum[:,0], self.x[:,2], c='k', marker='+')
+        ax.errorbar(xdisp, zpos, xerr=err, linestyle='-')
+        plt.savefit(self.sid + '-sheardisp.' + outformat, transparent=True)
+
 
 
     def thinsection_x1x3(self,
@@ -2034,6 +2073,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             finally :
                 if fh is not None:
                     fh.close()
+
 
     else :
         print("Visualization type '" + method + "' not understood")
