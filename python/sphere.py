@@ -783,10 +783,6 @@ class Spherebin:
 
         for n in numpy.arange(bondparticles.shape[0]):
             self.createBondPair(bondparticles[n,0], bondparticles[n,1], spacing)
-<<<<<<< HEAD
-=======
-
->>>>>>> a4966d0106281e3fbecd21a0a132f7e76e851ad0
 
     def zeroKinematics(self):
         'Zero kinematics of particles'
@@ -822,10 +818,6 @@ class Spherebin:
         self.w_vel = numpy.zeros(1)
         self.w_force = numpy.zeros(1)
         self.w_devs = numpy.zeros(1)
-<<<<<<< HEAD
-=======
-
->>>>>>> a4966d0106281e3fbecd21a0a132f7e76e851ad0
 
 
     def consolidate(self, deviatoric_stress = 10e3,
@@ -934,10 +926,6 @@ class Spherebin:
         self.time_file_dt[0] = file_dt
         self.time_step_count[0] = 0
 
-<<<<<<< HEAD
-=======
-
->>>>>>> a4966d0106281e3fbecd21a0a132f7e76e851ad0
     def defaultParams(self,
 	    mu_s = 0.4,
             mu_d = 0.4,
@@ -1135,10 +1123,6 @@ class Spherebin:
         # Find the volume of solids
         V_solid = numpy.sum(V_sphere(self.radius))
         return (V_total - V_solid) / V_total
-<<<<<<< HEAD
-=======
-
->>>>>>> a4966d0106281e3fbecd21a0a132f7e76e851ad0
 
     def porosity(self,
             slices = 10,
@@ -1200,10 +1184,6 @@ class Spherebin:
         if (status != 0):
             raise Exception("Error, the sphere run returned with status " + str(status))
 
-<<<<<<< HEAD
-=======
-
->>>>>>> a4966d0106281e3fbecd21a0a132f7e76e851ad0
     def torqueScript(self,
             email="adc@geo.au.dk",
             email_alerts="ae",
