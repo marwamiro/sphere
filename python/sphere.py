@@ -1449,7 +1449,6 @@ class Spherebin:
         plt.savefig(self.sid + '-sheardisp.' + outformat, transparent=True)
 
 
-
     def thinsection_x1x3(self,
             x2 = 'center',
             graphicsformat = 'png',
