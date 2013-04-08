@@ -9,6 +9,7 @@ import subprocess
 
 numpy.seterr(all='warn', over='raise')
 
+
 class Spherebin:
     """
     Class containing all data SPHERE data.
@@ -1438,7 +1439,6 @@ class Spherebin:
             # Save x displacement standard deviation
             err[iz] = numpy.std(self.xysum[I,0])
 
-
         plt.figure(figsize=[4, 4])
         ax = plt.subplot(111)
         ax.scatter(self.xysum[:,0], self.x[:,2], c='gray', marker='+')
@@ -1447,6 +1447,20 @@ class Spherebin:
         ax.set_xlabel("Horizontal particle displacement, [m]")
         ax.set_ylabel("Vertical position, [m]")
         plt.savefig(self.sid + '-sheardisp.' + outformat, transparent=True)
+
+    def porosities(self, outformat='pdf', zslices=16):
+        ''' Plot porosities with depth '''
+
+        porosity, depth = self.porosity(zslices)
+
+        plt.figure(figsize=[4, 4])
+        ax = plt.subplot(111)
+        ax.plot(porosity, depth,
+                    c='black', linestyle='-', linewidth=1.4)
+        ax.set_xlabel("Horizontally averaged porosity, [-]")
+        ax.set_ylabel("Vertical position, [m]")
+        plt.savefig(self.sid + '-porositiy.' + outformat, transparent=True)
+
 
 
     def thinsection_x1x3(self,
