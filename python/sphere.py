@@ -1183,7 +1183,7 @@ class Spherebin:
         status = subprocess.call("cd ..; " + valgrindbin + cudamemchk + "./sphere " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
 
         if (status != 0):
-            raise Exception("Error, the sphere run returned with status " + str(status))
+            print("Warning: the sphere run returned with status " + str(status))
 
     def torqueScript(self,
             email="adc@geo.au.dk",
@@ -1456,7 +1456,7 @@ class Spherebin:
         plt.figure(figsize=[4, 4])
         ax = plt.subplot(111)
         ax.plot(porosity, depth,
-                    c='black', linestyle='-', linewidth=1.4)
+                c='black', linestyle='-', linewidth=1.4)
         ax.set_xlabel("Horizontally averaged porosity, [-]")
         ax.set_ylabel("Vertical position, [m]")
         plt.savefig(self.sid + '-porositiy.' + outformat, transparent=True)
