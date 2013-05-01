@@ -1,3 +1,6 @@
+#ifndef SORTING_CUH_
+#define SORTING_CUH_
+
 // Returns the cellID containing the particle, based cubic grid
 // See Bayraktar et al. 2009
 // Kernel is executed on the device, and is callable from the device only
@@ -118,5 +121,5 @@ __global__ void reorderArrays(unsigned int* dev_cellStart,
 } // End of reorderArrays(...)
 
 
-
+#endif
 // vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -96,6 +96,7 @@ struct Params {
     Float tau_b;          // Bond shear strength
     Float devs_A;         // Amplitude of modulations in deviatoric normal stress
     Float devs_f;         // Frequency of modulations in deviatoric normal stress
+    Float nu;             // Fluid dynamic viscosity
 };
 
 // Structure containing wall parameters

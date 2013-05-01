@@ -45,9 +45,9 @@ for d in distances:
     sb.bond(0, 1)
     sb.defaultParams(gamma_n = 0.0, gamma_t = 0.0)
     #sb.initTemporal(total=0.5, file_dt=0.01)
-
     #sb.render(verbose=False)
     #visualize(sb.sid, "energy")
+
 
     print("# Stability test")
     sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
@@ -85,8 +85,9 @@ for d in distances:
         print(passed())
     compareNumpyArrays(sb.vel[:,1:2], z2_2, "vel[:,1:2]")
     compareNumpyArrays(sb.angvel, z2_3, "angvel\t")
-    #printKinematics(sb)
+    printKinematics(sb)
     #visualize(sb.sid, "energy")
+    continue
 
     print("# Normal contraction")
     sb.zeroKinematics()

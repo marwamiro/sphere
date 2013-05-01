@@ -21,7 +21,6 @@ compare(orig, py, "Python IO:")
 
 # Test C++ IO routines
 orig.run(verbose=False, hideinputfile=True)
-#orig.run()
 cpp = Spherebin()
 cpp.readbin("../output/" + orig.sid + ".output00000.bin", verbose=False)
 compare(orig, cpp, "C++ IO:   ")

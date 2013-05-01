@@ -25,6 +25,7 @@
 #include "contactsearch.cuh"
 #include "integration.cuh"
 #include "raytracer.cuh"
+#include "latticeboltzmann.cuh"
 
 
 // Wrapper function for initializing the CUDA components.
@@ -140,7 +141,8 @@ __global__ void checkConstantValues(int* dev_equal,
             dev_params->db != devC_params.db ||
             dev_params->V_b != devC_params.V_b ||
             dev_params->lambda_bar != devC_params.lambda_bar ||
-            dev_params->nb0 != devC_params.nb0)
+            dev_params->nb0 != devC_params.nb0 ||
+            dev_params->nu != devC_params.nu)
         *dev_equal = 2; // Not ok
 
 }
@@ -184,11 +186,12 @@ __host__ void DEM::checkConstantMemory()
     // Are the values equal?
     if (*equal != 0) {
         std::cerr << "Error! The values in constant memory do not "
-            << "seem to be correct (" << *equal << ").\n";
+            << "seem to be correct (" << *equal << ")." << std::endl;
         exit(1);
     } else {
         if (verbose == 1)
-            std::cout << "  Constant values ok (" << *equal << ").\n";
+            std::cout << "  Constant values ok (" << *equal << ")."
+                << std::endl;
     }
 }
 
@@ -256,7 +259,8 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
     cudaMalloc((void**)&dev_torque, memSizeF4);
 
     // Particle contact bookkeeping arrays
-    cudaMalloc((void**)&dev_contacts, sizeof(unsigned int)*np*NC); // Max NC contacts per particle
+    cudaMalloc((void**)&dev_contacts,
+            sizeof(unsigned int)*np*NC); // Max NC contacts per particle
     cudaMalloc((void**)&dev_distmod, memSizeF4*NC);
     cudaMalloc((void**)&dev_delta_t, memSizeF4*NC);
     cudaMalloc((void**)&dev_bonds, sizeof(uint2)*params.nb0);
@@ -278,8 +282,10 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
     // Cell-related arrays
     cudaMalloc((void**)&dev_gridParticleCellID, sizeof(unsigned int)*np);
     cudaMalloc((void**)&dev_gridParticleIndex, sizeof(unsigned int)*np);
-    cudaMalloc((void**)&dev_cellStart, sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
-    cudaMalloc((void**)&dev_cellEnd, sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
+    cudaMalloc((void**)&dev_cellStart, 
+            sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
+    cudaMalloc((void**)&dev_cellEnd,
+            sizeof(unsigned int)*grid.num[0]*grid.num[1]*grid.num[2]);
 
     // Host contact bookkeeping arrays
     k.contacts = new unsigned int[np*NC];
@@ -298,9 +304,17 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
     cudaMalloc((void**)&dev_walls_vel0, sizeof(Float)*walls.nw);
     // dev_walls_force_partial allocated later
 
+    // Fluid arrays
+    cudaMalloc((void**)&dev_f,
+            sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19);
+    cudaMalloc((void**)&dev_f_new,
+            sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19);
+    cudaMalloc((void**)&dev_v_rho,
+            sizeof(Float4)*grid.num[0]*grid.num[1]*grid.num[2]);
+
     checkForCudaErrors("End of allocateGlobalDeviceMemory");
     if (verbose == 1)
-        std::cout << "Done\n";
+        std::cout << "Done" << std::endl;
 }
 
 __host__ void DEM::freeGlobalDeviceMemory()
@@ -348,10 +362,16 @@ __host__ void DEM::freeGlobalDeviceMemory()
     cudaFree(dev_walls_force_partial);
     cudaFree(dev_walls_force_pp);
     cudaFree(dev_walls_vel0);
+
+    // Fluid arrays
+    cudaFree(dev_f);
+    cudaFree(dev_f_new);
+    cudaFree(dev_v_rho);
+
     checkForCudaErrors("During cudaFree calls");
 
     if (verbose == 1)
-        printf("Done\n");
+        std::cout << "Done" << std::endl;
 }
 
 
@@ -427,9 +447,18 @@ __host__ void DEM::transferToGlobalDeviceMemory()
                 sizeof(Float), cudaMemcpyHostToDevice);
     }
 
+    // Fluid arrays
+    if (params.nu > 0.0) {
+        cudaMemcpy( dev_f, f, sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
+                cudaMemcpyHostToDevice);
+        cudaMemcpy( dev_v_rho, v_rho,
+                sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2],
+                cudaMemcpyHostToDevice);
+    }
+
     checkForCudaErrors("End of transferToGlobalDeviceMemory");
     if (verbose == 1)
-        std::cout << "Done\n";
+        std::cout << "Done" << std::endl;
 }
 
 __host__ void DEM::transferFromGlobalDeviceMemory()
@@ -495,8 +524,15 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
     cudaMemcpy( walls.mvfd, dev_walls_mvfd,
             sizeof(Float4)*walls.nw, cudaMemcpyDeviceToHost);
 
-    // Bond parameters
-
+    // Fluid arrays
+    if (params.nu > 0.0) {
+        cudaMemcpy( f, dev_f,
+                sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
+                cudaMemcpyDeviceToHost);
+        cudaMemcpy( v_rho, dev_v_rho,
+                sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2],
+                cudaMemcpyDeviceToHost);
+    }
 
     checkForCudaErrors("End of transferFromGlobalDeviceMemory");
 }
@@ -506,6 +542,8 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
 __host__ void DEM::startTime()
 {
     using std::cout; // Namespace directive
+    using std::cerr; // Namespace directive
+    using std::endl; // Namespace directive
     std::string outfile;
     char file[200];
     FILE *fp;
@@ -523,14 +561,34 @@ __host__ void DEM::startTime()
     // Start CPU clock
     tic = clock();
 
-    // GPU workload configuration
-    unsigned int threadsPerBlock = 256; 
+    //// GPU workload configuration
+    //unsigned int threadsPerBlock = 256; 
+    unsigned int threadsPerBlock = 512; 
+
     // Create enough blocks to accomodate the particles
     unsigned int blocksPerGrid = iDivUp(np, threadsPerBlock); 
     dim3 dimGrid(blocksPerGrid, 1, 1); // Blocks arranged in 1D grid
     dim3 dimBlock(threadsPerBlock, 1, 1); // Threads arranged in 1D block
+
     unsigned int blocksPerGridBonds = iDivUp(params.nb0, threadsPerBlock); 
     dim3 dimGridBonds(blocksPerGridBonds, 1, 1); // Blocks arranged in 1D grid
+
+    // Use 3D block and grid layout for Lattice-Boltzmann fluid calculations
+    dim3 dimBlockFluid(8, 8, 8);    // 512 threads per block
+    //dim3 dimGridFluid(
+            //(grid.num[2]+8-1)/8,    // Use x as the z
+            //(grid.num[1]+8-1)/8,
+            //(grid.num[0]+8-1)/8);
+    dim3 dimGridFluid(
+            iDivUp(grid.num[2],dimBlockFluid.x),    // Use z as x
+            iDivUp(grid.num[1],dimBlockFluid.y),
+            iDivUp(grid.num[0],dimBlockFluid.z));   // Use x as z
+    if (dimGridFluid.z > 64) {
+        cerr << "Error: dimGridFluid.z > 64" << endl;
+        exit(1);
+    }
+
+
     // Shared memory per block
     unsigned int smemSize = sizeof(unsigned int)*(threadsPerBlock+1);
 
@@ -544,7 +602,16 @@ __host__ void DEM::startTime()
             << dimGrid.x << "*" << dimGrid.y << "*" << dimGrid.z << "\n"
             << "  - Threads per block: "
             << dimBlock.x << "*" << dimBlock.y << "*" << dimBlock.z << "\n"
-            << "  - Shared memory required per block: " << smemSize << " bytes\n";
+            << "  - Shared memory required per block: " << smemSize << " bytes"
+            << endl;
+        if (params.nu > 0.0) {
+            cout << "  - Blocks per fluid grid: "
+                << dimGridFluid.x << "*" << dimGridFluid.y << "*" <<
+                dimGridFluid.z << "\n"
+                << "  - Threads per fluid block: "
+                << dimBlockFluid.x << "*" << dimBlockFluid.y << "*" <<
+                dimBlockFluid.z << endl;
+        }
     }
 
     // Initialize counter variable values
@@ -561,17 +628,17 @@ __host__ void DEM::startTime()
             time.step_count);
     fclose(fp);
 
-    // Write first output data file: output0.bin, thus testing writing of bin files
-    //outfile = "output/" + sid + ".output0.bin";
-    //sprintf(file,"output/%s.output0.bin", sid);
-    //writebin(outfile.c_str());
+    // Initialize fluid distribution array
+    initfluid<<< dimGridFluid, dimBlockFluid >>>(dev_v_rho, dev_f);
+    cudaThreadSynchronize();
+    checkForCudaErrors("Post initfluid");
 
     if (verbose == 1) {
         cout << "\n  Entering the main calculation time loop...\n\n"
             << "  IMPORTANT: Do not close this terminal, doing so will \n"
             << "             terminate this SPHERE process. Follow the \n"
             << "             progress by executing:\n"
-            << "                $ ./sphere_status " << sid << "\n\n";
+            << "                $ ./sphere_status " << sid << endl << endl;
     }
 
 
@@ -590,6 +657,7 @@ __host__ void DEM::startTime()
     double t_topology = 0.0;
     double t_interact = 0.0;
     double t_bondsLinear = 0.0;
+    double t_latticeBoltzmannD3Q19 = 0.0;
     double t_integrate = 0.0;
     double t_summation = 0.0;
     double t_integrateWalls = 0.0;
@@ -606,8 +674,6 @@ __host__ void DEM::startTime()
     // MAIN CALCULATION TIME LOOP
     while (time.current <= time.total) {
 
-        // Increment iteration counter
-        ++iter;
 
         // Print current step number to terminal
         //printf("Step: %d\n", time.step_count);
@@ -733,7 +799,8 @@ __host__ void DEM::startTime()
 
         // Process particle pairs
         if (params.nb0 > 0) {
-            //bondsLinear<<< 1, params.nb0 >>>(
+            if (PROFILING == 1)
+                startTimer(&kernel_tic);
             bondsLinear<<<dimGridBonds, dimBlock>>>(
                     dev_bonds,
                     dev_bonds_delta,
@@ -750,6 +817,31 @@ __host__ void DEM::startTime()
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_bondsLinear);
             checkForCudaErrors("Post bondsLinear", iter);
         }
+
+        // Process fluid and particle interaction in each cell
+        if (params.nu > 0.0) {
+            if (PROFILING == 1)
+                startTimer(&kernel_tic);
+            latticeBoltzmannD3Q19<<< dimGridFluid, dimBlockFluid>>> (
+                    dev_f,
+                    dev_f_new,
+                    dev_v_rho,
+                    dev_cellStart,
+                    dev_cellEnd,
+                    dev_x_sorted,
+                    dev_vel_sorted,
+                    dev_force,
+                    dev_gridParticleIndex);
+            cudaThreadSynchronize();
+            if (PROFILING == 1)
+                stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
+                        &t_latticeBoltzmannD3Q19);
+            checkForCudaErrors("Post latticeBoltzmannD3Q19", iter);
+
+            // Flip flop
+            swapFloatArrays(dev_f, dev_f_new);
+        }
+
 
 
         // Update particle kinematics
@@ -822,6 +914,7 @@ __host__ void DEM::startTime()
         // Update timers and counters
         time.current  += time.dt;
         filetimeclock += time.dt;
+        ++iter;
 
         // Report time to console
         if (verbose == 1) {
@@ -938,6 +1031,8 @@ __host__ void DEM::startTime()
             << "\t(" << 100.0*t_interact/t_sum << " %)\n"
             << "  - bondsLinear:\t" << t_bondsLinear/1000.0 << " s"
             << "\t(" << 100.0*t_bondsLinear/t_sum << " %)\n"
+            << "  - latticeBoltzmann:\t" << t_latticeBoltzmannD3Q19/1000.0 << " s"
+            << "\t(" << 100.0*t_latticeBoltzmannD3Q19/t_sum << " %)\n"
             << "  - integrate:\t\t" << t_integrate/1000.0 << " s"
             << "\t(" << 100.0*t_integrate/t_sum << " %)\n"
             << "  - summation:\t\t" << t_summation/1000.0 << " s"

@@ -360,7 +360,7 @@ __global__ void latticeBoltzmannD3Q19(
             dev_f_new[grid2index(nx-1,   0,   z,  9)] = fmax(0.0, f_9);
 
         // Edge 10 (+x,-y): Periodic
-        /*if (x < nx-1 && y > 0)  // not at boundary
+        if (x < nx-1 && y > 0)  // not at boundary
             dev_f_new[grid2index( x+1, y-1,   z, 10)] = fmax(0.0, f_10);
         else if (x < nx-1)  // at -y boundary
             dev_f_new[grid2index( x+1,ny-1,   z, 10)] = fmax(0.0, f_10);
@@ -445,11 +445,10 @@ __global__ void latticeBoltzmannD3Q19(
         else if (y < ny-1)  // at -z boundary
             dev_f_new[grid2index(   x, y+1,   0, 17)] = fmax(0.0, f_18);
         else if (z > 0)     // at +y boundary
-            dev_f_new[grid2index(   x,   0, z+1, 18)] = fmax(0.0, f_18);
+            dev_f_new[grid2index(   x,   0, z-1, 18)] = fmax(0.0, f_18);
         else    // at +y-z boundary
             dev_f_new[grid2index(   x,   0,   0, 17)] = fmax(0.0, f_18);
 
-        // */
     }
 }
 

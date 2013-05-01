@@ -108,9 +108,18 @@ class Spherebin:
         self.tau_b = numpy.ones(1, dtype=numpy.uint32) * numpy.infty
         self.bonds = numpy.zeros((self.nb0, 2), dtype=numpy.uint32)
         self.bonds_delta_n = numpy.zeros(self.nb0, dtype=numpy.float64)
-        self.bonds_delta_t = numpy.zeros((self.nb0, self.nd), dtype=numpy.float64)
+        self.bonds_delta_t = numpy.zeros((self.nb0, self.nd),
+                                         dtype=numpy.float64)
         self.bonds_omega_n = numpy.zeros(self.nb0, dtype=numpy.float64)
-        self.bonds_omega_t = numpy.zeros((self.nb0, self.nd), dtype=numpy.float64)
+        self.bonds_omega_t = numpy.zeros((self.nb0, self.nd),
+                                         dtype=numpy.float64)
+
+        self.nu = numpy.zeros(1, dtype=numpy.float64)
+        self.f_v = numpy.zeros(
+            (self.num[0] * self.num[1] * self.num[2], self.nd),
+            dtype=numpy.float64)
+        self.f_rho = numpy.zeros(self.num[0] * self.num[1] * self.num[2],
+                               dtype=numpy.float64)
 
     def __cmp__(self, other):
         """ Called when to Spherebin objects are compared.
@@ -176,13 +185,16 @@ class Spherebin:
                 self.bonds_delta_n == other.bonds_delta_n and\
                 self.bonds_delta_t == other.bonds_delta_t and\
                 self.bonds_omega_n == other.bonds_omega_n and\
-                self.bonds_omega_t == other.bonds_omega_t\
+                self.bonds_omega_t == other.bonds_omega_t and\
+                self.nu == other.nu and\
+                (self.f_v == other.f_v).all() and\
+                (self.f_rho == other.f_rho).all()\
                 ).all() == True):
                     return 0 # All equal
-        else :
+        else:
             return 1
 
-    def readbin(self, targetbin, verbose = True, bonds = True, devsmod = True):
+    def readbin(self, targetbin, verbose = True, bonds = True, devsmod = True, fluid = True):
         'Reads a target SPHERE binary file'
 
         fh = None
@@ -203,20 +215,16 @@ class Spherebin:
             self.time_step_count = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
 
             # Allocate array memory for particles
-            self.x       = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
-            self.radius  = numpy.zeros(self.np, dtype=numpy.float64)
-            self.xysum   = numpy.zeros((self.np, 2), dtype=numpy.float64)
-            self.vel     = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
-            self.fixvel  = numpy.zeros(self.np, dtype=numpy.float64)
-            #self.force   = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
-            #self.angpos  = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
-            #self.angvel  = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
-            #self.torque  = numpy.zeros((self.np, self.nd), dtype=numpy.float64)
-            self.es_dot  = numpy.zeros(self.np, dtype=numpy.float64)
-            self.es      = numpy.zeros(self.np, dtype=numpy.float64)
-            self.ev_dot  = numpy.zeros(self.np, dtype=numpy.float64)
-            self.ev      = numpy.zeros(self.np, dtype=numpy.float64)
-            self.p       = numpy.zeros(self.np, dtype=numpy.float64)
+            self.x       = numpy.empty((self.np, self.nd), dtype=numpy.float64)
+            self.radius  = numpy.empty(self.np, dtype=numpy.float64)
+            self.xysum   = numpy.empty((self.np, 2), dtype=numpy.float64)
+            self.vel     = numpy.empty((self.np, self.nd), dtype=numpy.float64)
+            self.fixvel  = numpy.empty(self.np, dtype=numpy.float64)
+            self.es_dot  = numpy.empty(self.np, dtype=numpy.float64)
+            self.es      = numpy.empty(self.np, dtype=numpy.float64)
+            self.ev_dot  = numpy.empty(self.np, dtype=numpy.float64)
+            self.ev      = numpy.empty(self.np, dtype=numpy.float64)
+            self.p       = numpy.empty(self.np, dtype=numpy.float64)
 
             # Read remaining data from binary
             self.origo    = numpy.fromfile(fh, dtype=numpy.float64, count=self.nd)
@@ -271,13 +279,13 @@ class Spherebin:
 
             # Wall data
             self.nw      = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
-            self.wmode   = numpy.zeros(self.nw, dtype=numpy.int32)
-            self.w_n     = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
-            self.w_x     = numpy.zeros(self.nw, dtype=numpy.float64)
-            self.w_m     = numpy.zeros(self.nw, dtype=numpy.float64)
-            self.w_vel   = numpy.zeros(self.nw, dtype=numpy.float64)
-            self.w_force = numpy.zeros(self.nw, dtype=numpy.float64)
-            self.w_devs  = numpy.zeros(self.nw, dtype=numpy.float64)
+            self.wmode   = numpy.empty(self.nw, dtype=numpy.int32)
+            self.w_n     = numpy.empty(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
+            self.w_x     = numpy.empty(self.nw, dtype=numpy.float64)
+            self.w_m     = numpy.empty(self.nw, dtype=numpy.float64)
+            self.w_vel   = numpy.empty(self.nw, dtype=numpy.float64)
+            self.w_force = numpy.empty(self.nw, dtype=numpy.float64)
+            self.w_devs  = numpy.empty(self.nw, dtype=numpy.float64)
 
             self.wmode   = numpy.fromfile(fh, dtype=numpy.int32, count=self.nw)
             for i in range(self.nw):
@@ -298,16 +306,24 @@ class Spherebin:
                 self.nb0 = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
                 self.sigma_b = numpy.fromfile(fh, dtype=numpy.float64, count=1)
                 self.tau_b = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-                self.bonds = numpy.zeros((self.nb0, 2), dtype=numpy.uint32)
+                self.bonds = numpy.empty((self.nb0, 2), dtype=numpy.uint32)
                 for i in range(self.nb0):
                     self.bonds[i,0] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
                     self.bonds[i,1] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
                 self.bonds_delta_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
-                self.bonds_delta_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
+                self.bonds_delta_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0, self.nd)
                 self.bonds_omega_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
-                self.bonds_omega_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0*self.nd)
+                self.bonds_omega_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0, self.nd)
             else:
                 self.nb0 = numpy.zeros(1, dtype=numpy.uint32)
+
+            if (fluid == True):
+                ncells = self.num[0]*self.num[1]*self.num[2]
+                self.nu = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                self.f_v = numpy.empty(ncells*self.nd, dtype=numpy.float64)
+                self.f_rho = numpy.empty(ncells, dtype=numpy.float64)
+                self.f_v = numpy.fromfile(fh, dtype=numpy.float64, count=ncells*self.nd)
+                self.f_rho = numpy.fromfile(fh, dtype=numpy.float64, count=ncells)
 
         finally:
             if fh is not None:
@@ -412,10 +428,17 @@ class Spherebin:
             fh.write(self.bonds_omega_n.astype(numpy.float64))
             fh.write(self.bonds_omega_t.astype(numpy.float64))
 
+            fh.write(self.nu.astype(numpy.float64))
+            fh.write(self.f_v.astype(numpy.float64))
+            fh.write(self.f_rho.astype(numpy.float64))
 
         finally:
             if fh is not None:
                 fh.close()
+
+    def readfirst(self, verbose=True):
+        fn = "../output/{0}.output00000.bin".format(self.sid)
+        self.readbin(fn, verbose)
 
     def readlast(self, verbose=True):
         lastfile = status(self.sid)
@@ -508,6 +531,11 @@ class Spherebin:
         cellsize = 2 * r_max
         self.L = self.num * cellsize
 
+        # Init fluid arrays
+        self.f_v = numpy.zeros((self.num[0]*self.num[1]*self.num[2],self.nd), dtype=numpy.float64)
+        self.f_rho = numpy.ones(self.num[0]*self.num[1]*self.num[2], dtype=numpy.float64)
+
+
         # Particle positions randomly distributed without overlap
         for i in range(self.np):
             overlaps = True
@@ -551,6 +579,11 @@ class Spherebin:
             print("Error: The grid must be at least 3 cells in each direction")
             print(" Grid: x={}, y={}, z={}".format(self.num[0], self.num[1], self.num[2]))
 
+        # Init fluid arrays
+        self.f_v = numpy.zeros((self.num[0]*self.num[1]*self.num[2],self.nd), dtype=numpy.float64)
+        self.f_rho = numpy.ones(self.num[0]*self.num[1]*self.num[2], dtype=numpy.float64)
+
+
         # Put upper wall at top boundary
         if (self.nw > 0):
             self.w_x[0] = self.L[0]
@@ -590,6 +623,11 @@ class Spherebin:
         if (self.num[0] < 4 or self.num[1] < 4 or self.num[2] < 4):
             print("Error: The grid must be at least 3 cells in each direction")
             print(self.num)
+
+        # Init fluid arrays
+        self.f_v = numpy.zeros((self.num[0]*self.num[1]*self.num[2],self.nd), dtype=numpy.float64)
+        self.f_rho = numpy.ones(self.num[0]*self.num[1]*self.num[2], dtype=numpy.float64)
+
 
         self.contactmodel[0] = contactmodel
 
@@ -656,6 +694,10 @@ class Spherebin:
                     self.x[i,0] += 0.5*cellsize
                     self.x[i,1] += 0.5*cellsize
 
+        # Init fluid arrays
+        self.f_v = numpy.zeros((self.num[0]*self.num[1]*self.num[2],self.nd), dtype=numpy.float64)
+        self.f_rho = numpy.ones(self.num[0]*self.num[1]*self.num[2], dtype=numpy.float64)
+
         self.contactmodel[0] = contactmodel
 
         # Readjust grid to correct size
@@ -716,6 +758,10 @@ class Spherebin:
         self.num[1] = numpy.ceil(y_max/cellsize)
         self.num[2] = numpy.ceil(z_max/cellsize)
         self.L = self.num * cellsize
+
+        # Init fluid arrays
+        self.f_v = numpy.zeros((self.num[0]*self.num[1]*self.num[2],self.nd), dtype=numpy.float64)
+        self.f_rho = numpy.ones(self.num[0]*self.num[1]*self.num[2], dtype=numpy.float64)
 
     def createBondPair(self, i, j, spacing=-0.1):
         """ Bond particles i and j. Particle j is moved adjacent to particle i,
@@ -940,7 +986,8 @@ class Spherebin:
             gamma_r = 0,
             gamma_wn = 1e4,
             gamma_wt = 1e4,
-            capillaryCohesion = 0):
+            capillaryCohesion = 0,
+            nu = 0.0):
         """ Initialize particle parameters to default values.
             Radii must be set prior to calling this function.
         """
@@ -1006,6 +1053,9 @@ class Spherebin:
 
         # Debonding distance
         self.db[0] = (1.0 + theta/2.0) * self.V_b**(1.0/3.0)
+
+        # Fluid dynamic viscosity
+        self.nu[0] = nu
 
 
     def bond(self, i, j):

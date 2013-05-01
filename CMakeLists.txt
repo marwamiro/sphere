@@ -23,8 +23,13 @@ find_package(OpenMP)
 # Uncomment to enable testing
 enable_testing()
 
-# Set build type
+# Set build type = Debug
 #set(CMAKE_BUILD_TYPE Debug)
+#if (CUDA_FOUND)
+#    set(CUDA_NVCC_FLAGS -g;-G)
+#endif()
+
+# Set build type = Release
 set(CMAKE_BUILD_TYPE Release)
 
 # Add source directory to project.

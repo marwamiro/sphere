@@ -134,9 +134,16 @@ class DEM {
                 const Float *z_pos,
                 const Float *porosity);
 
+        // Lattice-Boltzmann data arrays (D3Q19)
+        Float  *f;          // Fluid distribution (f0..f18)
+        Float  *dev_f;      // Device equivalent
+        Float  *dev_f_new;  // Device equivalent
+        Float4 *v_rho;      // Fluid velocity v (xyz), and pressure rho (w) 
+        Float4 *dev_v_rho;  // Device equivalent
 
-        // Values and functions accessible from the outside
+
     public:
+        // Values and functions accessible from the outside
 
         // Constructor, some parameters with default values
         DEM(std::string inputbin, 
@@ -200,6 +207,8 @@ class DEM {
                 const double upper_cutoff = 1.0e9);
 
 };
+
+
 
 #endif
 // vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
