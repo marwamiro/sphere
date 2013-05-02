@@ -116,9 +116,9 @@ class Spherebin:
 
         self.nu = numpy.zeros(1, dtype=numpy.float64)
         self.f_v = numpy.zeros(
-            (self.num[0] * self.num[1] * self.num[2], self.nd),
+            (self.num[0], self.num[1], self.num[2], self.nd),
             dtype=numpy.float64)
-        self.f_rho = numpy.zeros(self.num[0] * self.num[1] * self.num[2],
+        self.f_rho = numpy.zeros((self.num[0], self.num[1], self.num[2]),
                                dtype=numpy.float64)
 
     def __cmp__(self, other):
@@ -308,22 +308,34 @@ class Spherebin:
                 self.tau_b = numpy.fromfile(fh, dtype=numpy.float64, count=1)
                 self.bonds = numpy.empty((self.nb0, 2), dtype=numpy.uint32)
                 for i in range(self.nb0):
-                    self.bonds[i,0] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
-                    self.bonds[i,1] = numpy.fromfile(fh, dtype=numpy.uint32, count=1)
-                self.bonds_delta_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
-                self.bonds_delta_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0, self.nd)
-                self.bonds_omega_n = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0)
-                self.bonds_omega_t = numpy.fromfile(fh, dtype=numpy.float64, count=self.nb0*self.nd).reshape(self.nb0, self.nd)
+                    self.bonds[i,0] = numpy.fromfile(fh, dtype=numpy.uint32,
+                            count=1)
+                    self.bonds[i,1] = numpy.fromfile(fh, dtype=numpy.uint32,
+                            count=1)
+                self.bonds_delta_n = numpy.fromfile(fh, dtype=numpy.float64,
+                        count=self.nb0)
+                self.bonds_delta_t = numpy.fromfile(fh, dtype=numpy.float64,
+                        count=self.nb0*self.nd).reshape(self.nb0, self.nd)
+                self.bonds_omega_n = numpy.fromfile(fh, dtype=numpy.float64,
+                        count=self.nb0)
+                self.bonds_omega_t = numpy.fromfile(fh, dtype=numpy.float64,
+                        count=self.nb0*self.nd).reshape(self.nb0, self.nd)
             else:
                 self.nb0 = numpy.zeros(1, dtype=numpy.uint32)
 
             if (fluid == True):
                 ncells = self.num[0]*self.num[1]*self.num[2]
                 self.nu = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-                self.f_v = numpy.empty(ncells*self.nd, dtype=numpy.float64)
+                self.f_v = numpy.empty(
+                        (self.num[0], self.num[1], self.num[2], self.nd),
+                        dtype=numpy.float64)
                 self.f_rho = numpy.empty(ncells, dtype=numpy.float64)
-                self.f_v = numpy.fromfile(fh, dtype=numpy.float64, count=ncells*self.nd)
-                self.f_rho = numpy.fromfile(fh, dtype=numpy.float64, count=ncells)
+                self.f_v = numpy.fromfile(fh, dtype=numpy.float64,
+                        count=ncells*self.nd).reshape(
+                                self.num[0], self.num[1], self.num[2], self.nd)
+                self.f_rho = numpy.fromfile(fh, dtype=numpy.float64,
+                        count=ncells).reshape(
+                                self.num[0], self.num[1], self.num[2])
 
         finally:
             if fh is not None:
@@ -1770,6 +1782,9 @@ class Spherebin:
         ax.bar(center_ang_mirr, hist_ang_mirr, width=30.0/180.0)
         fig.savefig('../img_out/' + self.sid + '-ts-x1x3-slipangles.png')
         fig.clf()
+
+    def plotRho(self):
+        x=2
 
 
 def convert(graphicsformat = "png",

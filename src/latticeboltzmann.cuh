@@ -124,7 +124,6 @@ __global__ void latticeBoltzmannD3Q19(
 
         //printf("(x,y,x) = (%d,%d,%d), tidx = %d\n", x, y, z, tidx);
 
-
         // Load the fluid distribution into local registers
         __syncthreads();
         Float f_0  = dev_f[grid2index(x,y,z,0)];

@@ -562,8 +562,8 @@ __host__ void DEM::startTime()
     tic = clock();
 
     //// GPU workload configuration
-    //unsigned int threadsPerBlock = 256; 
-    unsigned int threadsPerBlock = 512; 
+    unsigned int threadsPerBlock = 256; 
+    //unsigned int threadsPerBlock = 512; 
 
     // Create enough blocks to accomodate the particles
     unsigned int blocksPerGrid = iDivUp(np, threadsPerBlock); 
