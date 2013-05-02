@@ -1783,7 +1783,7 @@ class Spherebin:
         fig.savefig('../img_out/' + self.sid + '-ts-x1x3-slipangles.png')
         fig.clf()
 
-    def plotRho(self):
+    def plotdensities(self):
         x=2
 
 

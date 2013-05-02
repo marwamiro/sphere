@@ -819,7 +819,7 @@ __host__ void DEM::startTime()
         }
 
         // Process fluid and particle interaction in each cell
-        if (params.nu > 0.0) {
+        if (params.nu > 0.0 && grid.periodic == 1) {
             if (PROFILING == 1)
                 startTimer(&kernel_tic);
             latticeBoltzmannD3Q19<<< dimGridFluid, dimBlockFluid>>> (
