@@ -324,18 +324,19 @@ class Spherebin:
                 self.nb0 = numpy.zeros(1, dtype=numpy.uint32)
 
             if (fluid == True):
-                ncells = self.num[0]*self.num[1]*self.num[2]
                 self.nu = numpy.fromfile(fh, dtype=numpy.float64, count=1)
                 self.f_v = numpy.empty(
                         (self.num[0], self.num[1], self.num[2], self.nd),
                         dtype=numpy.float64)
-                self.f_rho = numpy.empty(ncells, dtype=numpy.float64)
-                self.f_v = numpy.fromfile(fh, dtype=numpy.float64,
-                        count=ncells*self.nd).reshape(
-                                self.num[0], self.num[1], self.num[2], self.nd)
-                self.f_rho = numpy.fromfile(fh, dtype=numpy.float64,
-                        count=ncells).reshape(
-                                self.num[0], self.num[1], self.num[2])
+                self.f_rho = numpy.empty((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
+                for z in range(self.num[2]):
+                    for y in range(self.num[1]):
+                        for x in range(self.num[0]):
+                            self.f_v[x,y,z,0] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                            self.f_v[x,y,z,1] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                            self.f_v[x,y,z,2] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                            self.f_rho[x,y,z] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+
 
         finally:
             if fh is not None:
@@ -441,8 +442,13 @@ class Spherebin:
             fh.write(self.bonds_omega_t.astype(numpy.float64))
 
             fh.write(self.nu.astype(numpy.float64))
-            fh.write(self.f_v.astype(numpy.float64))
-            fh.write(self.f_rho.astype(numpy.float64))
+            for z in range(self.num[2]):
+                for y in range(self.num[1]):
+                    for x in range(self.num[0]):
+                        fh.write(self.f_v[x,y,z,0].astype(numpy.float64))
+                        fh.write(self.f_v[x,y,z,1].astype(numpy.float64))
+                        fh.write(self.f_v[x,y,z,2].astype(numpy.float64))
+                        fh.write(self.f_rho[x,y,z].astype(numpy.float64))
 
         finally:
             if fh is not None:
@@ -450,6 +456,10 @@ class Spherebin:
 
     def readfirst(self, verbose=True):
         fn = "../output/{0}.output00000.bin".format(self.sid)
+        self.readbin(fn, verbose)
+
+    def readsecond(self, verbose=True):
+        fn = "../output/{0}.output00001.bin".format(self.sid)
         self.readbin(fn, verbose)
 
     def readlast(self, verbose=True):
@@ -544,8 +554,8 @@ class Spherebin:
         self.L = self.num * cellsize
 
         # Init fluid arrays
-        self.f_v = numpy.zeros((self.num[0]*self.num[1]*self.num[2],self.nd), dtype=numpy.float64)
-        self.f_rho = numpy.ones(self.num[0]*self.num[1]*self.num[2], dtype=numpy.float64)
+        self.f_v = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
+        self.f_rho = numpy.ones((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
 
 
         # Particle positions randomly distributed without overlap
@@ -592,8 +602,8 @@ class Spherebin:
             print(" Grid: x={}, y={}, z={}".format(self.num[0], self.num[1], self.num[2]))
 
         # Init fluid arrays
-        self.f_v = numpy.zeros((self.num[0]*self.num[1]*self.num[2],self.nd), dtype=numpy.float64)
-        self.f_rho = numpy.ones(self.num[0]*self.num[1]*self.num[2], dtype=numpy.float64)
+        self.f_v = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
+        self.f_rho = numpy.ones((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
 
 
         # Put upper wall at top boundary
@@ -637,8 +647,8 @@ class Spherebin:
             print(self.num)
 
         # Init fluid arrays
-        self.f_v = numpy.zeros((self.num[0]*self.num[1]*self.num[2],self.nd), dtype=numpy.float64)
-        self.f_rho = numpy.ones(self.num[0]*self.num[1]*self.num[2], dtype=numpy.float64)
+        self.f_v = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
+        self.f_rho = numpy.ones((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
 
 
         self.contactmodel[0] = contactmodel
@@ -707,8 +717,8 @@ class Spherebin:
                     self.x[i,1] += 0.5*cellsize
 
         # Init fluid arrays
-        self.f_v = numpy.zeros((self.num[0]*self.num[1]*self.num[2],self.nd), dtype=numpy.float64)
-        self.f_rho = numpy.ones(self.num[0]*self.num[1]*self.num[2], dtype=numpy.float64)
+        self.f_v = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
+        self.f_rho = numpy.ones((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
 
         self.contactmodel[0] = contactmodel
 
@@ -772,8 +782,8 @@ class Spherebin:
         self.L = self.num * cellsize
 
         # Init fluid arrays
-        self.f_v = numpy.zeros((self.num[0]*self.num[1]*self.num[2],self.nd), dtype=numpy.float64)
-        self.f_rho = numpy.ones(self.num[0]*self.num[1]*self.num[2], dtype=numpy.float64)
+        self.f_v = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
+        self.f_rho = numpy.ones((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
 
     def createBondPair(self, i, j, spacing=-0.1):
         """ Bond particles i and j. Particle j is moved adjacent to particle i,
@@ -1315,6 +1325,20 @@ class Spherebin:
         # Convert images to compressed format
         convert()
 
+    def video(self,
+        out_folder = "./",
+        video_format = "mp4",
+        graphics_folder = "../img_out/",
+        graphics_format = "png",
+        fps = 25,
+        qscale = 1,
+        bitrate = 1800,
+        verbose = False):
+    'Use ffmpeg to combine images to animation. All images should be rendered beforehand.'
+
+        video(self.sid, out_folder, video_format, graphics_folder, \
+              graphics_format, fps, qscale, bitrate, verbose)
+
     def shearvel(self):
         'Calculates and returns the shear velocity (gamma_dot) of the experiment'
 
@@ -1423,7 +1447,7 @@ class Spherebin:
 
         subprocess.call("rm fc-tmp.txt", shell=True)
 
-    def bondsRose(self):
+    def bondsRose(self, imgformat = "pdf"):
         ''' Visualize strike- and dip angles of the bond pairs in a rose plot.
         '''
         # loop through these contacts and find the strike and dip of the contacts
@@ -1469,7 +1493,7 @@ class Spherebin:
         ax.scatter(strikelist, diplist, c='k', marker='+')
         ax.set_rmax(90)
         ax.set_rticks([])
-        plt.savefig("bonds-" + self.sid + "-rose.pdf", transparent=True)
+        plt.savefig("bonds-" + self.sid + "-rose." + imgformat, transparent=True)
 
 
     def sheardisp(self, outformat='pdf', zslices=32):
@@ -1783,8 +1807,63 @@ class Spherebin:
         fig.savefig('../img_out/' + self.sid + '-ts-x1x3-slipangles.png')
         fig.clf()
 
-    def plotdensities(self):
-        x=2
+    def plotFluidDensities(self, y = -1, imgformat = 'png'):
+
+        if (y == -1):
+            y = self.num[1]/2
+
+        plt.figure(figsize=[8,8])
+        plt.title("Fluid densities")
+        imgplt = plt.imshow(self.f_rho[:,y,:].T, origin='lower')
+        imgplt.set_interpolation('nearest')
+        #imgplt.set_interpolation('bicubic')
+        #imgplt.set_cmap('hot')
+        plt.xlabel('$x_1$')
+        plt.ylabel('$x_3$')
+        plt.colorbar()
+        plt.savefig('f_rho-' + self.sid + \
+                '-y' + str(y) + '.' + imgformat, transparent=False)
+
+    def plotFluidVelocities(self, y = -1, imgformat = 'png'):
+
+        if (y == -1):
+            y = self.num[1]/2
+
+        plt.title("Fluid velocities")
+        plt.figure(figsize=[8,8])
+
+        plt.subplot(131)
+        imgplt = plt.imshow(self.f_v[:,y,:,0].T, origin='lower')
+        imgplt.set_interpolation('nearest')
+        #imgplt.set_interpolation('bicubic')
+        #imgplt.set_cmap('hot')
+        plt.title("$v_1$")
+        plt.xlabel('$x_1$')
+        plt.ylabel('$x_3$')
+        plt.colorbar()
+
+        plt.subplot(132)
+        imgplt = plt.imshow(self.f_v[:,y,:,1].T, origin='lower')
+        imgplt.set_interpolation('nearest')
+        #imgplt.set_interpolation('bicubic')
+        #imgplt.set_cmap('hot')
+        plt.title("$v_2$")
+        plt.xlabel('$x_1$')
+        plt.ylabel('$x_3$')
+        plt.colorbar()
+
+        plt.subplot(133)
+        imgplt = plt.imshow(self.f_v[:,y,:,2].T, origin='lower')
+        imgplt.set_interpolation('nearest')
+        #imgplt.set_interpolation('bicubic')
+        #imgplt.set_cmap('hot')
+        plt.title("$v_3$")
+        plt.xlabel('$x_1$')
+        plt.ylabel('$x_3$')
+        plt.colorbar()
+
+        plt.savefig('f_v-' + self.sid + \
+                '-y' + str(y) + '.' + imgformat, transparent=False)
 
 
 def convert(graphicsformat = "png",
