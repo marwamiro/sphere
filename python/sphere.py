@@ -2210,7 +2210,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             ax1.grid()
 
             # Plot dilation
-            ax2 = plt.subplot2grid((1,2),(1,0))
+            ax2 = plt.subplot2grid((1,2),(0,1))
             ax2.set_xlabel('Shear strain [-]')
             ax2.set_ylabel('Dilation [m]')
             ax2.plot(xdisp/w_x0, dilation, '+-')
