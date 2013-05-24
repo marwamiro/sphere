@@ -1334,7 +1334,7 @@ class Spherebin:
         qscale = 1,
         bitrate = 1800,
         verbose = False):
-    'Use ffmpeg to combine images to animation. All images should be rendered beforehand.'
+        'Use ffmpeg to combine images to animation. All images should be rendered beforehand.'
 
         video(self.sid, out_folder, video_format, graphics_folder, \
               graphics_format, fps, qscale, bitrate, verbose)
