@@ -18,6 +18,7 @@ SET(CUDA_NVCC_FLAGS "--use_fast_math;-O3;-gencode=arch=compute_20,code=\"sm_20,c
 CUDA_ADD_EXECUTABLE(../sphere main.cpp file_io.cpp sphere.cpp device.cu utility.cu)
 CUDA_ADD_EXECUTABLE(../porosity porosity.cpp file_io.cpp sphere.cpp device.cu utility.cu)
 CUDA_ADD_EXECUTABLE(../forcechains forcechains.cpp file_io.cpp sphere.cpp device.cu utility.cu)
+CUDA_ADD_EXECUTABLE(../darcy darcy.cpp file_io.cpp sphere.cpp device.cu utility.cu)
 
 #ADD_EXECUTABLE(unittests boost-unit-tests.cpp sphere.cpp)
 #TARGET_LINK_LIBRARIES(unittests

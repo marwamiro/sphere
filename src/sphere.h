@@ -136,6 +136,7 @@ class DEM {
 
         // Lattice-Boltzmann data arrays (D3Q19)
         Float  *f;          // Fluid distribution (f0..f18)
+        Float  *f_new;      // t+deltaT fluid distribution (f0..f18)
         Float  *dev_f;      // Device equivalent
         Float  *dev_f_new;  // Device equivalent
         Float4 *v_rho;      // Fluid velocity v (xyz), and pressure rho (w) 
@@ -206,6 +207,9 @@ class DEM {
                 const double lower_cutoff = 0.0,
                 const double upper_cutoff = 1.0e9);
 
+        // Calculate Darcy fluid flow through material
+        void startDarcy(
+                const Float cellsizemultiplier = 1.0);
 };
 
 

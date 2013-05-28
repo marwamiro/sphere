@@ -29,6 +29,7 @@ int main(const int argc, const char *argv[])
     // Default values
     int verbose = 1;
     int dry = 0;
+    int nfiles = 0;
 
 
     // Process input parameters
@@ -49,11 +50,11 @@ int main(const int argc, const char *argv[])
 
         else if (argvi == "-n" || argvi == "--dry")
             dry = 1;
-        }
-
 
         // The rest of the values must be input binary files
         else {
+            nfiles++;
+
             if (verbose == 1)
                 std::cout << argv[0] << ": processing input file: " << argvi <<
                     std::endl;
@@ -64,8 +65,7 @@ int main(const int argc, const char *argv[])
             DEM dem(argvi, verbose, 0, dry, 0, 0);
 
             // Otherwise, start iterating through time
-            else
-                dem.startDarcy();
+            dem.startDarcy();
 
 
         }
