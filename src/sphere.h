@@ -4,6 +4,7 @@
 
 #include <vector>
 
+
 #include "datatypes.h"
 
 // DEM class
@@ -141,6 +142,10 @@ class DEM {
         Float  *dev_f_new;  // Device equivalent
         Float4 *v_rho;      // Fluid velocity v (xyz), and pressure rho (w) 
         Float4 *dev_v_rho;  // Device equivalent
+
+        // Darcy-flow values
+        int d_nx, d_ny, d_nz;     // Number of cells in each dim
+        Float d_dx, d_dy, d_dz;   // Cell length in each dim
 
 
     public:

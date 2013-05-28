@@ -449,11 +449,14 @@ __host__ void DEM::transferToGlobalDeviceMemory()
 
     // Fluid arrays
     if (params.nu > 0.0) {
-        cudaMemcpy( dev_f, f, sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
+#ifdef LBM_GPU
+        cudaMemcpy( dev_f, f,
+                sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
                 cudaMemcpyHostToDevice);
         cudaMemcpy( dev_v_rho, v_rho,
-                sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2],
+                sizeof(Float4)*grid.num[0]*grid.num[1]*grid.num[2],
                 cudaMemcpyHostToDevice);
+#endif
     }
 
     checkForCudaErrors("End of transferToGlobalDeviceMemory");
@@ -525,14 +528,16 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
             sizeof(Float4)*walls.nw, cudaMemcpyDeviceToHost);
 
     // Fluid arrays
+#ifdef LBM_GPU
     if (params.nu > 0.0) {
         cudaMemcpy( f, dev_f,
                 sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
                 cudaMemcpyDeviceToHost);
-        cudaMemcpy( v_rho, dev_v_rho,
-                sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2],
+        cudaMemcpy(v_rho, dev_v_rho,
+                sizeof(Float4)*grid.num[0]*grid.num[1]*grid.num[2],
                 cudaMemcpyDeviceToHost);
     }
+#endif
 
     checkForCudaErrors("End of transferFromGlobalDeviceMemory");
 }
@@ -575,14 +580,10 @@ __host__ void DEM::startTime()
 
     // Use 3D block and grid layout for Lattice-Boltzmann fluid calculations
     dim3 dimBlockFluid(8, 8, 8);    // 512 threads per block
-    //dim3 dimGridFluid(
-            //(grid.num[2]+8-1)/8,    // Use x as the z
-            //(grid.num[1]+8-1)/8,
-            //(grid.num[0]+8-1)/8);
     dim3 dimGridFluid(
-            iDivUp(grid.num[2],dimBlockFluid.x),    // Use z as x
-            iDivUp(grid.num[1],dimBlockFluid.y),
-            iDivUp(grid.num[0],dimBlockFluid.z));   // Use x as z
+            iDivUp(grid.num[0], dimBlockFluid.x),
+            iDivUp(grid.num[1], dimBlockFluid.y),
+            iDivUp(grid.num[2], dimBlockFluid.z));
     if (dimGridFluid.z > 64) {
         cerr << "Error: dimGridFluid.z > 64" << endl;
         exit(1);
@@ -629,9 +630,14 @@ __host__ void DEM::startTime()
     fclose(fp);
 
     // Initialize fluid distribution array
-    initfluid<<< dimGridFluid, dimBlockFluid >>>(dev_v_rho, dev_f);
-    cudaThreadSynchronize();
-    checkForCudaErrors("Post initfluid");
+    if (params.nu > 0.0) {
+#ifdef LBM_GPU
+        initFluid<<< dimGridFluid, dimBlockFluid >>>(dev_v_rho, dev_f);
+        cudaThreadSynchronize();
+#else
+        initFluid(v_rho, f, grid.num[0], grid.num[1], grid.num[2]);
+#endif
+    }
 
     if (verbose == 1) {
         cout << "\n  Entering the main calculation time loop...\n\n"
@@ -820,9 +826,10 @@ __host__ void DEM::startTime()
 
         // Process fluid and particle interaction in each cell
         if (params.nu > 0.0 && grid.periodic == 1) {
+#ifdef LBM_GPU
             if (PROFILING == 1)
                 startTimer(&kernel_tic);
-            latticeBoltzmannD3Q19<<< dimGridFluid, dimBlockFluid>>> (
+            latticeBoltzmannD3Q19<<<dimGridFluid, dimBlockFluid>>> (
                     dev_f,
                     dev_f_new,
                     dev_v_rho,
@@ -840,6 +847,13 @@ __host__ void DEM::startTime()
 
             // Flip flop
             swapFloatArrays(dev_f, dev_f_new);
+#else
+            latticeBoltzmannD3Q19(f, f_new, v_rho,
+                    time.dt, grid, params);
+            // Flip flop
+            swapFloatArrays(f, f_new);
+#endif
+
         }
 
 

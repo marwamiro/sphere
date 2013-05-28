@@ -304,6 +304,16 @@ void DEM::reportValues()
             << grid.num[1] << " * "
             << grid.num[2];
     cout << " cells\n";
+    cout << "  - Domain size: ";
+    if (nd == 1)
+        cout << grid.L[0];
+    else if (nd == 2)
+        cout << grid.L[0] << " * " << grid.L[1];
+    else 
+        cout << grid.L[0] << " * " 
+            << grid.L[1] << " * "
+            << grid.L[2];
+    cout << " m\n";
 
     cout << "  - No. of particle bonds: " << params.nb0 << endl;
 }
@@ -727,32 +737,6 @@ void DEM::forcechains(const std::string format, const int threedim,
         if (threedim == 1)
             cout << '[' << x_min.y << ':' << x_max.y << "] ";
         cout << '[' << x_min.z << ':' << x_max.z << "] " << "NaN notitle" << endl;
-    }
-
-
-}
-
-// Find hydraulic conductivities for each cell
-
-// Solve Darcy flow through particles
-void DEM::startDarcy(
-        const Float cellsizemultiplier)
-{
-    // Number of cells
-    int nx = grid.L[0]/grid.num[0];
-    int ny = grid.L[1]/grid.num[1];
-    int nz = grid.L[2]/grid.num[2];
-
-    // Cell size 
-    Float dx = grid.L[0]/nx;
-    Float dy = grid.L[1]/nx;
-    Float dz = grid.L[2]/nx;
-
-    if (verbose == 1) {
-        std::cout << "Fluid grid dimensions: "
-            << nx << " * "
-            << ny << " * "
-            << nz << std::endl;
     }
 
 

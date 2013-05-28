@@ -325,17 +325,18 @@ class Spherebin:
 
             if (fluid == True):
                 self.nu = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-                self.f_v = numpy.empty(
-                        (self.num[0], self.num[1], self.num[2], self.nd),
-                        dtype=numpy.float64)
-                self.f_rho = numpy.empty((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
-                for z in range(self.num[2]):
-                    for y in range(self.num[1]):
-                        for x in range(self.num[0]):
-                            self.f_v[x,y,z,0] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-                            self.f_v[x,y,z,1] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-                            self.f_v[x,y,z,2] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-                            self.f_rho[x,y,z] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                if (self.nu[0] > 0.0):
+                    self.f_v = numpy.empty(
+                            (self.num[0], self.num[1], self.num[2], self.nd),
+                            dtype=numpy.float64)
+                    self.f_rho = numpy.empty((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
+                    for z in range(self.num[2]):
+                        for y in range(self.num[1]):
+                            for x in range(self.num[0]):
+                                self.f_v[x,y,z,0] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                                self.f_v[x,y,z,1] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                                self.f_v[x,y,z,2] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                                self.f_rho[x,y,z] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
 
         finally:
@@ -442,13 +443,14 @@ class Spherebin:
             fh.write(self.bonds_omega_t.astype(numpy.float64))
 
             fh.write(self.nu.astype(numpy.float64))
-            for z in range(self.num[2]):
-                for y in range(self.num[1]):
-                    for x in range(self.num[0]):
-                        fh.write(self.f_v[x,y,z,0].astype(numpy.float64))
-                        fh.write(self.f_v[x,y,z,1].astype(numpy.float64))
-                        fh.write(self.f_v[x,y,z,2].astype(numpy.float64))
-                        fh.write(self.f_rho[x,y,z].astype(numpy.float64))
+            if (self.nu[0] > 0.0):
+                for z in range(self.num[2]):
+                    for y in range(self.num[1]):
+                        for x in range(self.num[0]):
+                            fh.write(self.f_v[x,y,z,0].astype(numpy.float64))
+                            fh.write(self.f_v[x,y,z,1].astype(numpy.float64))
+                            fh.write(self.f_v[x,y,z,2].astype(numpy.float64))
+                            fh.write(self.f_rho[x,y,z].astype(numpy.float64))
 
         finally:
             if fh is not None:

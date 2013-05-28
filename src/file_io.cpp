@@ -238,16 +238,22 @@ void DEM::readbin(const char *target)
 
     // Read fluid parameters
     ifs.read(as_bytes(params.nu), sizeof(params.nu));
-    v_rho = new Float4[grid.num[0]*grid.num[1]*grid.num[2]];
     f = new Float[grid.num[0]*grid.num[1]*grid.num[2]*19];
+    f_new = new Float[grid.num[0]*grid.num[1]*grid.num[2]*19];
+    v_rho = new Float4[grid.num[0]*grid.num[1]*grid.num[2]];
     if (params.nu > 0.0) {
-        for (i = 0; i<grid.num[0]*grid.num[1]*grid.num[2]; ++i) {
-            ifs.read(as_bytes(v_rho[i].x), sizeof(Float));
-            ifs.read(as_bytes(v_rho[i].y), sizeof(Float));
-            ifs.read(as_bytes(v_rho[i].z), sizeof(Float));
+        unsigned int x, y, z;
+        for (z = 0; z<grid.num[2]; ++z) {
+            for (y = 0; y<grid.num[1]; ++y) {
+                for (x = 0; x<grid.num[0]; ++x) {
+                    i = x + grid.num[0]*y + grid.num[0]*grid.num[1]*z;
+                    ifs.read(as_bytes(v_rho[i].x), sizeof(Float));
+                    ifs.read(as_bytes(v_rho[i].y), sizeof(Float));
+                    ifs.read(as_bytes(v_rho[i].z), sizeof(Float));
+                    ifs.read(as_bytes(v_rho[i].w), sizeof(Float));
+                }
+            }
         }
-        for (i = 0; i<grid.num[0]*grid.num[1]*grid.num[2]; ++i)
-            ifs.read(as_bytes(v_rho[i].w), sizeof(Float));
     }
 
 
@@ -410,13 +416,20 @@ void DEM::writebin(const char *target)
         }
 
         ofs.write(as_bytes(params.nu), sizeof(params.nu));
-        for (i = 0; i<grid.num[0]*grid.num[1]*grid.num[2]; ++i) {
-            ofs.write(as_bytes(v_rho[i].x), sizeof(Float));
-            ofs.write(as_bytes(v_rho[i].y), sizeof(Float));
-            ofs.write(as_bytes(v_rho[i].z), sizeof(Float));
+        unsigned int x, y, z;
+        if (params.nu > 0.0) {
+            for (z = 0; z<grid.num[2]; ++z) {
+                for (y = 0; y<grid.num[1]; ++y) {
+                    for (x = 0; x<grid.num[0]; ++x) {
+                        i = x + grid.num[0]*y + grid.num[0]*grid.num[1]*z;
+                        ofs.write(as_bytes(v_rho[i].x), sizeof(Float));
+                        ofs.write(as_bytes(v_rho[i].y), sizeof(Float));
+                        ofs.write(as_bytes(v_rho[i].z), sizeof(Float));
+                        ofs.write(as_bytes(v_rho[i].w), sizeof(Float));
+                    }
+                }
+            }
         }
-        for (i = 0; i<grid.num[0]*grid.num[1]*grid.num[2]; ++i)
-            ofs.write(as_bytes(v_rho[i].w), sizeof(Float));
 
         // Close file if it is still open
         if (ofs.is_open())
