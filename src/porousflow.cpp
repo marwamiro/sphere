@@ -60,13 +60,10 @@ int main(const int argc, const char *argv[])
                     std::endl;
 
             // Create DEM class, read data from input binary,
-            // do not check values, do not init cuda, do not transfer const
-            // mem
-            DEM dem(argvi, verbose, 0, dry, 0, 0);
+            // check values, init cuda, transfer const mem, solve Darcy flow
+            DEM dem(argvi, verbose, 1, dry, 1, 1, 1);
 
-            // Start iterating through time
-            dem.startDarcy();
-
+            dem.startTime();
 
         }
     }

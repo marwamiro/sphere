@@ -448,7 +448,7 @@ __host__ void DEM::transferToGlobalDeviceMemory()
     }
 
     // Fluid arrays
-    if (params.nu > 0.0) {
+    if (params.nu > 0.0 && darcy == 0) {
 #ifdef LBM_GPU
         cudaMemcpy( dev_f, f,
                 sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
@@ -529,7 +529,7 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
 
     // Fluid arrays
 #ifdef LBM_GPU
-    if (params.nu > 0.0) {
+    if (params.nu > 0.0 && darcy == 0) {
         cudaMemcpy( f, dev_f,
                 sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
                 cudaMemcpyDeviceToHost);
@@ -605,7 +605,7 @@ __host__ void DEM::startTime()
             << dimBlock.x << "*" << dimBlock.y << "*" << dimBlock.z << "\n"
             << "  - Shared memory required per block: " << smemSize << " bytes"
             << endl;
-        if (params.nu > 0.0) {
+        if (params.nu > 0.0 && darcy == 0) {
             cout << "  - Blocks per fluid grid: "
                 << dimGridFluid.x << "*" << dimGridFluid.y << "*" <<
                 dimGridFluid.z << "\n"
@@ -630,7 +630,7 @@ __host__ void DEM::startTime()
     fclose(fp);
 
     // Initialize fluid distribution array
-    if (params.nu > 0.0) {
+    if (params.nu > 0.0 && darcy == 0) {
 #ifdef LBM_GPU
         initFluid<<< dimGridFluid, dimBlockFluid >>>(dev_v_rho, dev_f);
         cudaThreadSynchronize();
@@ -825,7 +825,7 @@ __host__ void DEM::startTime()
         }
 
         // Process fluid and particle interaction in each cell
-        if (params.nu > 0.0 && grid.periodic == 1) {
+        if (params.nu > 0.0 && darcy == 0 && grid.periodic == 1) {
 #ifdef LBM_GPU
             if (PROFILING == 1)
                 startTimer(&kernel_tic);
@@ -856,6 +856,9 @@ __host__ void DEM::startTime()
 
         }
 
+        // Solve darcy flow through grid
+        if (darcy == 1)
+            explDarcyStep();
 
 
         // Update particle kinematics
@@ -1063,6 +1066,9 @@ __host__ void DEM::startTime()
     delete[] k.contacts;
     delete[] k.distmod;
     delete[] k.delta_t;
+
+    if (darcy == 1)
+        endDarcy();
 
 } /* EOF */
 // vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

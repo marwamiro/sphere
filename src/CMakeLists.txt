@@ -17,11 +17,11 @@ SET(CUDA_NVCC_FLAGS
 
 # Rule to build executable program 
 CUDA_ADD_EXECUTABLE(../sphere
-    main.cpp file_io.cpp sphere.cpp device.cu utility.cu)
+    main.cpp file_io.cpp sphere.cpp device.cu utility.cu darcy.cpp)
 CUDA_ADD_EXECUTABLE(../porosity
-    porosity.cpp file_io.cpp sphere.cpp device.cu utility.cu)
+    porosity.cpp file_io.cpp sphere.cpp device.cu utility.cu darcy.cpp)
 CUDA_ADD_EXECUTABLE(../forcechains
-    forcechains.cpp file_io.cpp sphere.cpp device.cu utility.cu)
+    forcechains.cpp file_io.cpp sphere.cpp device.cu utility.cu darcy.cpp)
 CUDA_ADD_EXECUTABLE(../porousflow
     porousflow.cpp darcy.cpp file_io.cpp sphere.cpp device.cu utility.cu)
 

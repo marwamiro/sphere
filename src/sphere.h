@@ -144,16 +144,54 @@ class DEM {
         Float4 *v_rho;      // Fluid velocity v (xyz), and pressure rho (w) 
         Float4 *dev_v_rho;  // Device equivalent
 
-        // Darcy-flow values
+        //// Darcy-flow 
+        int darcy;  // 0: no, 1: yes
+
+        // Darcy values
         int d_nx, d_ny, d_nz;     // Number of cells in each dim
         Float d_dx, d_dy, d_dz;   // Cell length in each dim
-        Float* d_P;   // Cell hydraulic pressures
-        Float3* d_dP; // Cell spatial gradient in pressures
+        Float* d_H;   // Cell hydraulic heads
+        Float3* d_dH; // Cell spatial gradient in heads
         Float* d_K;   // Cell hydraulic conductivities (anisotropic)
         Float* d_S;   // Cell hydraulic storativity
         Float* d_W;   // Cell hydraulic recharge
-        Float mu;     // Fluid viscosity
+        Float3* d_V;  // Cell fluid velocity
         
+        // Darcy functions
+
+        // Memory allocation
+        void initDarcyMem();
+        void freeDarcyMem();
+        
+        // Set some values for the Darcy parameters
+        void initDarcyVals();
+
+        // Finds central difference gradients
+        void findDarcyGradients();
+        
+        // Set gradient to zero at grid edges
+        void setDarcyBCNeumannZero();
+        
+        // Find darcy flow velocities from specific flux (q)
+        void findDarcyVelocities();
+
+        // Get linear (1D) index from 3D coordinate
+        unsigned int idx(
+                const unsigned int x,
+                const unsigned int y,
+                const unsigned int z);
+
+        // Get minimum value in 1D array 
+        Float minVal3dArr(Float* arr);
+
+        // Initialize Darcy values and arrays
+        void initDarcy(const Float cellsizemultiplier = 1.0);
+
+        // Clean up Darcy arrays
+        void endDarcy();
+
+        // Perform a single time step, explicit integration
+        void explDarcyStep();
 
 
     public:
@@ -165,7 +203,8 @@ class DEM {
                 const int checkVals = 1,
                 const int dry = 0,
                 const int initCuda = 1,
-                const int transferConstMem = 1);
+                const int transferConstMem = 1,
+                const int darcyflow = 0);
 
         // Destructor
         ~DEM(void);
@@ -223,40 +262,13 @@ class DEM {
         
         ///// Darcy flow functions
 
-        // Memory allocation and destruction
-        void initDarcyMem();
-        void freeDarcyMem();
-
-        // Set some values for the Darcy parameters
-        void initDarcyVals();
-
-        // Get linear (1D) index from 3D coordinate
-        unsigned int idx(
-                const unsigned int x,
-                const unsigned int y,
-                const unsigned int z);
-
-        // Get minimum value in 1D array 
-        Float minVal3dArr(Float* arr);
-
-        // Finds central difference gradients
-        void findDarcyGradients();
-
-        // Set gradient to zero at grid edges
-        void setDarcyBCNeumannZero();
-
-        // Perform a single time step, explicit integration
-        void explDarcyStep(const Float dt);
-
-        // Calculate Darcy fluid flow through material
-        void startDarcy(
-                const Float cellsizemultiplier = 1.0);
 
         // Print Darcy arrays to file stream
         void printDarcyArray(FILE* stream, Float* arr);
         void printDarcyArray(FILE* stream, Float* arr, std::string desc);
         void printDarcyArray3(FILE* stream, Float3* arr);
         void printDarcyArray3(FILE* stream, Float3* arr, std::string desc);
+
 };
 
 #endif

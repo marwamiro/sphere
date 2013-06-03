@@ -18,8 +18,9 @@ DEM::DEM(const std::string inputbin,
         const int checkVals,
         const int dry,
         const int initCuda,
-        const int transferConstMem)
-: verbose(verbosity)
+        const int transferConstMem,
+        const int darcyflow)
+: verbose(verbosity), darcy(darcyflow)
 {
     using std::cout;
     using std::cerr;
@@ -65,8 +66,6 @@ DEM::DEM(const std::string inputbin,
         // Transfer data from host to gpu device memory
         transferToGlobalDeviceMemory();
     }
-
-
 }
 
 // Destructor: Liberates dynamically allocated host memory
