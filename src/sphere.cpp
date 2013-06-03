@@ -66,6 +66,7 @@ DEM::DEM(const std::string inputbin,
         transferToGlobalDeviceMemory();
     }
 
+
 }
 
 // Destructor: Liberates dynamically allocated host memory

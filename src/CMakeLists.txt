@@ -12,13 +12,18 @@ INCLUDE(FindCUDA)
 
 # Additional NVCC command line arguments
 # NOTE: Multiple arguments must be semi-colon selimited
-SET(CUDA_NVCC_FLAGS "--use_fast_math;-O3;-gencode=arch=compute_20,code=\"sm_20,compute_20\"")
+SET(CUDA_NVCC_FLAGS
+    "--use_fast_math;-O3;-gencode=arch=compute_20,code=\"sm_20,compute_20\" -ccbin gcc-4.6")
 
 # Rule to build executable program 
-CUDA_ADD_EXECUTABLE(../sphere main.cpp file_io.cpp sphere.cpp device.cu utility.cu)
-CUDA_ADD_EXECUTABLE(../porosity porosity.cpp file_io.cpp sphere.cpp device.cu utility.cu)
-CUDA_ADD_EXECUTABLE(../forcechains forcechains.cpp file_io.cpp sphere.cpp device.cu utility.cu)
-CUDA_ADD_EXECUTABLE(../porousflow porousflow.cpp darcy.cpp file_io.cpp sphere.cpp device.cu utility.cu)
+CUDA_ADD_EXECUTABLE(../sphere
+    main.cpp file_io.cpp sphere.cpp device.cu utility.cu)
+CUDA_ADD_EXECUTABLE(../porosity
+    porosity.cpp file_io.cpp sphere.cpp device.cu utility.cu)
+CUDA_ADD_EXECUTABLE(../forcechains
+    forcechains.cpp file_io.cpp sphere.cpp device.cu utility.cu)
+CUDA_ADD_EXECUTABLE(../porousflow
+    porousflow.cpp darcy.cpp file_io.cpp sphere.cpp device.cu utility.cu)
 
 #ADD_EXECUTABLE(unittests boost-unit-tests.cpp sphere.cpp)
 #TARGET_LINK_LIBRARIES(unittests

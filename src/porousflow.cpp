@@ -64,7 +64,7 @@ int main(const int argc, const char *argv[])
             // mem
             DEM dem(argvi, verbose, 0, dry, 0, 0);
 
-            // Otherwise, start iterating through time
+            // Start iterating through time
             dem.startDarcy();
 
 

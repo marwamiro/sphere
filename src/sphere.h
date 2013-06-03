@@ -4,6 +4,7 @@
 
 #include <vector>
 
+//#include "eigen-nvcc/Eigen/Core"
 
 #include "datatypes.h"
 
@@ -146,6 +147,13 @@ class DEM {
         // Darcy-flow values
         int d_nx, d_ny, d_nz;     // Number of cells in each dim
         Float d_dx, d_dy, d_dz;   // Cell length in each dim
+        Float* d_P;   // Cell hydraulic pressures
+        Float3* d_dP; // Cell spatial gradient in pressures
+        Float* d_K;   // Cell hydraulic conductivities (anisotropic)
+        Float* d_S;   // Cell hydraulic storativity
+        Float* d_W;   // Cell hydraulic recharge
+        Float mu;     // Fluid viscosity
+        
 
 
     public:
@@ -212,12 +220,44 @@ class DEM {
                 const double lower_cutoff = 0.0,
                 const double upper_cutoff = 1.0e9);
 
+        
+        ///// Darcy flow functions
+
+        // Memory allocation and destruction
+        void initDarcyMem();
+        void freeDarcyMem();
+
+        // Set some values for the Darcy parameters
+        void initDarcyVals();
+
+        // Get linear (1D) index from 3D coordinate
+        unsigned int idx(
+                const unsigned int x,
+                const unsigned int y,
+                const unsigned int z);
+
+        // Get minimum value in 1D array 
+        Float minVal3dArr(Float* arr);
+
+        // Finds central difference gradients
+        void findDarcyGradients();
+
+        // Set gradient to zero at grid edges
+        void setDarcyBCNeumannZero();
+
+        // Perform a single time step, explicit integration
+        void explDarcyStep(const Float dt);
+
         // Calculate Darcy fluid flow through material
         void startDarcy(
                 const Float cellsizemultiplier = 1.0);
+
+        // Print Darcy arrays to file stream
+        void printDarcyArray(FILE* stream, Float* arr);
+        void printDarcyArray(FILE* stream, Float* arr, std::string desc);
+        void printDarcyArray3(FILE* stream, Float3* arr);
+        void printDarcyArray3(FILE* stream, Float3* arr, std::string desc);
 };
-
-
 
 #endif
 // vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
