@@ -1235,7 +1235,8 @@ class Spherebin:
 
         return numpy.array(porosity), numpy.array(depth)
 
-    def run(self, verbose=True, hideinputfile=False, dry=False, valgrind=False, cudamemcheck=False):
+    def run(self, verbose=True, hideinputfile=False, dry=False, valgrind=False,
+            cudamemcheck=False, darcyflow=False):
         'Execute sphere with target project'
 
         quiet = ""
@@ -1243,6 +1244,7 @@ class Spherebin:
         dryarg = ""
         valgrindbin = ""
         cudamemchk = ""
+        binary = "sphere"
         if (verbose == False):
             quiet = "-q "
         if (hideinputfile == True):
@@ -1253,8 +1255,10 @@ class Spherebin:
             valgrindbin = "valgrind -q "
         if (cudamemcheck == True):
             cudamemchk = "cuda-memcheck "
+        if (darcyflow == True):
+            binary = "porousflow"
 
-        status = subprocess.call("cd ..; " + valgrindbin + cudamemchk + "./sphere " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
+        status = subprocess.call("cd ..; " + valgrindbin + cudamemchk + "./" + binary + " " + quiet + dryarg + "input/" + self.sid + ".bin " + stdout, shell=True)
 
         if (status != 0):
             print("Warning: the sphere run returned with status " + str(status))
