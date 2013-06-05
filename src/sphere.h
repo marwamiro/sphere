@@ -151,12 +151,13 @@ class DEM {
         int d_nx, d_ny, d_nz;     // Number of cells in each dim
         Float d_dx, d_dy, d_dz;   // Cell length in each dim
         Float* d_H;   // Cell hydraulic heads
+        Float3* d_V;  // Cell fluid velocity
         Float3* d_dH; // Cell spatial gradient in heads
         Float* d_K;   // Cell hydraulic conductivities (anisotropic)
         Float* d_S;   // Cell hydraulic storativity
         Float* d_W;   // Cell hydraulic recharge
-        Float3* d_V;  // Cell fluid velocity
-        
+        Float* d_n;   // Cell porosity
+
         // Darcy functions
 
         // Memory allocation
@@ -172,6 +173,16 @@ class DEM {
         // Set gradient to zero at grid edges
         void setDarcyBCNeumannZero();
         
+        // Find particles in cell
+        std::vector<unsigned int> particlesInCell(
+                const Float3 min, const Float3 max);
+
+        // Find porosity of cell
+        Float cellPorosity(
+                const unsigned int x,
+                const unsigned int y,
+                const unsigned int z);
+
         // Find darcy flow velocities from specific flux (q)
         void findDarcyVelocities();
 
@@ -266,8 +277,8 @@ class DEM {
         // Print Darcy arrays to file stream
         void printDarcyArray(FILE* stream, Float* arr);
         void printDarcyArray(FILE* stream, Float* arr, std::string desc);
-        void printDarcyArray3(FILE* stream, Float3* arr);
-        void printDarcyArray3(FILE* stream, Float3* arr, std::string desc);
+        void printDarcyArray(FILE* stream, Float3* arr);
+        void printDarcyArray(FILE* stream, Float3* arr, std::string desc);
 
 };
 

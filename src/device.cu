@@ -860,7 +860,6 @@ __host__ void DEM::startTime()
         if (darcy == 1)
             explDarcyStep();
 
-
         // Update particle kinematics
         if (PROFILING == 1)
             startTimer(&kernel_tic);

@@ -246,7 +246,7 @@ void DEM::readbin(const char *target)
     if (params.nu > 0.0 && darcy == 0) {    // Lattice-Boltzmann flow
 
         if (verbose == 1)
-            cout << "  - Reading LBM values:\t\t\t";
+            cout << "  - Reading LBM values:\t\t\t\t  ";
 
         f = new Float[grid.num[0]*grid.num[1]*grid.num[2]*19];
         f_new = new Float[grid.num[0]*grid.num[1]*grid.num[2]*19];
@@ -461,9 +461,9 @@ void DEM::writebin(const char *target)
                 }
             }
         } else if (params.nu > 0.0 && darcy == 1) { // Darcy flow
-            for (z = 0; z<d_dz; ++z) {
-                for (y = 0; y<d_dy; ++y) {
-                    for (x = 0; x<d_dx; ++x) {
+            for (z = 0; z<d_nz; ++z) {
+                for (y = 0; y<d_ny; ++y) {
+                    for (x = 0; x<d_nx; ++x) {
                         i = idx(x,y,z);
                         ofs.write(as_bytes(d_V[i].x), sizeof(Float));
                         ofs.write(as_bytes(d_V[i].y), sizeof(Float));

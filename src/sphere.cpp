@@ -738,8 +738,6 @@ void DEM::forcechains(const std::string format, const int threedim,
             cout << '[' << x_min.y << ':' << x_max.y << "] ";
         cout << '[' << x_min.z << ':' << x_max.z << "] " << "NaN notitle" << endl;
     }
-
-
 }
 
 // vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

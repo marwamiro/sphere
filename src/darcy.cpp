@@ -2,13 +2,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 #include "typedefs.h"
 #include "datatypes.h"
 #include "constants.h"
 #include "sphere.h"
-
-//#include "eigen-nvcc/Eigen/Core"
 
 // Initialize memory
 void DEM::initDarcyMem()
@@ -20,6 +19,7 @@ void DEM::initDarcyMem()
     d_K = new Float[ncells]; // hydraulic conductivity matrix
     d_S = new Float[ncells]; // hydraulic storativity matrix
     d_W = new Float[ncells]; // hydraulic recharge
+    d_n = new Float[ncells]; // cell porosity
 }
 
 // Free memory
@@ -31,6 +31,7 @@ void DEM::freeDarcyMem()
     free(d_K);
     free(d_S);
     free(d_W);
+    free(d_n);
 }
 
 // 3D index to 1D index
@@ -187,6 +188,9 @@ void DEM::explDarcyStep()
             }
         }
     }
+
+    // Find macroscopic cell fluid velocities
+    findDarcyVelocities();
 }
 
 // Print array values to file stream (stdout, stderr, other file)
@@ -212,7 +216,7 @@ void DEM::printDarcyArray(FILE* stream, Float* arr, std::string desc)
 }
 
 // Print array values to file stream (stdout, stderr, other file)
-void DEM::printDarcyArray3(FILE* stream, Float3* arr)
+void DEM::printDarcyArray(FILE* stream, Float3* arr)
 {
     unsigned int x, y, z;
     for (z=0; z<d_nz; z++) {
@@ -230,10 +234,10 @@ void DEM::printDarcyArray3(FILE* stream, Float3* arr)
 }
 
 // Overload printDarcyArray to add optional description
-void DEM::printDarcyArray3(FILE* stream, Float3* arr, std::string desc)
+void DEM::printDarcyArray(FILE* stream, Float3* arr, std::string desc)
 {
     std::cout << "\n" << desc << ":\n";
-    printDarcyArray3(stream, arr);
+    printDarcyArray(stream, arr);
 }
 
 // Find cell velocity
@@ -247,8 +251,7 @@ void DEM::findDarcyVelocities()
     Float nu = params.nu;
 
     // Porosity [-]: n
-    Float n = 0.5;  // CHANGE THIS
-    
+
     unsigned int ix, iy, iz, cellidx;
     for (ix=0; ix<d_nx; ++ix) {
         for (iy=0; iy<d_ny; ++iy) {
@@ -257,20 +260,75 @@ void DEM::findDarcyVelocities()
                 cellidx = idx(ix,iy,iz);
                 dH = d_dH[cellidx];
 
-                // Calculate flux
+                // Approximate cell porosity
+                Float n = cellPorosity(ix, iy, iz);
+
+                // Calculate flux (if 0,0,0 is lower left corner)
                 q.x = -d_K[cellidx]/nu * dH.x;
                 q.y = -d_K[cellidx]/nu * dH.y;
                 q.z = -d_K[cellidx]/nu * dH.z;
-
+                
                 // Calculate velocity
                 v.x = q.x/n;
                 v.y = q.y/n;
                 v.z = q.z/n;
-
                 d_V[cellidx] = v;
             }
         }
     }
+}
+
+// Find particles with centres inside a spatial interval
+// NOTE: This function is untested and unused
+std::vector<unsigned int> DEM::particlesInCell(
+        const Float3 min, const Float3 max)
+{
+    // Particles radii inside cell will be stored in this vector
+    std::vector<unsigned int> pidx;
+
+    unsigned int i;
+    Float4 x;
+    for (i=0; i<np; ++i) {
+
+        // Read the position
+        x = k.x[i];
+
+        if (x.x >= min.x && x.y >= min.y && x.z >= min.z
+                && x.x < max.x && x.y < max.y && x.z < max.z) {
+            pidx.push_back(i);
+        }
+    }
+}
+
+// Find the porosity of a target cell
+Float DEM::cellPorosity(
+        const unsigned int x,
+        const unsigned int y,
+        const unsigned int z)
+{
+    const Float3 x_min = {x*d_dx, y*d_dy, z*d_dz};
+    const Float3 x_max = {x_min.x+d_dx, x_min.y+d_dy, x_min.z+d_dz};
+    const Float cell_volume = d_dx*d_dy*d_dz;
+
+    Float void_volume = cell_volume;
+
+    unsigned int i;
+    Float4 xr;
+    for (i=0; i<np; ++i) {
+
+        // Read the position and radius
+        xr = k.x[i];
+
+        if (xr.x >= x_min.x && xr.y >= x_min.y && xr.z >= x_min.z
+                && xr.x < x_max.x && xr.y < x_max.y && xr.z < x_max.z) {
+            void_volume -= 4.0/3.0*M_PI*xr.w*xr.w*xr.w;
+        }
+    }
+
+    // Return the porosity, which should always be between 0.0 and 1.0
+    Float n = fmin(1.0, fmax(0.0, (void_volume)/cell_volume));
+    d_n[idx(x,y,z)] = n;
+    return n;
 }
 
 // Solve Darcy flow on a regular, cubic grid
@@ -294,12 +352,12 @@ void DEM::initDarcy(const Float cellsizemultiplier)
 
     if (verbose == 1) {
         std::cout << "  - Fluid grid dimensions: "
-            << d_nx << " * "
-            << d_ny << " * "
+            << d_nx << "*"
+            << d_ny << "*"
             << d_nz << std::endl;
         std::cout << "  - Fluid grid cell size: "
-            << d_dx << " * "
-            << d_dy << " * "
+            << d_dx << "*"
+            << d_dy << "*"
             << d_dz << std::endl;
     }
 
@@ -307,9 +365,13 @@ void DEM::initDarcy(const Float cellsizemultiplier)
     initDarcyVals();
 }
 
-
+// Print final heads and free memory
 void DEM::endDarcy()
 {
-    printDarcyArray(stdout, d_H, "d_H");
+    //printDarcyArray(stdout, d_H, "d_H");
+    //printDarcyArray(stdout, d_V, "d_V");
+    //printDarcyArray(stdout, d_n, "d_n");
     freeDarcyMem();
 }
+
+// vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

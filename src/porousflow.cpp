@@ -30,7 +30,7 @@ int main(const int argc, const char *argv[])
     int verbose = 1;
     int dry = 0;
     int nfiles = 0;
-
+    int darcy = 1;
 
     // Process input parameters
     int i;
@@ -61,10 +61,9 @@ int main(const int argc, const char *argv[])
 
             // Create DEM class, read data from input binary,
             // check values, init cuda, transfer const mem, solve Darcy flow
-            DEM dem(argvi, verbose, 1, dry, 1, 1, 1);
-
-            dem.startTime();
-
+            DEM dem(argvi, verbose, 1, dry, 1, 1, darcy);
+            if (dry == 0)
+                dem.startTime();
         }
     }
 
@@ -77,6 +76,5 @@ int main(const int argc, const char *argv[])
     }
 
     return 0; // Return successfull exit status
-} 
-// END OF FILE
+}
 // vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
