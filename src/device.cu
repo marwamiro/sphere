@@ -857,8 +857,23 @@ __host__ void DEM::startTime()
         }
 
         // Solve darcy flow through grid
-        if (darcy == 1)
+        if (darcy == 1) {
+
+            // Copy device data to host memory
+            transferFromGlobalDeviceMemory();
+
+            // Pause the CPU thread until all CUDA calls previously issued are completed
+            cudaThreadSynchronize();
+
+            // Perform explicit Darcy time step
             explDarcyStep();
+
+            // Transfer data from host to device memory
+            transferToGlobalDeviceMemory();
+
+            // Pause the CPU thread until all CUDA calls previously issued are completed
+            cudaThreadSynchronize();
+        }
 
         // Update particle kinematics
         if (PROFILING == 1)

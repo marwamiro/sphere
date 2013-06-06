@@ -177,6 +177,24 @@ class DEM {
         std::vector<unsigned int> particlesInCell(
                 const Float3 min, const Float3 max);
 
+        // Return the lower corner coordinates of a cell
+        Float3 cellMinBoundaryDarcy(
+                const unsigned int x,
+                const unsigned int y,
+                const unsigned int z);
+
+        // Return the upper corner coordinates of a cell
+        Float3 cellMaxBoundaryDarcy(
+                const unsigned int x,
+                const unsigned int y,
+                const unsigned int z);
+
+        // Returns the cell volume
+        Float cellVolumeDarcy();
+
+        // Add fluid drag to the particles inside each cell
+        void fluidDragDarcy();
+
         // Find porosity of cell
         Float cellPorosity(
                 const unsigned int x,

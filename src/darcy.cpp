@@ -103,6 +103,7 @@ void DEM::findDarcyGradients()
 
                 H = d_H[cellidx];   // cell hydraulic pressure
 
+                // Second order central difference
                 d_dH[cellidx].x
                  = (d_H[idx(ix+1,iy,iz)] - 2.0*H + d_H[idx(ix-1,iy,iz)])/dx2;
                 
@@ -263,7 +264,9 @@ void DEM::findDarcyVelocities()
                 // Approximate cell porosity
                 Float n = cellPorosity(ix, iy, iz);
 
-                // Calculate flux (if 0,0,0 is lower left corner)
+                // Calculate flux
+                // The sign might need to be reversed, depending on the
+                // grid orientation
                 q.x = -d_K[cellidx]/nu * dH.x;
                 q.y = -d_K[cellidx]/nu * dH.y;
                 q.z = -d_K[cellidx]/nu * dH.z;
@@ -276,6 +279,63 @@ void DEM::findDarcyVelocities()
             }
         }
     }
+}
+
+// Return the lower corner coordinates of a cell
+Float3 DEM::cellMinBoundaryDarcy(
+        const unsigned int x,
+        const unsigned int y,
+        const unsigned int z)
+{
+    const Float3 x_min = {x*d_dx, y*d_dy, z*d_dz};
+    return x_min;
+}
+
+// Return the lower corner coordinates of a cell
+Float3 DEM::cellMaxBoundaryDarcy(
+        const unsigned int x,
+        const unsigned int y,
+        const unsigned int z)
+{
+    const Float3 x_max = {(x+1)*d_dx, (y+1)*d_dy, (z+1)*d_dz};
+    return x_max;
+}
+
+// Return the volume of a cell
+Float DEM::cellVolumeDarcy()
+{
+    const Float cell_volume = d_dx*d_dy*d_dz;
+    return cell_volume;
+}
+
+// Find the porosity of a target cell
+Float DEM::cellPorosity(
+        const unsigned int x,
+        const unsigned int y,
+        const unsigned int z)
+{
+    const Float3 x_min = cellMinBoundaryDarcy(x,y,z);
+    const Float3 x_max = cellMaxBoundaryDarcy(x,y,z);
+    Float cell_volume = cellVolumeDarcy();
+    Float void_volume = cell_volume;
+
+    unsigned int i;
+    Float4 xr;
+    for (i=0; i<np; ++i) {
+
+        // Read the position and radius
+        xr = k.x[i];
+
+        if (xr.x >= x_min.x && xr.y >= x_min.y && xr.z >= x_min.z
+                && xr.x < x_max.x && xr.y < x_max.y && xr.z < x_max.z) {
+            void_volume -= 4.0/3.0*M_PI*xr.w*xr.w*xr.w;
+        }
+    }
+
+    // Return the porosity, which should always be between 0.0 and 1.0
+    Float n = fmin(1.0, fmax(0.0, (void_volume)/cell_volume));
+    d_n[idx(x,y,z)] = n;
+    return n;
 }
 
 // Find particles with centres inside a spatial interval
@@ -300,35 +360,18 @@ std::vector<unsigned int> DEM::particlesInCell(
     }
 }
 
-// Find the porosity of a target cell
-Float DEM::cellPorosity(
-        const unsigned int x,
-        const unsigned int y,
-        const unsigned int z)
+// Add fluid drag to the particles inside each cell
+void DEM::fluidDragDarcy()
 {
-    const Float3 x_min = {x*d_dx, y*d_dy, z*d_dz};
-    const Float3 x_max = {x_min.x+d_dx, x_min.y+d_dy, x_min.z+d_dz};
-    const Float cell_volume = d_dx*d_dy*d_dz;
+    unsigned int ix, iy, iz, cellidx;
+    for (ix=0; ix<d_nx; ++ix) {
+        for (iy=0; iy<d_ny; ++iy) {
+            for (iz=0; iz<d_nz; ++iz) {
 
-    Float void_volume = cell_volume;
 
-    unsigned int i;
-    Float4 xr;
-    for (i=0; i<np; ++i) {
-
-        // Read the position and radius
-        xr = k.x[i];
-
-        if (xr.x >= x_min.x && xr.y >= x_min.y && xr.z >= x_min.z
-                && xr.x < x_max.x && xr.y < x_max.y && xr.z < x_max.z) {
-            void_volume -= 4.0/3.0*M_PI*xr.w*xr.w*xr.w;
+            }
         }
     }
-
-    // Return the porosity, which should always be between 0.0 and 1.0
-    Float n = fmin(1.0, fmax(0.0, (void_volume)/cell_volume));
-    d_n[idx(x,y,z)] = n;
-    return n;
 }
 
 // Solve Darcy flow on a regular, cubic grid
