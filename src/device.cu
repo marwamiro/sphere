@@ -14,6 +14,7 @@
 #include "sphere.h"
 #include "datatypes.h"
 #include "utility.cuh"
+#include "utility.h"
 #include "constants.cuh"
 #include "debug.h"
 
@@ -375,9 +376,9 @@ __host__ void DEM::freeGlobalDeviceMemory()
 }
 
 
-__host__ void DEM::transferToGlobalDeviceMemory()
+__host__ void DEM::transferToGlobalDeviceMemory(int statusmsg)
 {
-    if (verbose == 1)
+    if (verbose == 1 && statusmsg == 1)
         std::cout << "  Transfering data to the device:                 ";
 
     // Commonly-used memory sizes
@@ -460,7 +461,7 @@ __host__ void DEM::transferToGlobalDeviceMemory()
     }
 
     checkForCudaErrors("End of transferToGlobalDeviceMemory");
-    if (verbose == 1)
+    if (verbose == 1 && statusmsg == 1)
         std::cout << "Done" << std::endl;
 }
 
@@ -869,7 +870,7 @@ __host__ void DEM::startTime()
             explDarcyStep();
 
             // Transfer data from host to device memory
-            transferToGlobalDeviceMemory();
+            transferToGlobalDeviceMemory(0);
 
             // Pause the CPU thread until all CUDA calls previously issued are completed
             cudaThreadSynchronize();

@@ -8,12 +8,14 @@
 #include "datatypes.h"
 #include "constants.h"
 #include "sphere.h"
+#include "utility.h"
 
 // Initialize memory
 void DEM::initDarcyMem()
 {
     unsigned int ncells = d_nx*d_ny*d_nz;
     d_H = new Float[ncells]; // hydraulic pressure matrix
+    d_H_new = new Float[ncells]; // hydraulic pressure matrix
     d_V = new Float3[ncells]; // Cell hydraulic velocity
     d_dH = new Float3[ncells]; // Cell spatial gradient in hydraulic pressures
     d_K = new Float[ncells]; // hydraulic conductivity matrix
@@ -26,12 +28,21 @@ void DEM::initDarcyMem()
 void DEM::freeDarcyMem()
 {
     free(d_H);
+    free(d_H_new);
     free(d_V);
     free(d_dH);
     free(d_K);
     free(d_S);
     free(d_W);
     free(d_n);
+}
+
+// Swap two arrays pointers
+void swapFloatArrays(Float* arr1, Float* arr2)
+{
+    Float* tmp = arr1;
+    arr1 = arr2;
+    arr2 = tmp;
 }
 
 // 3D index to 1D index
@@ -84,39 +95,6 @@ Float DEM::minVal3dArr(Float* arr)
     }
 }
 
-// Find the spatial gradient in pressures per cell
-void DEM::findDarcyGradients()
-{
-    // Cell sizes squared
-    const Float dx2 = d_dx*d_dx;
-    const Float dy2 = d_dy*d_dy;
-    const Float dz2 = d_dz*d_dz;
-
-    Float H;
-    unsigned int ix, iy, iz, cellidx;
-
-    for (ix=1; ix<d_nx-1; ++ix) {
-        for (iy=1; iy<d_ny-1; ++iy) {
-            for (iz=1; iz<d_nz-1; ++iz) {
-
-                cellidx = idx(ix,iy,iz);
-
-                H = d_H[cellidx];   // cell hydraulic pressure
-
-                // Second order central difference
-                d_dH[cellidx].x
-                 = (d_H[idx(ix+1,iy,iz)] - 2.0*H + d_H[idx(ix-1,iy,iz)])/dx2;
-                
-                d_dH[cellidx].y
-                 = (d_H[idx(ix,iy+1,iz)] - 2.0*H + d_H[idx(ix,iy-1,iz)])/dy2;
-
-                d_dH[cellidx].z
-                 = (d_H[idx(ix,iy,iz+1)] - 2.0*H + d_H[idx(ix,iy,iz-1)])/dz2;
-            }
-        }
-    }
-}
-
 
 // Set the gradient to 0.0 in all dimensions at the boundaries
 void DEM::setDarcyBCNeumannZero()
@@ -155,6 +133,40 @@ void DEM::setDarcyBCNeumannZero()
 }
 
 
+// Find the spatial gradient in pressures per cell
+void DEM::findDarcyGradients()
+{
+    // Cell sizes squared
+    const Float dx2 = d_dx*d_dx;
+    const Float dy2 = d_dy*d_dy;
+    const Float dz2 = d_dz*d_dz;
+
+    Float H;
+    unsigned int ix, iy, iz, cellidx;
+
+    for (ix=1; ix<d_nx-1; ++ix) {
+        for (iy=1; iy<d_ny-1; ++iy) {
+            for (iz=1; iz<d_nz-1; ++iz) {
+
+                cellidx = idx(ix,iy,iz);
+
+                H = d_H[cellidx];   // cell hydraulic pressure
+
+                // Second order central difference
+                d_dH[cellidx].x
+                 = (d_H[idx(ix+1,iy,iz)] - 2.0*H + d_H[idx(ix-1,iy,iz)])/dx2;
+                
+                d_dH[cellidx].y
+                 = (d_H[idx(ix,iy+1,iz)] - 2.0*H + d_H[idx(ix,iy-1,iz)])/dy2;
+
+                d_dH[cellidx].z
+                 = (d_H[idx(ix,iy,iz+1)] - 2.0*H + d_H[idx(ix,iy,iz-1)])/dz2;
+            }
+        }
+    }
+}
+
+
 // Perform an explicit step.
 // Boundary conditions are fixed gradient values (Neumann)
 void DEM::explDarcyStep()
@@ -171,24 +183,52 @@ void DEM::explDarcyStep()
     // Explicit 3D finite difference scheme
     // new = old + gradient*timestep
     unsigned int ix, iy, iz, cellidx;
-    Float K, H;
+    Float K, H, d;
+    Float T, Tx, Ty, Tz, S;
     Float dt = time.dt;
-    for (ix=0; ix<d_nx; ++ix) {
+    /*for (ix=0; ix<d_nx; ++ix) {
         for (iy=0; iy<d_ny; ++iy) {
-            for (iz=0; iz<d_nz; ++iz) {
+            for (iz=0; iz<d_nz; ++iz) {*/
+    for (ix=1; ix<d_nx-1; ++ix) {
+        for (iy=1; iy<d_ny-1; ++iy) {
+            for (iz=1; iz<d_nz-1; ++iz) {
 
                 cellidx = idx(ix,iy,iz);
 
                 K = d_K[cellidx];   // cell hydraulic conductivity
-                H = d_H[cellidx];   // cell hydraulic pressure
+                //H = d_H[cellidx];   // cell hydraulic pressure
 
-                d_H[cellidx]
-                    += d_W[cellidx]*dt  // cell recharge
-                    + K*dt *            // diffusivity term
-                    (d_dH[cellidx].x + d_dH[cellidx].y + d_dH[cellidx].z);
+                // Cell size
+                d = d_dx;
+
+                // Cell hydraulic transmissivity (as long as nx=ny=nz)
+                T = K*d;
+
+                // Transmissivity (arithmetic mean, harmonic mean may be better)
+                Tx = (d_K[idx(ix-1,iy,iz)]*d + T + d_K[idx(ix+1,iy,iz)])/3.0;
+                Ty = (d_K[idx(ix,iy-1,iz)]*d + T + d_K[idx(ix,iy+1,iz)])/3.0;
+                Tz = (d_K[idx(ix,iy,iz-1)]*d + T + d_K[idx(ix,iy,iz+1)])/3.0;
+
+                // Cell hydraulic storativity (as long as nx=ny=nz)
+                S = d_S[cellidx]*d; // not d^3 ?
+
+                d_H_new[cellidx] = d_H[cellidx] +
+                    dt/S *
+                    (Tx*d_dH[cellidx].x
+                     + Ty*d_dH[cellidx].y
+                     + Tz*d_dH[cellidx].z
+                     + d_W[cellidx]);       // Cell recharge
+
+                //d_H[cellidx]
+                    //+= d_W[cellidx]*dt  // cell recharge
+                    //+ K*dt *            // diffusivity term
+                    //(d_dH[cellidx].x + d_dH[cellidx].y + d_dH[cellidx].z);
             }
         }
     }
+
+    // Swap d_H and d_H_new
+    swapFloatArrays(d_H, d_H_new);
 
     // Find macroscopic cell fluid velocities
     findDarcyVelocities();
@@ -411,7 +451,7 @@ void DEM::initDarcy(const Float cellsizemultiplier)
 // Print final heads and free memory
 void DEM::endDarcy()
 {
-    //printDarcyArray(stdout, d_H, "d_H");
+    printDarcyArray(stdout, d_H, "d_H");
     //printDarcyArray(stdout, d_V, "d_V");
     //printDarcyArray(stdout, d_n, "d_n");
     freeDarcyMem();

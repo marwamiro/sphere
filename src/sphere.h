@@ -120,7 +120,7 @@ class DEM {
         void rt_freeGlobalDeviceMemory(void);
 
         // Copy non-constant data to global GPU memory
-        void transferToGlobalDeviceMemory(void);
+        void transferToGlobalDeviceMemory(int status = 1);
 
         // Copy non-constant data from global GPU memory to host RAM
         void transferFromGlobalDeviceMemory(void);
@@ -151,6 +151,7 @@ class DEM {
         int d_nx, d_ny, d_nz;     // Number of cells in each dim
         Float d_dx, d_dy, d_dz;   // Cell length in each dim
         Float* d_H;   // Cell hydraulic heads
+        Float* d_H_new;   // Cell hydraulic heads
         Float3* d_V;  // Cell fluid velocity
         Float3* d_dH; // Cell spatial gradient in heads
         Float* d_K;   // Cell hydraulic conductivities (anisotropic)

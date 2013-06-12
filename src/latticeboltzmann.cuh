@@ -1,6 +1,8 @@
 #ifndef LATTICEBOLTZMANN_CUH_
 #define LATTICEBOLTZMANN_CUH_
 
+#include "utility.h"
+
 // Enable line below to perform lattice Boltzmann computations on the
 // GPU, disable for CPU computation
 //#define LBM_GPU
@@ -172,14 +174,6 @@ void initFluid(
 #ifndef LBM_GPU
             }}}
 #endif
-}
-
-// Swap two arrays pointers
-void swapFloatArrays(Float* arr1, Float* arr2)
-{
-    Float* tmp = arr1;
-    arr1 = arr2;
-    arr2 = tmp;
 }
 
 // Combined streaming and collision step with particle coupling and optional
