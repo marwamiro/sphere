@@ -37,14 +37,6 @@ void DEM::freeDarcyMem()
     free(d_n);
 }
 
-// Swap two arrays pointers
-void swapFloatArrays(Float* arr1, Float* arr2)
-{
-    Float* tmp = arr1;
-    arr1 = arr2;
-    arr2 = tmp;
-}
-
 // 3D index to 1D index
 unsigned int DEM::idx(
         const unsigned int x,
