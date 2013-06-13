@@ -957,7 +957,7 @@ __host__ void DEM::startTime()
 
         // Produce output binary if the time interval 
         // between output files has been reached
-        if (filetimeclock > time.file_dt) {
+        if (filetimeclock >= time.file_dt) {
 
             // Pause the CPU thread until all CUDA calls previously issued are completed
             cudaThreadSynchronize();
