@@ -147,7 +147,7 @@ class DEM {
         //// Darcy-flow 
         int darcy;  // 0: no, 1: yes
 
-        // Darcy values
+        // Darcy values, host
         int d_nx, d_ny, d_nz;     // Number of cells in each dim
         Float d_dx, d_dy, d_dz;   // Cell length in each dim
         Float* d_H;   // Cell hydraulic heads
@@ -155,11 +155,23 @@ class DEM {
         Float3* d_V;  // Cell fluid velocity
         Float3* d_dH; // Cell spatial gradient in heads
         Float* d_K;   // Cell hydraulic conductivities (anisotropic)
-        Float* d_S;   // Cell hydraulic storativity
+        Float3* d_T;   // Cell hydraulic transmissivity
+        Float* d_Ss;   // Cell hydraulic storativity
         Float* d_W;   // Cell hydraulic recharge
-        Float* d_n;   // Cell porosity
+        Float* d_phi;   // Cell porosity
 
-        // Darcy functions
+        // Darcy values, device
+        Float* dev_d_H;   // Cell hydraulic heads
+        Float* dev_d_H_new; // Cell hydraulic heads
+        Float3* dev_d_V;  // Cell fluid velocity
+        Float3* dev_d_dH; // Cell spatial gradient in heads
+        Float* dev_d_K;   // Cell hydraulic conductivities
+        Float3* dev_d_T;  // Cell hydraulic transmissivity
+        Float* dev_d_Ss;   // Cell hydraulic storativity
+        Float* dev_d_W;   // Cell hydraulic recharge
+        Float* dev_d_phi;   // Cell porosity
+
+        //// Darcy functions
 
         // Memory allocation
         void initDarcyMem();
@@ -167,6 +179,16 @@ class DEM {
         
         // Set some values for the Darcy parameters
         void initDarcyVals();
+
+        // Copy Darcy values from cell to cell (by index)
+        void copyDarcyVals(unsigned int read, unsigned int write);
+
+        // Update ghost nodes from their parent cell values
+        void setDarcyGhostNodes();
+
+        // Find cell transmissivities from hydraulic conductivities and cell
+        // dimensions
+        void findDarcyTransmissivities();
 
         // Finds central difference gradients
         void findDarcyGradients();
@@ -202,6 +224,9 @@ class DEM {
                 const unsigned int y,
                 const unsigned int z);
 
+        // Find and save all cell porosities
+        void findPorosities();
+
         // Find darcy flow velocities from specific flux (q)
         void findDarcyVelocities();
 
@@ -211,17 +236,26 @@ class DEM {
                 const unsigned int y,
                 const unsigned int z);
 
-        // Get minimum value in 1D array 
-        Float minVal3dArr(Float* arr);
-
         // Initialize Darcy values and arrays
         void initDarcy(const Float cellsizemultiplier = 1.0);
 
         // Clean up Darcy arrays
         void endDarcy();
 
+        // Check whether the explicit integration is going to meet the
+        // stability criteria
+        Float getTmax();
+        Float getSsmin();
+        void checkDarcyTimestep();
+
         // Perform a single time step, explicit integration
         void explDarcyStep();
+
+        //// Darcy functions, device
+        void initDarcyMemDev();
+        void freeDarcyMemDev();
+        void transferDarcyToGlobalDeviceMemory(int statusmsg);
+        void transferDarcyFromGlobalDeviceMemory(int statusmsg);
 
 
     public:

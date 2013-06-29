@@ -23,7 +23,7 @@ void DEM::initDarcyMem()
     d_T = new Float3[ncells]; // hydraulic transmissivity matrix
     d_Ss = new Float[ncells]; // hydraulic storativity matrix
     d_W = new Float[ncells]; // hydraulic recharge
-    d_n = new Float[ncells]; // cell porosity
+    d_phi = new Float[ncells]; // cell porosity
 }
 
 // Free memory
@@ -37,7 +37,7 @@ void DEM::freeDarcyMem()
     free(d_T);
     free(d_Ss);
     free(d_W);
-    free(d_n);
+    free(d_phi);
 }
 
 // 3D index to 1D index
@@ -57,7 +57,7 @@ void DEM::initDarcyVals()
     const Float k = 1.0e-10;
 
     // Density of the fluid [kg/m^3]
-    const Float rho = 3600.0;
+    const Float rho = 1000.0;
 
     unsigned int ix, iy, iz, cellidx;
     for (ix=0; ix<d_nx; ++ix) {
@@ -95,7 +95,7 @@ void DEM::copyDarcyVals(unsigned int read, unsigned int write)
     d_T[write] = MAKE_FLOAT3(d_T[read].x, d_T[read].y, d_T[read].z);
     d_Ss[write] = d_Ss[read];
     d_W[write] = d_W[read];
-    d_n[write] = d_n[read];
+    d_phi[write] = d_phi[read];
 }
 
 // Update ghost nodes from their parent cell values
@@ -156,14 +156,32 @@ void DEM::setDarcyGhostNodes()
 // Find cell transmissivities from hydraulic conductivities and cell dimensions
 void DEM::findDarcyTransmissivities()
 {
+    // Find porosities from cell particle content
+    findPorosities();
+
+    // Density of the fluid [kg/m^3]
+    const Float rho = 1000.0;
+
+    // Kozeny-Carman parameter
+    Float a = 1.0e-8;
+
     unsigned int ix, iy, iz, cellidx;
-    Float K;
+    Float K, k;
     for (ix=0; ix<d_nx; ++ix) {
         for (iy=0; iy<d_ny; ++iy) {
             for (iz=0; iz<d_nz; ++iz) {
 
                 cellidx = idx(ix,iy,iz);
-                K = d_K[cellidx];
+
+                // Read cell porosity
+                Float phi = d_phi[cellidx];
+
+                // Calculate permeability from the Kozeny-Carman relationship
+                k = a*phi*phi*phi/(1.0 - phi*phi);
+
+                //K = d_K[cellidx];
+                // Save hydraulic conductivity [m/s]
+                d_K[cellidx] = k*rho*-params.g[2]/params.nu;
 
                 // Hydraulic transmissivity [m2/s]
                 Float3 T = {K*d_dx, K*d_dy, K*d_dz};
@@ -293,6 +311,12 @@ Float hmean(Float a, Float b) {
 // Boundary conditions are fixed values (Dirichlet)
 void DEM::explDarcyStep()
 {
+    // Find transmissivities from cell particle content
+    findDarcyTransmissivities();
+
+    // Check the time step length
+    checkDarcyTimestep();
+
     // Cell dims squared
     const Float dx2 = d_dx*d_dx;
     const Float dy2 = d_dy*d_dy;
@@ -404,14 +428,13 @@ void DEM::explDarcyStep()
         }
     }
 
-    // Find macroscopic cell fluid velocities
-    findDarcyVelocities();
-
     // Swap d_H and d_H_new
     Float* tmp = d_H;
     d_H = d_H_new;
     d_H_new = tmp;
 
+    // Find macroscopic cell fluid velocities
+    findDarcyVelocities();
 }
 
 // Print array values to file stream (stdout, stderr, other file)
@@ -485,7 +508,7 @@ void DEM::findDarcyVelocities()
                 dH = d_dH[cellidx];
 
                 // Approximate cell porosity
-                Float n = cellPorosity(ix, iy, iz);
+                Float phi = d_phi[cellidx];
 
                 // Calculate flux
                 // The sign might need to be reversed, depending on the
@@ -495,9 +518,9 @@ void DEM::findDarcyVelocities()
                 q.z = -d_K[cellidx]/nu * dH.z;
                 
                 // Calculate velocity
-                v.x = q.x/n;
-                v.y = q.y/n;
-                v.z = q.z/n;
+                v.x = q.x/phi;
+                v.y = q.y/phi;
+                v.z = q.z/phi;
                 d_V[cellidx] = v;
             }
         }
@@ -556,9 +579,21 @@ Float DEM::cellPorosity(
     }
 
     // Return the porosity, which should always be between 0.0 and 1.0
-    Float n = fmin(1.0, fmax(0.0, (void_volume)/cell_volume));
-    d_n[idx(x,y,z)] = n;
-    return n;
+    Float phi = fmin(1.0, fmax(0.0, void_volume/cell_volume));
+    //Float phi = 0.1;
+    return phi;
+}
+
+void DEM::findPorosities()
+{
+    unsigned int ix, iy, iz, cellidx;
+    for (ix=0; ix<d_nx; ++ix) {
+        for (iy=0; iy<d_ny; ++iy) {
+            for (iz=0; iz<d_nz; ++iz) {
+                d_phi[idx(ix,iy,iz)] = cellPorosity(ix,iy,iz);
+            }
+        }
+    }
 }
 
 // Find particles with centres inside a spatial interval
@@ -619,7 +654,7 @@ Float DEM::getTmax()
     return max;
 }
 // Get maximum value in 1d array with ghost nodes
-Float DEM::getSmin()
+Float DEM::getSsmin()
 {
     Float min = 1.0e13; // initialize with a small number
     unsigned int ix,iy,iz;
@@ -704,9 +739,17 @@ void DEM::initDarcy(const Float cellsizemultiplier)
 // Print final heads and free memory
 void DEM::endDarcy()
 {
-    //printDarcyArray(stdout, d_H, "d_H");
-    //printDarcyArray(stdout, d_V, "d_V");
-    //printDarcyArray(stdout, d_n, "d_n");
+    FILE* Kfile;
+    if ((Kfile = fopen("d_K.txt","w"))) {
+        printDarcyArray(Kfile, d_K);
+        fclose(Kfile);
+    } else {
+        fprintf(stderr, "Error, could not open d_K.txt\n");
+    }
+    printDarcyArray(stdout, d_phi, "d_phi");
+    printDarcyArray(stdout, d_H, "d_H");
+    printDarcyArray(stdout, d_K, "d_K");
+    printDarcyArray(stdout, d_V, "d_V");
     freeDarcyMem();
 }
 
