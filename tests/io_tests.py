@@ -5,13 +5,13 @@ from pytestutils import *
 print("### Input/output tests ###")
 
 # Generate data in python
-orig = Spherebin(np = 100, nw = 1, sid = "test-initgrid")
-orig.generateRadii(histogram = False)
+orig = Spherebin(np=100, nw=1, sid="test-initgrid")
+orig.generateRadii(histogram=False)
 orig.defaultParams()
-orig.initRandomGridPos(g = numpy.zeros(orig.nd))
-orig.initTemporal(current = 0.0, total = 0.0)
-orig.time_total = 2.0*orig.time_dt;
-orig.time_file_dt = orig.time_dt;
+orig.initRandomGridPos(g=numpy.zeros(orig.nd))
+orig.initTemporal(current=0.0, total=0.0)
+orig.time_total=2.0*orig.time_dt
+orig.time_file_dt = orig.time_dt
 orig.writebin(verbose=False)
 
 # Test Python IO routines
@@ -20,7 +20,8 @@ py.readbin("../input/" + orig.sid + ".bin", verbose=False)
 compare(orig, py, "Python IO:")
 
 # Test C++ IO routines
-orig.run(verbose=False, hideinputfile=True)
+#orig.run(verbose=False, hideinputfile=True)
+orig.run(verbose=True, hideinputfile=True)
 cpp = Spherebin()
 cpp.readbin("../output/" + orig.sid + ".output00000.bin", verbose=False)
 compare(orig, cpp, "C++ IO:   ")
@@ -34,6 +35,3 @@ compare(orig, cuda, "CUDA IO:  ")
 
 # Remove temporary files
 cleanup(orig)
-
-
-

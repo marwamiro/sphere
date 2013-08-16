@@ -24,7 +24,7 @@ The build requirements are:
 
 The runtime requirements are:
   * A `CUDA-enabled GPU <http://www.nvidia.com/object/cuda_gpus.html>`_ 
-    with compute capability 1.1 or greater.
+    with compute capability 2.0 or greater.
   * A Nvidia CUDA-enabled GPU and device driver
 
 Optional tools, required for simulation setup and data processing:

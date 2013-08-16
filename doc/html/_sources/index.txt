@@ -5,11 +5,18 @@
 
 Welcome to sphere's documentation!
 ==================================
-This is the official documentation for the *sphere* discrete element modelling software. It presents the theory behind the discrete element method (DEM), the structure of the software source code, and the Python API for handling simulation setup and data analysis.
+This is the official documentation for the *sphere* discrete element modelling
+software. It presents the theory behind the discrete element method (DEM), the
+structure of the software source code, and the Python API for handling
+simulation setup and data analysis.
 
-*sphere* is developed by Anders Damsgaard Christensen under supervision of David Lunbek Egholm and Jan A. Piotrowski, all of the department of Geology, Aarhus University, Denmark. This document is a work in progress, and is still in an early state. 
+*sphere* is developed by Anders Damsgaard Christensen under supervision of David
+Lunbek Egholm and Jan A. Piotrowski, all of the department of Geoscience, Aarhus
+University, Denmark. This document is a work in progress, and is still in an
+early state. 
 
-Contact: Anders Damsgaard Christensen, `<http://cs.au.dk/~adc>`_, `<adc@geo.au.dk>`_
+Contact: Anders Damsgaard Christensen, `<http://cs.au.dk/~adc>`_,
+`<anders.damsgaard@geo.au.dk>`_
 
 
 Contents:

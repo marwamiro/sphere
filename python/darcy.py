@@ -9,7 +9,7 @@ initialization = True
 consolidation  = True
 #shearing       = True
 rendering      = False
-#plots	       = False
+plots	       = True
 
 
 

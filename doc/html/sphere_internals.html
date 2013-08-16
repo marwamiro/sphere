@@ -54,9 +54,26 @@
   <div class="section" id="sphere-internals">
 <h1>sphere internals<a class="headerlink" href="#sphere-internals" title="Permalink to this headline">¶</a></h1>
 <p>The <em>sphere</em> executable has the following options:</p>
-<div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/home/adc/code/sphere/doc/sphinx/sphere_internals.rst</tt>, line 6)</p>
-Command u&#8217;../../sphere_linux_X86_64 &#8211;help&#8217; failed: [Errno 2] No such file or directory</div>
+<div class="highlight-text"><div class="highlight"><pre>$ ../../sphere --help
+../../sphere: particle dynamics simulator
+Usage: ../../sphere [OPTION[S]]... [FILE1 ...]
+Options:
+-h, --help		print help
+-V, --version		print version information and exit
+-q, --quiet		suppress status messages to stdout
+-n, --dry		show key experiment parameters and quit
+-r, --render		render input files instead of simulating temporal evolution
+-dc, --dont-check	don&#39;t check values before running
+
+Raytracer (-r) specific options:
+-m &lt;method&gt; &lt;maxval&gt; [-l &lt;lower cutoff val&gt;], or
+--method &lt;method&gt; &lt;maxval&gt; [-l &lt;lower cutoff val&gt;]
+	color visualization method, possible values:
+	normal, pres, vel, angvel, xdisp, angpos
+	&#39;normal&#39; is the default mode
+	if -l is appended, don&#39;t render particles with value below
+</pre></div>
+</div>
 <p>The most common way to invoke <em>sphere</em> is however via the Python API (e.g. <a class="reference internal" href="python_api.html#sphere.run" title="sphere.run"><tt class="xref py py-func docutils literal"><span class="pre">sphere.run()</span></tt></a>, <a class="reference internal" href="python_api.html#sphere.render" title="sphere.render"><tt class="xref py py-func docutils literal"><span class="pre">sphere.render()</span></tt></a>, etc.).</p>
 <p>subsection{The <em>sphere</em> algorithm}
 label{subsec:spherealgo}
@@ -334,8 +351,8 @@ An important note is that the texttt{C} examples of the NVIDIA CUDA SDK should b
 <div><p></p>
 <p></p>
 </div></blockquote>
-<p id=""><span id="project0classDEM_1a0cb0fcf60594f664a9e593917c623767"></span><div class="line-block">
-<div class="line">void <strong>forcechains</strong>(const std::string format = &#8220;interactive&#8221;, const int threedim = 1)</div>
+<p id=""><span id="project0classDEM_1ad94250277dec22f68e096bbf149ff0a8"></span><div class="line-block">
+<div class="line">void <strong>forcechains</strong>(const std::string format = &#8220;interactive&#8221;, const int threedim = 1, const double lower_cutoff = 0.0, const double upper_cutoff = 1.0e9)</div>
 </div>
 </p>
 <blockquote>

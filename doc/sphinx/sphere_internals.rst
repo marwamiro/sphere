@@ -3,7 +3,7 @@ sphere internals
 
 The *sphere* executable has the following options:
 
-.. command-output:: ../../sphere_linux_X86_64 --help
+.. command-output:: ../../sphere --help
 
 The most common way to invoke *sphere* is however via the Python API (e.g. :py:func:`sphere.run`, :py:func:`sphere.render`, etc.).
 
