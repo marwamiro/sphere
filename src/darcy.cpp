@@ -177,6 +177,8 @@ void DEM::findDarcyTransmissivities()
                 Float phi = d_phi[cellidx];
 
                 // Calculate permeability from the Kozeny-Carman relationship
+                // Nelson 1994 eq. 1c
+                // Boek 2012 eq. 16
                 k = a*phi*phi*phi/(1.0 - phi*phi);
 
                 //K = d_K[cellidx];
