@@ -30,6 +30,7 @@ int main(const int argc, const char *argv[])
     int verbose = 1;
     int checkVals = 1;
     int dry = 0;
+    int rigid  = 0; // whether to soft body (0) or rigid body (1) solver
     int render = 0; // whether to render an image
     int method = 0; // visualization method
     int nfiles = 0; // number of input files
@@ -52,6 +53,7 @@ int main(const int argc, const char *argv[])
                 << "-n, --dry\t\tshow key experiment parameters and quit\n"
                 << "-r, --render\t\trender input files instead of simulating temporal evolution\n"
                 << "-dc, --dont-check\tdon't check values before running\n" 
+                << "-rb, --rigid\tuse rigid body contact model, using the Bullet Physics engine\n" 
                 << "\nRaytracer (-r) specific options:\n"
                 << "-m <method> <maxval> [-l <lower cutoff val>], or\n"
                 << "--method <method> <maxval> [-l <lower cutoff val>]\n"
@@ -93,6 +95,9 @@ int main(const int argc, const char *argv[])
 
         else if (argvi == "-dc" || argvi == "--dont-check")
             checkVals = 0;
+
+        else if (argvi == "-rb" || argvi == "--rigid")
+            rigid = 1;
 
         else if (argvi == "-m" || argvi == "--method") {
 
@@ -150,8 +155,12 @@ int main(const int argc, const char *argv[])
                     dem.render(method, max_val, lower_cutoff);
 
                 // Otherwise, start iterating through time
-                else
-                    dem.startTime();
+                else {
+                    if (rigid == 0)     // Soft body
+                        dem.startTime();
+                    else                // Rigid body
+                        dem.startRigid();
+                }
 
             } else { 
                 
@@ -163,8 +172,12 @@ int main(const int argc, const char *argv[])
                     dem.render(method, max_val, lower_cutoff);
 
                 // Otherwise, start iterating through time
-                else
-                    dem.startTime();
+                else {
+                    if (rigid == 0)
+                        dem.startTime();
+                    else
+                        dem.startRigid();
+                }
             }
 
         }
