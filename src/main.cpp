@@ -159,7 +159,7 @@ int main(const int argc, const char *argv[])
                     if (rigid == 0)     // Soft body
                         dem.startTime();
                     else                // Rigid body
-                        dem.startRigid();
+                        dem.startTimeRigid();
                 }
 
             } else { 
@@ -176,7 +176,7 @@ int main(const int argc, const char *argv[])
                     if (rigid == 0)
                         dem.startTime();
                     else
-                        dem.startRigid();
+                        dem.startTimeRigid();
                 }
             }
 

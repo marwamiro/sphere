@@ -10,6 +10,10 @@ INCLUDE_DIRECTORIES("${CMAKE_BINARY_DIR}/src")
 # Include FindCUDA script
 INCLUDE(FindCUDA)
 
+# Include Bullet
+INCLUDE(FindBullet)
+INCLUDE_DIRECTORIES("${BULLET_INCLUDE_DIRS}")
+
 # Additional NVCC command line arguments
 # NOTE: Multiple arguments must be semi-colon selimited
 SET(CUDA_NVCC_FLAGS
@@ -17,13 +21,17 @@ SET(CUDA_NVCC_FLAGS
 
 # Rule to build executable program 
 CUDA_ADD_EXECUTABLE(../sphere
-    main.cpp file_io.cpp sphere.cpp device.cu utility.cu utility.cpp darcy.cpp)
+    main.cpp file_io.cpp sphere.cpp device.cu utility.cu utility.cpp darcy.cpp
+    rigid.cpp)
 CUDA_ADD_EXECUTABLE(../porosity
-    porosity.cpp file_io.cpp sphere.cpp device.cu utility.cu utility.cpp darcy.cpp)
+    porosity.cpp file_io.cpp sphere.cpp device.cu utility.cu utility.cpp
+    darcy.cpp rigid.cpp)
 CUDA_ADD_EXECUTABLE(../forcechains
-    forcechains.cpp file_io.cpp sphere.cpp device.cu utility.cu utility.cpp darcy.cpp)
+    forcechains.cpp file_io.cpp sphere.cpp device.cu utility.cu utility.cpp
+    darcy.cpp rigid.cpp)
 CUDA_ADD_EXECUTABLE(../porousflow
-    porousflow.cpp darcy.cpp file_io.cpp sphere.cpp device.cu utility.cpp utility.cu)
+    porousflow.cpp darcy.cpp file_io.cpp sphere.cpp device.cu utility.cpp
+    utility.cu rigid.cpp)
 
 #ADD_EXECUTABLE(unittests boost-unit-tests.cpp sphere.cpp)
 #TARGET_LINK_LIBRARIES(unittests

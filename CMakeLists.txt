@@ -15,7 +15,8 @@ cmake_minimum_required(VERSION 2.8)
 find_package(CUDA REQUIRED)
 
 # Find the Bullet Physics engine
-find_package(Bullet)
+#set(BULLET_ROOT /usr/include/bullet)
+find_package(Bullet REQUIRED)
 
 # Find OpenMP
 find_package(OpenMP)

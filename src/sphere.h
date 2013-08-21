@@ -7,6 +7,7 @@
 //#include "eigen-nvcc/Eigen/Core"
 
 #include "datatypes.h"
+#include "btBulletDynamicsCommon.h"
 
 // DEM class
 class DEM {
@@ -257,6 +258,33 @@ class DEM {
         void transferDarcyToGlobalDeviceMemory(int statusmsg);
         void transferDarcyFromGlobalDeviceMemory(int statusmsg);
 
+        //// Rigid body functions
+        void addRigidBox(
+                btDiscreteDynamicsWorld* dynamicsWorld,
+                btAlignedObjectArray<btCollisionShape*> &collisionShapes,
+                Float mass,
+                btVector3 &size,
+                btVector3 &origin,
+                btVector3 &localInertia,
+                Float restitution,
+                Float friction,
+                Float rollingFriction,
+                Float linearDamping,
+                Float angularDamping);
+
+        void addRigidSphere(
+                btDiscreteDynamicsWorld* dynamicsWorld,
+                btAlignedObjectArray<btCollisionShape*> &collisionShapes,
+                Float mass,
+                Float radius,
+                btVector3 &origin,
+                btVector3 &localInertia,
+                Float restitution,
+                Float friction,
+                Float rollingFriction,
+                Float linearDamping,
+                Float angularDamping);
+
 
     public:
         // Values and functions accessible from the outside
@@ -323,6 +351,8 @@ class DEM {
                 const double lower_cutoff = 0.0,
                 const double upper_cutoff = 1.0e9);
 
+        ///// Rigid body simulation
+        void startTimeRigid(void);
         
         ///// Darcy flow functions
 
