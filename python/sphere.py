@@ -88,12 +88,25 @@ class Spherebin:
         self.V_b          = numpy.zeros(1, dtype=numpy.float64)
 
         # Wall data
+        # nw: Number of dynamic walls
+        # nw = 1: Uniaxial
+        # nw = 2: Biaxial
+        # nw = 5: Triaxial
         self.nw      = numpy.ones(1, dtype=numpy.uint32) * nw
         self.wmode   = numpy.zeros(self.nw, dtype=numpy.int32)
 
         self.w_n     = numpy.zeros((self.nw, self.nd), dtype=numpy.float64)
-        if (self.nw > 0):
+        if (self.nw >= 1):
             self.w_n[0,2] = -1.0
+        if (self.nw >= 2):
+            self.w_n[1,0] = -1.0
+        if (self.nw >= 3):
+            self.w_n[2,0] =  1.0
+        if (self.nw >= 4):
+            self.w_n[3,1] = -1.0
+        if (self.nw >= 5):
+            self.w_n[4,1] =  1.0
+            
         self.w_x     = numpy.ones(self.nw, dtype=numpy.float64)
         self.w_m     = numpy.zeros(self.nw, dtype=numpy.float64)
         self.w_vel   = numpy.zeros(self.nw, dtype=numpy.float64)
@@ -875,21 +888,38 @@ class Spherebin:
                 .reshape(self.np, 2)
 
     def adjustUpperWall(self, z_adjust = 1.1):
-        'Adjust grid and dynamic upper wall to max. particle height'
+        'Included for legacy purposes, calls adjustWall with idx=0'
+        self.adjustWall(idx=0, adjust = z_adjust)
 
-        # Compute new grid, scaled to fit max. and min. particle positions
-        z_min = numpy.min(self.x[:,2] - self.radius)
-        z_max = numpy.max(self.x[:,2] + self.radius)
+    def adjustWall(self, idx, adjust):
+        'Adjust grid and dynamic wall to max. particle position'
+
+        if (idx == 0):
+            dim = 2
+        elif (idx == 1 or idx == 2):
+            dim = 0
+        elif (idx == 3 or idx == 4):
+            dim = 1
+        else:
+            print("adjustWall: idx value not understood")
+
+        xmin = numpy.min(self.x[:,dim] - self.radius)
+        xmax = numpy.max(self.x[:,dim] + self.radius)
+
         cellsize = self.L[0] / self.num[0]
-        self.num[2] = numpy.ceil(((z_max-z_min)*z_adjust + z_min)/cellsize)
-        self.L[2] = (z_max-z_min)*z_adjust + z_min
+
+        self.num[dim] = numpy.ceil(((xmax-xmin)*adjust + xmin)/cellsize)
+        self.L[dim] = (xmax-xmin)*adjust + xmin
 
         # Initialize upper wall
         self.nw = numpy.ones(1)
         self.wmode = numpy.zeros(1) # fixed BC
         self.w_n = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
         self.w_n[0,2] = -1.0
-        self.w_x = numpy.array([z_max])
+        if (idx == 0 or idx == 1 or idx == 3):
+            self.w_x = numpy.array([xmax])
+        else:
+            self.w_x = numpy.array([xmin])
         self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
         self.w_vel = numpy.zeros(1)
         self.w_force = numpy.zeros(1)
@@ -925,6 +955,25 @@ class Spherebin:
         self.adjustUpperWall()
         self.wmode = numpy.array([2]) # strain rate BC
         self.w_vel = numpy.array([wvel])
+
+    def triaxial(self, wvel = -0.001, deviatoric_stress = 10.0e3):
+        """ Setup triaxial experiment. The upper wall is moved at a fixed
+            velocity in m/s, default values is -0.001 m/s (i.e. downwards).
+            The side walls are exerting a deviatoric stress
+        """
+
+        # zero kinematics
+        self.zeroKinematics()
+
+        # Initialize walls
+        self.nw[0] = 5  # five dynamic walls
+        for i in range(5):
+            self.adjustWall(i)
+        self.w_m[:] = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
+        self.wmode  = numpy.array([2,1,1,1,1]) # define BCs (vel, stress, stress, ...)
+        self.w_vel  = numpy.array([1,0,0,0,0]) * wvel
+        self.w_devs = numpy.array([0,1,1,1,1]) * deviatoric_stress
+        
 
     def shear(self,
             shear_strain_rate = 1,

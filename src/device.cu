@@ -595,7 +595,8 @@ __host__ void DEM::startTime()
     unsigned int smemSize = sizeof(unsigned int)*(threadsPerBlock+1);
 
     // Pre-sum of force per wall
-    cudaMalloc((void**)&dev_walls_force_partial, sizeof(Float)*dimGrid.x);
+    cudaMalloc((void**)&dev_walls_force_partial,
+            sizeof(Float)*dimGrid.x*walls.nw);
 
     // Report to stdout
     if (verbose == 1) {

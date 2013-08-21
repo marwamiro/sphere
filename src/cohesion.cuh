@@ -219,6 +219,7 @@ __global__ void bondsLinear(
     dev_bonds_omega[idx] = MAKE_FLOAT4(omega_t.x, omega_t.y, omega_t.z, omega_n);
 
     // Save forces and torques to the particle pairs
+    // !!! This is probably wrong, see Obermayer et al. 2013, C & GT (49)
     dev_force[bond.x] += MAKE_FLOAT4(f.x, f.y, f.z, 0.0);
     dev_force[bond.y] -= MAKE_FLOAT4(f.x, f.y, f.z, 0.0);
     //dev_torque[bond.x] += MAKE_FLOAT4(t.x, t.y, t.z, 0.0);

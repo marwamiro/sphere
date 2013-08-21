@@ -409,14 +409,43 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
                 devC_grid.L[2]);
 
         // Fetch wall data in global read
-        Float4 w_up_nx;
-        Float4 w_up_mvfd;
-        if (devC_nw > 0) {
-            w_up_nx   = dev_walls_nx[0];
-            w_up_mvfd = dev_walls_mvfd[0];
-        } else {
-            w_up_nx   = MAKE_FLOAT4(0.0f, 0.0f, -1.0f, L.z);
-            w_up_mvfd = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+        Float4 w_0_nx, w_1_nx, w_2_nx, w_3_nx, w_4_nx;
+        Float4 w_0_mvfd, w_1_mvfd, w_2_mvfd, w_3_mvfd, w_4_mvfd;
+
+        // default wall normals and positions
+        w_0_nx = MAKE_FLOAT4( 0.0f, 0.0f,-1.0f, L.z);
+        w_1_nx = MAKE_FLOAT4(-1.0f, 0.0f, 0.0f, L.x);
+        w_2_nx = MAKE_FLOAT4( 1.0f, 0.0f, 0.0f, 0.0f);
+        w_3_nx = MAKE_FLOAT4( 0.0f,-1.0f, 0.0f, L.y);
+        w_4_nx = MAKE_FLOAT4( 0.0f, 1.0f, 0.0f, 0.0f);
+
+        // default wall mass, vel, force, and devs
+        w_0_mvfd = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+        w_1_mvfd = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+        w_2_mvfd = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+        w_3_mvfd = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+        w_4_mvfd = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+
+        // fetch data for dynamic walls
+        if (devC_nw >= 1) {
+            w_0_nx   = dev_walls_nx[0];
+            w_0_mvfd = dev_walls_mvfd[0];
+            if (devC_nw >= 2) {
+                w_1_nx = dev_walls_nx[1];
+                w_1_mvfd = dev_walls_mvfd[1];
+            }
+            if (devC_nw >= 3) {
+                w_2_nx = dev_walls_nx[2];
+                w_2_mvfd = dev_walls_mvfd[2];
+            }
+            if (devC_nw >= 4) {
+                w_3_nx = dev_walls_nx[3];
+                w_3_mvfd = dev_walls_mvfd[3];
+            }
+            if (devC_nw >= 5) {
+                w_4_nx = dev_walls_nx[4];
+                w_4_mvfd = dev_walls_mvfd[4];
+            }
         }
 
         // Index of particle which is bonded to particle A.
@@ -549,83 +578,87 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
         //// Interact with walls
         Float delta_w; // Overlap distance
         Float3 w_n;    // Wall surface normal
-        Float w_force = 0.0; // Force on wall from particle A
+        Float w_0_force = 0.0; // Force on wall 0 from particle A
+        Float w_1_force = 0.0; // Force on wall 1 from particle A
+        Float w_2_force = 0.0; // Force on wall 2 from particle A
+        Float w_3_force = 0.0; // Force on wall 3 from particle A
+        Float w_4_force = 0.0; // Force on wall 4 from particle A
 
         // Upper wall (idx 0)
-        delta_w = w_up_nx.w - (x_a.z + radius_a);
-        w_n = MAKE_FLOAT3(0.0f, 0.0f, -1.0f);
+        delta_w = w_0_nx.w - (x_a.z + radius_a);
+        w_n = MAKE_FLOAT3(w_0_nx.x, w_0_nx.y, w_0_nx.z);
         if (delta_w < 0.0f) {
-            w_force = contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a, radius_a,
-                    dev_vel_sorted, dev_angvel_sorted,
-                    w_n, delta_w, w_up_mvfd.y);
+            w_0_force = contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a,
+                    radius_a, dev_vel_sorted, dev_angvel_sorted, w_n, delta_w,
+                    w_0_mvfd.y);
         }
 
         // Lower wall (force on wall not stored)
         delta_w = x_a.z - radius_a - origo.z;
         w_n = MAKE_FLOAT3(0.0f, 0.0f, 1.0f);
         if (delta_w < 0.0f) {
-            (void)contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a, radius_a,
-                    dev_vel_sorted, dev_angvel_sorted,
+            (void)contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a,
+                    radius_a, dev_vel_sorted, dev_angvel_sorted,
                     w_n, delta_w, 0.0f);
         }
 
 
-        if (devC_grid.periodic == 0) {
+        if (devC_grid.periodic == 0) {          // no periodic walls
 
-            // Left wall
-            delta_w = x_a.x - radius_a - origo.x;
-            w_n = MAKE_FLOAT3(1.0f, 0.0f, 0.0f);
+            // Right wall (idx 1)
+            delta_w = w_1_nx.w - (x_a.x + radius_a);
+            w_n = MAKE_FLOAT3(w_1_nx.x, w_1_nx.y, w_1_nx.z);
             if (delta_w < 0.0f) {
-                (void)contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a, radius_a,
-                        dev_vel_sorted, dev_angvel_sorted,
-                        w_n, delta_w, 0.0f);
+                w_1_force = contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p,
+                        idx_a, radius_a, dev_vel_sorted, dev_angvel_sorted, w_n,
+                        delta_w, w_1_mvfd.y);
             }
 
-            // Right wall
-            delta_w = L.x - (x_a.x + radius_a);
-            w_n = MAKE_FLOAT3(-1.0f, 0.0f, 0.0f);
+            // Left wall (idx 2)
+            delta_w = x_a.x - radius_a - w_2_nx.w;
+            w_n = MAKE_FLOAT3(w_2_nx.x, w_2_nx.y, w_2_nx.z);
             if (delta_w < 0.0f) {
-                (void)contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a, radius_a,
-                        dev_vel_sorted, dev_angvel_sorted,
-                        w_n, delta_w, 0.0f);
+                w_2_force = contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p,
+                        idx_a, radius_a, dev_vel_sorted, dev_angvel_sorted, w_n,
+                        delta_w, w_2_mvfd.y);
             }
 
-            // Front wall
-            delta_w = x_a.y - radius_a - origo.y;
-            w_n = MAKE_FLOAT3(0.0f, 1.0f, 0.0f);
+            // Back wall (idx 3)
+            delta_w = w_3_nx.w - (x_a.y + radius_a);
+            w_n = MAKE_FLOAT3(w_3_nx.x, w_3_nx.y, w_3_nx.z);
             if (delta_w < 0.0f) {
-                (void)contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a, radius_a,
-                        dev_vel_sorted, dev_angvel_sorted,
-                        w_n, delta_w, 0.0f);
+                w_3_force = contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p,
+                        idx_a, radius_a, dev_vel_sorted, dev_angvel_sorted, w_n,
+                        delta_w, w_3_mvfd.y);
             }
 
-            // Back wall
-            delta_w = L.y - (x_a.y + radius_a);
-            w_n = MAKE_FLOAT3(0.0f, -1.0f, 0.0f);
+            // Front wall (idx 4)
+            delta_w = x_a.y - radius_a - w_4_nx.w;
+            w_n = MAKE_FLOAT3(w_4_nx.x, w_4_nx.y, w_4_nx.z);
             if (delta_w < 0.0f) {
-                (void)contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a, radius_a,
-                        dev_vel_sorted, dev_angvel_sorted,
-                        w_n, delta_w, 0.0f);
+                w_4_force = contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p,
+                        idx_a, radius_a, dev_vel_sorted, dev_angvel_sorted, w_n,
+                        delta_w, w_4_mvfd.y);
             }
 
-        } else if (devC_grid.periodic == 2) {
+        } else if (devC_grid.periodic == 2) {   // right and left walls periodic
 
-            // Front wall
-            delta_w = x_a.y - radius_a - origo.y;
-            w_n = MAKE_FLOAT3(0.0f, 1.0f, 0.0f);
+            // Back wall (idx 3)
+            delta_w = w_3_nx.w - (x_a.y + radius_a);
+            w_n = MAKE_FLOAT3(w_3_nx.x, w_3_nx.y, w_3_nx.z);
             if (delta_w < 0.0f) {
-                (void)contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a, radius_a,
-                        dev_vel_sorted, dev_angvel_sorted,
-                        w_n, delta_w, 0.0f);
+                w_3_force = contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p,
+                        idx_a, radius_a, dev_vel_sorted, dev_angvel_sorted, w_n,
+                        delta_w, w_3_mvfd.y);
             }
 
-            // Back wall
-            delta_w = L.y - (x_a.y + radius_a);
-            w_n = MAKE_FLOAT3(0.0f, -1.0f, 0.0f);
+            // Front wall (idx 4)
+            delta_w = x_a.y - radius_a - w_4_nx.w;
+            w_n = MAKE_FLOAT3(w_4_nx.x, w_4_nx.y, w_4_nx.z);
             if (delta_w < 0.0f) {
-                (void)contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p, idx_a, radius_a,
-                        dev_vel_sorted, dev_angvel_sorted,
-                        w_n, delta_w, 0.0f);
+                w_4_force = contactLinear_wall(&F, &T, &es_dot, &ev_dot, &p,
+                        idx_a, radius_a, dev_vel_sorted, dev_angvel_sorted, w_n,
+                        delta_w, w_4_mvfd.y);
             }
         }
 
@@ -643,7 +676,15 @@ __global__ void interact(unsigned int* dev_gridParticleIndex, // Input: Unsorted
         dev_ev[orig_idx]     += ev_dot * devC_dt;
         dev_p[orig_idx]       = p;
         if (devC_nw > 0)
-            dev_walls_force_pp[orig_idx] = w_force;
+            dev_walls_force_pp[orig_idx] = w_0_force;
+        if (devC_nw > 1)
+            dev_walls_force_pp[orig_idx+devC_np] = w_1_force;
+        if (devC_nw > 2)
+            dev_walls_force_pp[orig_idx+devC_np*2] = w_2_force;
+        if (devC_nw > 3)
+            dev_walls_force_pp[orig_idx+devC_np*3] = w_3_force;
+        if (devC_nw > 4)
+            dev_walls_force_pp[orig_idx+devC_np*4] = w_4_force;
     }
 } // End of interact(...)
 
