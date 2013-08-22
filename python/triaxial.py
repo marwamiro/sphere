@@ -31,7 +31,7 @@ init.generateRadii(radius_mean = 0.05)
 init.defaultParams(gamma_n = 0.0, mu_s = 0.4, mu_d = 0.4)
 
 # Initialize positions in random grid (also sets world size)
-init.initRandomGridPos(gridnum = numpy.array([12, 12, 1000]), periodic = 1, contactmodel = 2)
+init.initRandomGridPos(gridnum = numpy.array([12, 12, 1000]), periodic = 0, contactmodel = 2)
 
 # Set duration of simulation
 init.initTemporal(total = 5.0)
