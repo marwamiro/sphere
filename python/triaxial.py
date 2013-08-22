@@ -4,7 +4,7 @@
 from sphere import *
 
 ### EXPERIMENT SETUP ###
-initialization = True
+initialization = False
 consolidation  = True
 rendering      = True
 plots	       = True
@@ -68,8 +68,6 @@ cons.triaxial(wvel = -cons.L[2]*0.01, deviatoric_stress = devs) # one percent of
 cons.initTemporal(total = 5.0)
 
 cons.w_m[:] *= 0.001
-
-
 
 if (consolidation == True):
   # Write input file for sphere

@@ -891,7 +891,21 @@ class Spherebin:
         'Included for legacy purposes, calls adjustWall with idx=0'
         self.adjustWall(idx=0, adjust = z_adjust)
 
-    def adjustWall(self, idx, adjust):
+        # Initialize upper wall
+        self.nw = numpy.ones(1)
+        self.wmode = numpy.zeros(1) # fixed BC
+        self.w_n = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
+        self.w_n[0,2] = -1.0
+        if (idx == 0 or idx == 1 or idx == 3):
+            self.w_x = numpy.array([xmax])
+        else:
+            self.w_x = numpy.array([xmin])
+        self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
+        self.w_vel = numpy.zeros(1)
+        self.w_force = numpy.zeros(1)
+        self.w_devs = numpy.zeros(1)
+
+    def adjustWall(self, idx, adjust = 1.1):
         'Adjust grid and dynamic wall to max. particle position'
 
         if (idx == 0):
@@ -912,18 +926,11 @@ class Spherebin:
         self.L[dim] = (xmax-xmin)*adjust + xmin
 
         # Initialize upper wall
-        self.nw = numpy.ones(1)
-        self.wmode = numpy.zeros(1) # fixed BC
-        self.w_n = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
-        self.w_n[0,2] = -1.0
         if (idx == 0 or idx == 1 or idx == 3):
-            self.w_x = numpy.array([xmax])
+            self.w_x[idx] = numpy.array([xmax])
         else:
-            self.w_x = numpy.array([xmin])
-        self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
-        self.w_vel = numpy.zeros(1)
-        self.w_force = numpy.zeros(1)
-        self.w_devs = numpy.zeros(1)
+            self.w_x[idx] = numpy.array([xmin])
+        self.w_m[idx] = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
 
 
     def consolidate(self, deviatoric_stress = 10e3,
@@ -967,12 +974,17 @@ class Spherebin:
 
         # Initialize walls
         self.nw[0] = 5  # five dynamic walls
-        for i in range(5):
-            self.adjustWall(i)
-        self.w_m[:] = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
         self.wmode  = numpy.array([2,1,1,1,1]) # define BCs (vel, stress, stress, ...)
         self.w_vel  = numpy.array([1,0,0,0,0]) * wvel
         self.w_devs = numpy.array([0,1,1,1,1]) * deviatoric_stress
+        self.w_n = numpy.array(([0,0,-1], [-1,0,0], [1,0,0], [0,-1,0], [0,1,0]),
+                dtype=numpy.float64)
+        self.w_x = numpy.zeros(5)
+        self.w_m = numpy.zeros(5)
+        self.w_force = numpy.zeros(5)
+        for i in range(5):
+            self.adjustWall(idx=i)
+
         
 
     def shear(self,
