@@ -620,7 +620,7 @@ __host__ void DEM::startTime()
     // Initialize counter variable values
     filetimeclock = 0.0;
     long iter = 0;
-    int stdout_report = 100; // the no of time steps between reporting to stdout
+    int stdout_report = 10; // the no of time steps between reporting to stdout
     int stdout_report_counter = stdout_report;
 
     // Create first status.dat
