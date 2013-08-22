@@ -953,7 +953,8 @@ __host__ void DEM::startTime()
         // Report time to console
         if (verbose == 1 && (iter % stdout_report == 0)) {
             cout << "\r  Current simulation time: " 
-                << time.current << " s.        ";// << std::flush;
+                << time.current << "/"
+                << time.total << " s.        "; // << std::flush;
         }
 
 
