@@ -62,7 +62,7 @@ lastf = status(sim_id + "-init")
 cons.readbin("../output/" + sim_id + "-init.output{:0=5}.bin".format(lastf), verbose=False)
 
 # Setup triaxial experiment
-cons.triaxial(wvel = -cons.L[2]*0.01, deviatoric_stress = devs) # one percent of height per second
+cons.triaxial(wvel = -cons.L[2]*0.02, deviatoric_stress = devs) # two percent of height per second
 
 # Set duration of simulation
 cons.initTemporal(total = 5.0)
