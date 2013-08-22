@@ -620,8 +620,7 @@ __host__ void DEM::startTime()
     // Initialize counter variable values
     filetimeclock = 0.0;
     long iter = 0;
-    int stdout_report = 10; // the no of time steps between reporting to stdout
-    int stdout_report_counter = stdout_report;
+    const int stdout_report = 10; // the no of time steps between reporting to stdout
 
     // Create first status.dat
     //sprintf(file,"output/%s.status.dat", sid);
@@ -952,13 +951,9 @@ __host__ void DEM::startTime()
         ++iter;
 
         // Report time to console
-        if (verbose == 1) {
-            stdout_report_counter--;
-            if (stdout_report < 0) {
-                cout << "\r  Current simulation time: " 
-                    << time.current << " s.        ";// << std::flush;
-                stdout_report_counter = stdout_report;
-            }
+        if (verbose == 1 && (iter % stdout_report == 0)) {
+            cout << "\r  Current simulation time: " 
+                << time.current << " s.        ";// << std::flush;
         }
 
 
