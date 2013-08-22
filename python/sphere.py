@@ -2224,6 +2224,59 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             ax4.legend(loc=4)
             ax4.grid()
 
+    elif method == 'triaxial':
+
+        # Read energy values from project binaries
+        sb = Spherebin()
+        for i in range(lastfile+1):
+            fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
+            sb.readbin(fn, verbose = False)
+
+            vol = (sb.w_x[0]-sb.origo[2]) * (sb.w_x[1]-sb.w_x[2]) * (sb.w_x[3] - sb.w_x[4])
+
+            # Allocate arrays on first run
+            if (i == 0):
+                axial_strain = numpy.zeros(lastfile+1, dtype=numpy.float64)
+                deviatoric_stress = numpy.zeros(lastfile+1, dtype=numpy.float64)
+                volumetric_strain = numpy.zeros(lastfile+1, dtype=numpy.float64)
+
+                w0pos0 = sb.w_x[0]
+                vol0 = vol
+
+            sigma1 = sb.w_force[0]/((sb.w_x[1]-sb.w_x[2])*(sb.w_x[3]-sb.w_x[4]))
+
+            axial_strain[i] = (sb.w_x[0]-w0pos0)/w0pos0
+            volumetric_strain[i] = (vol-vol0)/vol0
+            deviatoric_stress[i] = sigma1 / sb.w_devs[1]
+
+        #print(lastfile)
+        #print(axial_strain)
+        #print(deviatoric_stress)
+        #print(volumetric_strain)
+
+        # Plotting
+        if (outformat != 'txt'):
+
+            # linear plot of deviatoric stress
+            ax1 = plt.subplot2grid((2,1),(0,0))
+            ax1.set_xlabel('Axial strain, $\gamma_1$, [-]')
+            ax1.set_ylabel('Deviatoric stress, $\sigma_1 - \sigma_3$, [Pa]')
+            ax1.plot(axial_strain, deviatoric_stress, '+-')
+            #ax1.legend()
+            ax1.grid()
+
+            #ax2 = plt.subplot2grid((2,2),(1,0))
+            #ax2.set_xlabel('Time [s]')
+            #ax2.set_ylabel('Force [N]')
+            #ax2.plot(t, wforce, '+-')
+
+            # semilog plot of log stress vs. void ratio
+            ax2 = plt.subplot2grid((2,1),(1,0))
+            ax2.set_xlabel('Axial strain, $\gamma_1$ [-]')
+            ax2.set_ylabel('Volumetric strain, $\gamma_v$, [-]')
+            ax2.plot(axial_strain, deviatoric_stress, '+-')
+            ax2.grid()
+
 
     elif method == 'shear':
 
