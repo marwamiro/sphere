@@ -2245,8 +2245,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
 
             sigma1 = sb.w_force[0]/((sb.w_x[1]-sb.w_x[2])*(sb.w_x[3]-sb.w_x[4]))
 
-            axial_strain[i] = (sb.w_x[0]-w0pos0)/w0pos0
-            volumetric_strain[i] = (vol-vol0)/vol0
+            axial_strain[i] = (w0pos0 - sb.w_x[0])/w0pos0
+            volumetric_strain[i] = (vol0-vol)/vol0
             deviatoric_stress[i] = sigma1 / sb.w_devs[1]
 
         #print(lastfile)
@@ -2274,7 +2274,7 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             ax2 = plt.subplot2grid((2,1),(1,0))
             ax2.set_xlabel('Axial strain, $\gamma_1$ [-]')
             ax2.set_ylabel('Volumetric strain, $\gamma_v$, [-]')
-            ax2.plot(axial_strain, deviatoric_stress, '+-')
+            ax2.plot(axial_strain, volumetric_strain, '+-')
             ax2.grid()
 
 
