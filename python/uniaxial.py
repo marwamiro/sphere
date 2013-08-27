@@ -4,6 +4,7 @@
 from sphere import *
 
 ### EXPERIMENT SETUP ###
+initialization = True
 consolidation  = True
 rendering      = True
 plots	       = True
@@ -13,6 +14,38 @@ np = 2e3
 
 # Common simulation id
 sim_id = "uniaxial-test"
+
+### INITIALIZATION ###
+
+# New class
+init = Spherebin(np = np, nd = 3, nw = 0, sid = sim_id + "-init")
+
+# Save radii
+init.generateRadii(radius_mean = 0.05)
+
+# Use default params
+init.defaultParams(gamma_n = 0.0, mu_s = 0.4, mu_d = 0.4)
+
+# Initialize positions in random grid (also sets world size)
+init.initRandomGridPos(gridnum = numpy.array([12, 12, 1000]), periodic = 0, contactmodel = 2)
+
+# Set duration of simulation
+init.initTemporal(total = 5.0)
+
+if (initialization == True):
+  # Write input file for sphere
+  init.writebin()
+
+  # Run sphere
+  init.run()
+
+  if (plots == True):
+    # Make a graph of energies
+    visualize(init.sid, "energy", savefig=True, outformat='png')
+
+  #if (rendering == True):
+    # Render images with raytracer
+    #init.render(method = "angvel", max_val = 0.3, verbose = False)
 
 
 ### CONSOLIDATION ###
