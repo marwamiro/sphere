@@ -889,21 +889,19 @@ class Spherebin:
 
     def adjustUpperWall(self, z_adjust = 1.1):
         'Included for legacy purposes, calls adjustWall with idx=0'
-        self.adjustWall(idx=0, adjust = z_adjust)
 
         # Initialize upper wall
         self.nw = numpy.ones(1)
         self.wmode = numpy.zeros(1) # fixed BC
         self.w_n = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
         self.w_n[0,2] = -1.0
-        if (idx == 0 or idx == 1 or idx == 3):
-            self.w_x = numpy.array([xmax])
-        else:
-            self.w_x = numpy.array([xmin])
-        self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
         self.w_vel = numpy.zeros(1)
         self.w_force = numpy.zeros(1)
         self.w_devs = numpy.zeros(1)
+
+        self.w_x = numpy.zeros(1)
+        self.w_m = numpy.zeros(1)
+        self.adjustWall(idx=0, adjust = z_adjust)
 
     def adjustWall(self, idx, adjust = 1.1):
         'Adjust grid and dynamic wall to max. particle position'
