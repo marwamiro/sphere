@@ -54,8 +54,8 @@ if (initialization == True):
 cons = Spherebin(np = np, nw = 1, sid = sim_id + "-cons")
 
 # Read last output file of initialization step
-lastf = status("shear-test-init")
-cons.readbin("../output/shear-test-init.output{:0=5}.bin".format(lastf), verbose=False)
+lastf = status(sim_id + "-init")
+cons.readbin("../output/" + sim_id + "-init.output{:0=5}.bin".format(lastf), verbose=False)
 
 # Setup consolidation experiment
 cons.uniaxialStrainRate(wvel = -cons.L[2]*0.05) # five percent of height per second
