@@ -27,6 +27,7 @@
 #include "integration.cuh"
 #include "raytracer.cuh"
 #include "latticeboltzmann.cuh"
+//#include "darcy.cuh"
 
 
 // Wrapper function for initializing the CUDA components.
@@ -638,7 +639,12 @@ __host__ void DEM::startTime()
         initFluid<<< dimGridFluid, dimBlockFluid >>>(dev_v_rho, dev_f);
         cudaThreadSynchronize();
 #else
+#ifdef DARCY_GPU
         initFluid(v_rho, f, grid.num[0], grid.num[1], grid.num[2]);
+#else
+        const Float cellsizemultiplier = 1.0;
+        initDarcy(cellsizemultiplier);
+#endif
 #endif
     }
 
@@ -862,6 +868,8 @@ __host__ void DEM::startTime()
         // Solve darcy flow through grid
         if (darcy == 1) {
 
+#ifdef DARCY_GPU
+            std::cout << "GPU darcy" << std::endl;
             // Copy device data to host memory
             transferFromGlobalDeviceMemory();
 
@@ -876,6 +884,10 @@ __host__ void DEM::startTime()
 
             // Pause the CPU thread until all CUDA calls previously issued are completed
             cudaThreadSynchronize();
+#else
+            // Perform a Darcy time step on the CPU
+            explDarcyStep();
+#endif
         }
 
         // Update particle kinematics
@@ -1085,8 +1097,10 @@ __host__ void DEM::startTime()
     delete[] k.distmod;
     delete[] k.delta_t;
 
+#ifndef DARCY_GPU
     if (darcy == 1)
         endDarcy();
+#endif
 
 } /* EOF */
 // vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
