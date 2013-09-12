@@ -50,6 +50,7 @@ unsigned int DEM::idx(
     //return x + d_nx*y + d_nx*d_ny*z;
 
     // with ghost nodes
+    // the ghost nodes are placed at -1 and WIDTH
     return (x+1) + (d_nx+2)*(y+1) + (d_nx+2)*(d_ny+2)*(z+1);
 }
 
@@ -77,8 +78,8 @@ void DEM::initDarcyVals()
                 d_K[cellidx] = k*rho*-params.g[2]/params.nu;
 
                 // Hydraulic storativity [-]
-                //d_Ss[cellidx] = 8.0e-3;
-                d_Ss[cellidx] = 1.0;
+                d_Ss[cellidx] = 8.0e-3;
+                //d_Ss[cellidx] = 1.0;
 
                 // Hydraulic recharge [Pa/s]
                 d_W[cellidx] = 0.0;
@@ -91,15 +92,15 @@ void DEM::initDarcyVals()
 // Copy values from cell with index 'read' to cell with index 'write'
 void DEM::copyDarcyVals(unsigned int read, unsigned int write)
 {
-    d_H[write] = d_H[read];
+    d_H[write]     = d_H[read];
     d_H_new[write] = d_H_new[read];
-    d_V[write] = MAKE_FLOAT3(d_V[read].x, d_V[read].y, d_V[read].z);
-    d_dH[write] = MAKE_FLOAT3(d_dH[read].x, d_dH[read].y, d_dH[read].z);
-    d_K[write] = d_K[read];
-    d_T[write] = MAKE_FLOAT3(d_T[read].x, d_T[read].y, d_T[read].z);
-    d_Ss[write] = d_Ss[read];
-    d_W[write] = d_W[read];
-    d_phi[write] = d_phi[read];
+    d_V[write]     = MAKE_FLOAT3(d_V[read].x, d_V[read].y, d_V[read].z);
+    d_dH[write]    = MAKE_FLOAT3(d_dH[read].x, d_dH[read].y, d_dH[read].z);
+    d_K[write]     = d_K[read];
+    d_T[write]     = MAKE_FLOAT3(d_T[read].x, d_T[read].y, d_T[read].z);
+    d_Ss[write]    = d_Ss[read];
+    d_W[write]     = d_W[read];
+    d_phi[write]   = d_phi[read];
 }
 
 // Update ghost nodes from their parent cell values
@@ -189,7 +190,7 @@ void DEM::findDarcyTransmissivities()
                 // Save hydraulic conductivity [m/s]
                 //K = d_K[cellidx];
                 //K = k*rho*-params.g[2]/params.nu;
-                K = 2.0; 
+                K = 0.5; 
                 d_K[cellidx] = K;
 
                 // Hydraulic transmissivity [m2/s]
@@ -334,14 +335,9 @@ void DEM::explDarcyStep()
     checkDarcyTimestep();
 
     // Cell dims squared
-    //const Float dx2 = d_dx*d_dx;
-    //const Float dy2 = d_dy*d_dy;
-    //const Float dz2 = d_dz*d_dz;
-    const Float dx2 = d_dx*2.0;
-    const Float dy2 = d_dy*2.0;
-    const Float dz2 = d_dz*2.0;
-
-    //std::cerr << dx2 << ',' << dy2 << ',' << dz2 << std::endl;
+    const Float dx2 = d_dx*d_dx;
+    const Float dy2 = d_dy*d_dy;
+    const Float dz2 = d_dz*d_dz;
 
     //setDarcyBCNeumannZero();
 
