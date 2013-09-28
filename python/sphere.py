@@ -207,7 +207,8 @@ class Spherebin:
         else:
             return 1
 
-    def readbin(self, targetbin, verbose = True, bonds = True, devsmod = True, fluid = True):
+    def readbin(self, targetbin, verbose = True, bonds = True, devsmod = True,
+            fluid = True, esysparticle = False):
         'Reads a target SPHERE binary file'
 
         fh = None
@@ -261,6 +262,9 @@ class Spherebin:
             self.angpos = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
             self.angvel = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
             self.torque = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
+
+            if (esysparticle == True):
+                return
 
             # Per-particle single-value parameters
             self.es_dot  = numpy.fromfile(fh, dtype=numpy.float64, count=self.np)
@@ -1010,10 +1014,13 @@ class Spherebin:
 
         # set the thickness of the horizons of fixed particles
         #fixheight = 2*cellsize
-        fixheight = cellsize
+        #fixheight = cellsize
 
         # Fix horizontal velocity to 0.0 of lowermost particles
-        I = numpy.nonzero(self.x[:,2] < (z_min + fixheight)) # Find indices of lowermost 10%
+        d_max_below = numpy.max(self.radius[numpy.nonzero(self.x[:,2] <
+            (z_max-z_min)*0.3)])*2.0
+        #I = numpy.nonzero(self.x[:,2] < (z_min + fixheight))
+        I = numpy.nonzero(self.x[:,2] < (z_min + d_max_below))
         self.fixvel[I] = 1
         self.angvel[I,0] = 0.0
         self.angvel[I,1] = 0.0
@@ -1022,7 +1029,10 @@ class Spherebin:
         self.vel[I,1] = 0.0 # y-dim
 
         # Fix horizontal velocity to specific value of uppermost particles
-        I = numpy.nonzero(self.x[:,2] > (z_max - fixheight)) # Find indices of lowermost 10%
+        d_max_top = numpy.max(self.radius[numpy.nonzero(self.x[:,2] >
+            (z_max-z_min)*0.7)])*2.0
+        #I = numpy.nonzero(self.x[:,2] > (z_max - fixheight))
+        I = numpy.nonzero(self.x[:,2] > (z_max - d_max_top))
         self.fixvel[I] = 1
         self.angvel[I,0] = 0.0
         self.angvel[I,1] = 0.0
