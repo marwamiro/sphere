@@ -207,6 +207,42 @@ class Spherebin:
         else:
             return 1
 
+    def addParticle(self,
+            x,
+            radius,
+            xysum = numpy.zeros(1),
+            vel = numpy.zeros(3),
+            fixvel = numpy.zeros(1),
+            force = numpy.zeros(3),
+            angpos = numpy.zeros(3),
+            angvel = numpy.zeros(3),
+            torque = numpy.zeros(3),
+            es_dot = numpy.zeros(1),
+            es = numpy.zeros(1),
+            ev_dot = numpy.zeros(1),
+            ev = numpy.zeros(1),
+            p = numpy.zeros(1)):
+        ''' Add a single particle to the simulation object. The only required
+        parameters are the position (x), a length-three array, and the
+        radius (radius), a length-one array.
+        '''
+
+        self.np = self.np + 1
+
+        self.x      = numpy.append(self.x, [x], axis=0)
+        self.radius = numpy.append(self.radius, radius)
+        self.vel    = numpy.append(self.vel, [vel], axis=0)
+        self.fixvel = numpy.append(self.fixvel, fixvel)
+        self.force  = numpy.append(self.force, [force], axis=0)
+        self.angpos = numpy.append(self.angpos, [angpos], axis=0)
+        self.angvel = numpy.append(self.angvel, [angvel], axis=0)
+        self.torque = numpy.append(self.torque, [torque], axis=0)
+        self.es_dot = numpy.append(self.es_dot, es_dot)
+        self.es     = numpy.append(self.es, es)
+        self.ev_dot = numpy.append(self.ev_dot, ev_dot)
+        self.ev     = numpy.append(self.ev, ev)
+        self.p      = numpy.append(self.p, p)
+
     def readbin(self, targetbin, verbose = True, bonds = True, devsmod = True,
             fluid = True, esysparticle = False):
         'Reads a target SPHERE binary file'
@@ -479,14 +515,21 @@ class Spherebin:
                 fh.close()
 
     def readfirst(self, verbose=True):
+        ''' Read first output file of self.sid '''
         fn = "../output/{0}.output00000.bin".format(self.sid)
         self.readbin(fn, verbose)
 
     def readsecond(self, verbose=True):
+        ''' Read second output file of self.sid '''
         fn = "../output/{0}.output00001.bin".format(self.sid)
         self.readbin(fn, verbose)
 
+    def readstep(self, step, verbose=True):
+        ''' Read output binary from time step 'step' from output/ folder. '''
+        fn = "../output/{0}.output{1:0=5}.bin".format(self.sid, step)
+
     def readlast(self, verbose=True):
+        ''' Read last output binary of self.sid from output/ folder. '''
         lastfile = status(self.sid)
         fn = "../output/{0}.output{1:0=5}.bin".format(self.sid, lastfile)
         self.readbin(fn, verbose)
@@ -1575,6 +1618,9 @@ class Spherebin:
         ax.set_rticks([])
         plt.savefig("bonds-" + self.sid + "-rose." + imgformat, transparent=True)
 
+    def status(self):
+        ''' Show the current simulation status '''
+        return status(self.sid)
 
     def sheardisp(self, outformat='pdf', zslices=32):
         ''' Show particle x-displacement vs. the z-pos '''
