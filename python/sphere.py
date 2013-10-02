@@ -210,7 +210,7 @@ class Spherebin:
     def addParticle(self,
             x,
             radius,
-            xysum = numpy.zeros(1),
+            xysum = numpy.zeros(2),
             vel = numpy.zeros(3),
             fixvel = numpy.zeros(1),
             force = numpy.zeros(3),
@@ -232,6 +232,7 @@ class Spherebin:
         self.x      = numpy.append(self.x, [x], axis=0)
         self.radius = numpy.append(self.radius, radius)
         self.vel    = numpy.append(self.vel, [vel], axis=0)
+        self.xysum  = numpy.append(self.xysum, [xysum], axis=0)
         self.fixvel = numpy.append(self.fixvel, fixvel)
         self.force  = numpy.append(self.force, [force], axis=0)
         self.angpos = numpy.append(self.angpos, [angpos], axis=0)
