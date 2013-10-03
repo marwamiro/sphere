@@ -50,9 +50,14 @@ copy, execute::
 Build instructions
 ------------------
 Sphere is built using `cmake`, the platform-specific c/c++ compilers,
-and `nvcc` from the cuda toolkit. Execute the following commands from
+and `nvcc` from the cuda toolkit.
+
+If you plan to run sphere on a Kepler GPU, execute the following commands from
 the root directory::
  cmake . && make
+
+If you instead plan to execute it o a Fermi GPU, change ``set(GPU_GENERATION
+1)`` to ``set(GPU_GENERATION 0`` in `CMakeLists.txt`.
 
 In some cases the CMake FindCUDA module will have troubles locating the
 CUDA samples directory, and will complain about `helper_math.h` not being 

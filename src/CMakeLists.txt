@@ -12,8 +12,13 @@ INCLUDE(FindCUDA)
 
 # Additional NVCC command line arguments
 # NOTE: Multiple arguments must be semi-colon selimited
-SET(CUDA_NVCC_FLAGS
-    "--use_fast_math;-O3;-gencode=arch=compute_20,code=\"sm_20,compute_20\" -ccbin gcc-4.6")
+IF (GPU_GENERATION EQUAL 1) # Kepler
+    SET(CUDA_NVCC_FLAGS
+        "--use_fast_math;-O3;-gencode=arch=compute_20,code=\"sm_20,compute_20\";--fmad=false -ccbin gcc-4.6")
+ELSE()  # Fermi
+    SET(CUDA_NVCC_FLAGS
+        "--use_fast_math;-O3;-gencode=arch=compute_35,code=\"sm_35,compute_35\";--fmad=false -ccbin gcc-4.6")
+ENDIF (GPU_GENERATION EQUAL 1)
 
 # Rule to build executable program 
 CUDA_ADD_EXECUTABLE(../sphere

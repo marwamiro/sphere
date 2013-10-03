@@ -14,6 +14,11 @@ cmake_minimum_required(VERSION 2.8)
 # Find CUDA
 find_package(CUDA REQUIRED)
 
+# Set CUDA GPU generation
+# 0: Fermi
+# 1: Kepler
+set(GPU_GENERATION 1)
+
 # Find OpenMP
 find_package(OpenMP)
 
