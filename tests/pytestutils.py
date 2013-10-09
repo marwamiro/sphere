@@ -16,6 +16,7 @@ def compare(first, second, string):
     print(string + passed())
   else:
     print(string + failed())
+    return(1)
 
 def compareFloats(first, second, string, criterion=1e-5):
     if abs(first-second) < criterion:
@@ -25,12 +26,14 @@ def compareFloats(first, second, string, criterion=1e-5):
         print("First: " + str(first))
         print("Second: " + str(second))
         print("Difference: " + str(second-first))
+        return(1)
 
 def compareNumpyArrays(first, second, string):
     if ((first == second).all()):
         print(string + passed())
     else :
         print(string + failed())
+        return(1)
 
 
 def cleanup(spherebin):
