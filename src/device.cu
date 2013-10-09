@@ -897,7 +897,7 @@ __host__ void DEM::startTime()
         if (params.nu > 0.0 && darcy == 1) {
 
 #ifdef DARCY_GPU
-            /*
+            //*
             checkForCudaErrors("Before findPorositiesDev", iter);
             // Find cell porosities
             if (PROFILING == 1)
@@ -961,8 +961,11 @@ __host__ void DEM::startTime()
                         &t_explDarcyStepDev);
             checkForCudaErrors("Post explDarcyStepDev", iter);
 
-            // Flop flop
-            swapFloatArrays(dev_d_H, dev_d_H_new);
+            // Flip flop
+            Float* tmp = dev_d_H;
+            dev_d_H = dev_d_H_new;
+            dev_d_H_new = tmp;
+            
 
             // Find the pressure gradients
             if (PROFILING == 1)
@@ -989,7 +992,7 @@ __host__ void DEM::startTime()
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
                         &t_findDarcyVelocitiesDev);
             checkForCudaErrors("Post findDarcyVelocitiesDev", iter);
-            */
+            //*/
 
 #else
             // Copy device data to host memory
@@ -1182,21 +1185,34 @@ __host__ void DEM::startTime()
 
     // Report time spent on each kernel
     if (PROFILING == 1 && verbose == 1) {
-        double t_sum = t_calcParticleCellID + t_thrustsort + t_reorderArrays
-            + t_topology + t_interact + t_summation + t_integrateWalls;
+        double t_sum = t_calcParticleCellID + t_thrustsort + t_reorderArrays +
+            t_topology + t_interact + t_bondsLinear + t_latticeBoltzmannD3Q19 +
+            t_integrate + t_summation + t_integrateWalls + t_findPorositiesDev +
+            t_findDarcyTransmissivitiesDev + t_setDarcyGhostNodesDev +
+            t_explDarcyStepDev + t_findDarcyGradientsDev +
+            t_findDarcyVelocitiesDev;
+
         cout << "\nKernel profiling statistics:\n"
-            << "  - calcParticleCellID:\t\t" << t_calcParticleCellID/1000.0 << " s"
+            << "  - calcParticleCellID:\t\t" << t_calcParticleCellID/1000.0
+            << " s"
             << "\t(" << 100.0*t_calcParticleCellID/t_sum << " %)\n"
             << "  - thrustsort:\t\t\t" << t_thrustsort/1000.0 << " s"
             << "\t(" << 100.0*t_thrustsort/t_sum << " %)\n"
             << "  - reorderArrays:\t\t" << t_reorderArrays/1000.0 << " s"
-            << "\t(" << 100.0*t_reorderArrays/t_sum << " %)\n"
+            << "\t(" << 100.0*t_reorderArrays/t_sum << " %)\n";
+        if (params.contactmodel == 2 || params.contactmodel == 3) {
+            cout
             << "  - topology:\t\t\t" << t_topology/1000.0 << " s"
-            << "\t(" << 100.0*t_topology/t_sum << " %)\n"
+            << "\t(" << 100.0*t_topology/t_sum << " %)\n";
+        }
+        cout
             << "  - interact:\t\t\t" << t_interact/1000.0 << " s"
-            << "\t(" << 100.0*t_interact/t_sum << " %)\n"
+            << "\t(" << 100.0*t_interact/t_sum << " %)\n";
+        if (params.nb0 > 0) {
+            cout
             << "  - bondsLinear:\t\t" << t_bondsLinear/1000.0 << " s"
             << "\t(" << 100.0*t_bondsLinear/t_sum << " %)\n";
+        }
         if (params.nu > 0.0 && darcy == 0) {
             cout
             << "  - latticeBoltzmann:\t\t" << t_latticeBoltzmannD3Q19/1000.0 <<
