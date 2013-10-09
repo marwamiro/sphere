@@ -2,7 +2,7 @@
 from pytestutils import *
 
 #### Input/output tests ####
-print("### Input/output tests ###")
+print("### Fluid input/output tests ###")
 
 # Generate data in python
 orig = Spherebin(np=100, nw=0, sid="test-initgrid-fluid")
@@ -20,8 +20,8 @@ py.readbin("../input/" + orig.sid + ".bin", verbose=False)
 compare(orig, py, "Python IO:")
 
 # Test C++ IO routines
-#orig.run(verbose=False, hideinputfile=True)
 orig.run(verbose=True, hideinputfile=True, darcyflow=True)
+#orig.run(verbose=True, hideinputfile=False, darcyflow=True)
 cpp = Spherebin()
 cpp.readbin("../output/" + orig.sid + ".output00000.bin", verbose=False)
 compare(orig, cpp, "C++ IO:   ")
