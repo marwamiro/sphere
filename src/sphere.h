@@ -174,7 +174,7 @@ class DEM {
         //// Darcy functions
 
         // Memory allocation
-        void initDarcyMem();
+        void initDarcyMem(const Float cellsizemultiplier = 1.0);
         void freeDarcyMem();
         
         // Set some values for the Darcy parameters
@@ -201,16 +201,10 @@ class DEM {
                 const Float3 min, const Float3 max);
 
         // Return the lower corner coordinates of a cell
-        Float3 cellMinBoundaryDarcy(
-                const unsigned int x,
-                const unsigned int y,
-                const unsigned int z);
+        Float3 cellMinBoundaryDarcy(const int x, const int y, const int z);
 
         // Return the upper corner coordinates of a cell
-        Float3 cellMaxBoundaryDarcy(
-                const unsigned int x,
-                const unsigned int y,
-                const unsigned int z);
+        Float3 cellMaxBoundaryDarcy(const int x, const int y, const int z);
 
         // Returns the cell volume
         Float cellVolumeDarcy();
@@ -219,10 +213,7 @@ class DEM {
         void fluidDragDarcy();
 
         // Find porosity of cell
-        Float cellPorosity(
-                const unsigned int x,
-                const unsigned int y,
-                const unsigned int z);
+        Float cellPorosity(const int x, const int y, const int z);
 
         // Find and save all cell porosities
         void findPorosities();
@@ -234,14 +225,10 @@ class DEM {
         Float meanRadius();
 
         // Get linear (1D) index from 3D coordinate
-        unsigned int idx(
-                const unsigned int x,
-                const unsigned int y,
-                const unsigned int z);
+        unsigned int idx(const int x, const int y, const int z);
 
         // Initialize Darcy values and arrays
-        void initDarcy(const Float cellsizemultiplier = 1.0);
-        void initDarcyDev(const Float cellsizemultiplier = 1.0);
+        void initDarcy();
 
         // Clean up Darcy arrays
         void endDarcy();

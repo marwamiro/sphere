@@ -14,10 +14,16 @@
 #define PERIODIC_XY
 
 // Initialize memory
-void DEM::initDarcyMem()
+void DEM::initDarcyMem(const Float cellsizemultiplier)
 {
+    // Number of cells
+    d_nx = floor(grid.num[0]*cellsizemultiplier);
+    d_ny = floor(grid.num[1]*cellsizemultiplier);
+    d_nz = floor(grid.num[2]*cellsizemultiplier);
+
     //unsigned int ncells = d_nx*d_ny*d_nz; // without ghost nodes
     unsigned int ncells = (d_nx+2)*(d_ny+2)*(d_nz+2); // with ghost nodes
+
     d_H     = new Float[ncells];  // hydraulic pressure matrix
     d_H_new = new Float[ncells];  // hydraulic pressure matrix
     d_V     = new Float3[ncells]; // Cell hydraulic velocity
@@ -45,9 +51,9 @@ void DEM::freeDarcyMem()
 
 // 3D index to 1D index
 unsigned int DEM::idx(
-        const unsigned int x,
-        const unsigned int y,
-        const unsigned int z)
+        const int x,
+        const int y,
+        const int z)
 {
     // without ghost nodes
     //return x + d_nx*y + d_nx*d_ny*z;
@@ -66,10 +72,12 @@ void DEM::initDarcyVals()
     // Density of the fluid [kg/m^3]
     const Float rho = 1000.0;
 
-    unsigned int ix, iy, iz, cellidx;
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iy=0; iy<d_ny; ++iy) {
-            for (iz=0; iz<d_nz; ++iz) {
+    int ix, iy, iz, cellidx;
+
+    // Set values for all cells, including ghost nodes
+    for (ix=-1; ix<=d_nx; ++ix) {
+        for (iy=-1; iy<=d_ny; ++iy) {
+            for (iz=-1; iz<=d_nz; ++iz) {
 
                 cellidx = idx(ix,iy,iz);
 
@@ -119,7 +127,7 @@ void DEM::copyDarcyVals(unsigned int read, unsigned int write)
 // The edge (diagonal) cells are not written since they are not read
 void DEM::setDarcyGhostNodes()
 {
-    unsigned int ix, iy, iz;
+    int ix, iy, iz;
 
     // The x-normal plane
     for (iy=0; iy<d_ny; ++iy) {
@@ -188,7 +196,7 @@ void DEM::findDarcyTransmissivities()
     // Grain size factor for Kozeny-Carman relationship
     Float d_factor = r_bar2*r_bar2/180.0;
 
-    unsigned int ix, iy, iz, cellidx;
+    int ix, iy, iz, cellidx;
     Float K, k;
     for (ix=0; ix<d_nx; ++ix) {
         for (iy=0; iy<d_ny; ++iy) {
@@ -225,10 +233,10 @@ void DEM::findDarcyTransmissivities()
 void DEM::setDarcyBCNeumannZero()
 {
     Float3 z3 = MAKE_FLOAT3(0.0, 0.0, 0.0);
-    unsigned int ix, iy, iz;
-    unsigned int nx = d_nx-1;
-    unsigned int ny = d_ny-1;
-    unsigned int nz = d_nz-1;
+    int ix, iy, iz;
+    int nx = d_nx-1;
+    int ny = d_ny-1;
+    int nz = d_nz-1;
 
     // I don't care that the values at four edges are written twice
 
@@ -248,7 +256,7 @@ void DEM::setDarcyBCNeumannZero()
         }
     }
 
-    // y-z plane at x=0 and x=d_dx-1
+    // y-z plane at x=0 and x=d_nx-1
     for (iy=0; iy<d_ny; ++iy) {
         for (iz=0; iz<d_nz; ++iz) {
             d_dH[idx( 0,iy,iz)] = z3;
@@ -270,7 +278,7 @@ void DEM::findDarcyGradients()
     const Float dz2 = 2.0*d_dz;
 
     //Float H;
-    unsigned int ix, iy, iz, cellidx;
+    int ix, iy, iz, cellidx;
 
     // Without ghost-nodes
     /*for (ix=1; ix<d_nx-1; ++ix) {
@@ -367,7 +375,7 @@ void DEM::explDarcyStep()
 
     // Explicit 3D finite difference scheme
     // new = old + production*timestep + gradient*timestep
-    unsigned int ix, iy, iz, cellidx;
+    int ix, iy, iz, cellidx;
     Float K, H, deltaH;
     Float Tx, Ty, Tz, S;
     //Float Tx_n, Tx_p, Ty_n, Ty_p, Tz_n, Tz_p;
@@ -493,7 +501,7 @@ void DEM::explDarcyStep()
 // Print array values to file stream (stdout, stderr, other file)
 void DEM::printDarcyArray(FILE* stream, Float* arr)
 {
-    unsigned int x, y, z;
+    int x, y, z;
     for (z=0; z<d_nz; z++) {
         for (y=0; y<d_ny; y++) {
             for (x=0; x<d_nx; x++) {
@@ -515,7 +523,7 @@ void DEM::printDarcyArray(FILE* stream, Float* arr, std::string desc)
 // Print array values to file stream (stdout, stderr, other file)
 void DEM::printDarcyArray(FILE* stream, Float3* arr)
 {
-    unsigned int x, y, z;
+    int x, y, z;
     for (z=0; z<d_nz; z++) {
         for (y=0; y<d_ny; y++) {
             for (x=0; x<d_nx; x++) {
@@ -552,7 +560,7 @@ void DEM::findDarcyVelocities()
     // Find cell gradients
     findDarcyGradients();
 
-    unsigned int ix, iy, iz, cellidx;
+    int ix, iy, iz, cellidx;
     for (ix=0; ix<d_nx; ++ix) {
         for (iy=0; iy<d_ny; ++iy) {
             for (iz=0; iz<d_nz; ++iz) {
@@ -582,9 +590,9 @@ void DEM::findDarcyVelocities()
 
 // Return the lower corner coordinates of a cell
 Float3 DEM::cellMinBoundaryDarcy(
-        const unsigned int x,
-        const unsigned int y,
-        const unsigned int z)
+        const int x,
+        const int y,
+        const int z)
 {
     const Float3 x_min = {x*d_dx, y*d_dy, z*d_dz};
     return x_min;
@@ -592,9 +600,9 @@ Float3 DEM::cellMinBoundaryDarcy(
 
 // Return the upper corner coordinates of a cell
 Float3 DEM::cellMaxBoundaryDarcy(
-        const unsigned int x,
-        const unsigned int y,
-        const unsigned int z)
+        const int x,
+        const int y,
+        const int z)
 {
     const Float3 x_max = {(x+1)*d_dx, (y+1)*d_dy, (z+1)*d_dz};
     return x_max;
@@ -609,9 +617,9 @@ Float DEM::cellVolumeDarcy()
 
 // Find the porosity of a target cell
 Float DEM::cellPorosity(
-        const unsigned int x,
-        const unsigned int y,
-        const unsigned int z)
+        const int x,
+        const int y,
+        const int z)
 {
     const Float3 x_min = cellMinBoundaryDarcy(x,y,z);
     const Float3 x_max = cellMaxBoundaryDarcy(x,y,z);
@@ -640,7 +648,7 @@ Float DEM::cellPorosity(
 // Calculate the porosity for each cell
 void DEM::findPorosities()
 {
-    unsigned int ix, iy, iz, cellidx;
+    int ix, iy, iz, cellidx;
     for (ix=0; ix<d_nx; ++ix) {
         for (iy=0; iy<d_ny; ++iy) {
             for (iz=0; iz<d_nz; ++iz) {
@@ -700,7 +708,7 @@ void DEM::fluidDragDarcy()
 Float DEM::getTmax()
 {
     Float max = -1.0e13; // initialize with a small number
-    unsigned int ix,iy,iz;
+    int ix,iy,iz;
     Float3 val;
     for (ix=0; ix<d_nx; ++ix) {
         for (iy=0; iy<d_ny; ++iy) {
@@ -721,7 +729,7 @@ Float DEM::getTmax()
 Float DEM::getSsmin()
 {
     Float min = 1.0e13; // initialize with a small number
-    unsigned int ix,iy,iz;
+    int ix,iy,iz;
     Float val;
     for (ix=0; ix<d_nx; ++ix) {
         for (iy=0; iy<d_ny; ++iy) {
@@ -748,7 +756,7 @@ void DEM::checkDarcyTimestep()
         * (time.dt/(d_dx*d_dx) + time.dt/(d_dy*d_dy) + time.dt/(d_dz*d_dz));
 
     if (value > 0.5) {
-        std::cerr << "Error! The explicit darcy solution will be unstable.\n"
+        std::cerr << "Error! The explicit Darcy solution will be unstable.\n"
             << "This happens due to a combination of the following:\n"
             << " - The transmissivity T (i.e. hydraulic conductivity, K)"
             << " is too large (" << T_max << ")\n"
@@ -764,18 +772,13 @@ void DEM::checkDarcyTimestep()
 }
 
 // Initialize darcy arrays, their values, and check the time step length
-void DEM::initDarcy(const Float cellsizemultiplier)
+void DEM::initDarcy()
 {
     if (params.nu <= 0.0) {
         std::cerr << "Error in initDarcy. The dymamic viscosity (params.nu), "
             << "should be larger than 0.0, but is " << params.nu << std::endl;
         exit(1);
     }
-
-    // Number of cells
-    d_nx = floor(grid.num[0]*cellsizemultiplier);
-    d_ny = floor(grid.num[1]*cellsizemultiplier);
-    d_nz = floor(grid.num[2]*cellsizemultiplier);
 
     // Cell size 
     d_dx = grid.L[0]/d_nx;
@@ -793,7 +796,7 @@ void DEM::initDarcy(const Float cellsizemultiplier)
             << d_dz << std::endl;
     }
 
-    initDarcyMem();
+    //initDarcyMem(); // done in readbin
     initDarcyVals();
     findDarcyTransmissivities();
 

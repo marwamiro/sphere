@@ -32,9 +32,9 @@ void DEM::initDarcyMemDev(void)
     cudaMalloc((void**)&dev_d_dH, memSizeF*3);  // hydraulic pressure gradient
     cudaMalloc((void**)&dev_d_K, memSizeF);     // hydraulic conductivity
     cudaMalloc((void**)&dev_d_T, memSizeF*3);   // hydraulic transmissivity
-    cudaMalloc((void**)&dev_d_Ss, memSizeF);     // hydraulic storativi
+    cudaMalloc((void**)&dev_d_Ss, memSizeF);    // hydraulic storativi
     cudaMalloc((void**)&dev_d_W, memSizeF);     // hydraulic recharge
-    cudaMalloc((void**)&dev_d_phi, memSizeF);     // cell porosity
+    cudaMalloc((void**)&dev_d_phi, memSizeF);   // cell porosity
 
     checkForCudaErrors("End of initDarcyMemDev");
 }
@@ -354,8 +354,8 @@ __global__ void findDarcyTransmissivitiesDev(
         __syncthreads();
 
         // Save hydraulic conductivity [m/s]
-        const Float K = k*rho*-devC_params.g[2]/devC_params.nu;
-        //K = 0.5; 
+        //const Float K = k*rho*-devC_params.g[2]/devC_params.nu;
+        const Float K = 0.5; 
         dev_d_K[cellidx] = K;
 
         // Hydraulic transmissivity [m2/s]

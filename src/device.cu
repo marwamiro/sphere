@@ -307,12 +307,14 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
     // dev_walls_force_partial allocated later
 
     // Fluid arrays
+#ifdef LBM_GPU
     cudaMalloc((void**)&dev_f,
             sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19);
     cudaMalloc((void**)&dev_f_new,
             sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19);
     cudaMalloc((void**)&dev_v_rho,
             sizeof(Float4)*grid.num[0]*grid.num[1]*grid.num[2]);
+#endif
 
     checkForCudaErrors("End of allocateGlobalDeviceMemory");
     if (verbose == 1)
@@ -366,9 +368,11 @@ __host__ void DEM::freeGlobalDeviceMemory()
     cudaFree(dev_walls_vel0);
 
     // Fluid arrays
+#ifdef LBM_GPU
     cudaFree(dev_f);
     cudaFree(dev_f_new);
     cudaFree(dev_v_rho);
+#endif
 
     checkForCudaErrors("During cudaFree calls");
 
@@ -460,10 +464,12 @@ __host__ void DEM::transferToGlobalDeviceMemory(int statusmsg)
                     sizeof(Float4)*grid.num[0]*grid.num[1]*grid.num[2],
                     cudaMemcpyHostToDevice);
 #endif
-        } //else {
-            //transferDarcyToGlobalDeviceMemory(1);
-        //}
-            // Darcy arrays aren't ready yet
+        } else if (darcy == 1) {
+            transferDarcyToGlobalDeviceMemory(1);
+        } else {
+            std::cerr << "darcy value not understood ("
+                << darcy << ")" << std::endl;
+        }
     }
 
     checkForCudaErrors("End of transferToGlobalDeviceMemory");
@@ -652,18 +658,10 @@ __host__ void DEM::startTime()
 #endif
         } else if (darcy == 1) {
 #ifdef DARCY_GPU
-            const Float cellsizemultiplier = 1.0;
-            initDarcy(cellsizemultiplier);
-            initDarcyMemDev();
-            transferDarcyToGlobalDeviceMemory(1);
-
             // Representative grain radius
             const Float r_bar2 = meanRadius()*2.0;
             // Grain size factor for Kozeny-Carman relationship
             d_factor = r_bar2*r_bar2/180.0;
-#else
-            const Float cellsizemultiplier = 1.0;
-            initDarcy(cellsizemultiplier);
 #endif
         } else {
             std::cerr << "Error, darcy value (" << darcy 
@@ -899,6 +897,7 @@ __host__ void DEM::startTime()
         if (params.nu > 0.0 && darcy == 1) {
 
 #ifdef DARCY_GPU
+            /*
             checkForCudaErrors("Before findPorositiesDev", iter);
             // Find cell porosities
             if (PROFILING == 1)
@@ -990,6 +989,7 @@ __host__ void DEM::startTime()
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
                         &t_findDarcyVelocitiesDev);
             checkForCudaErrors("Post findDarcyVelocitiesDev", iter);
+            */
 
 #else
             // Copy device data to host memory
@@ -1239,12 +1239,12 @@ __host__ void DEM::startTime()
     delete[] k.delta_t;
 
 #ifndef DARCY_GPU
-    if (darcy == 1) {
+    if (darcy == 1 && params.nu > 0.0)
         endDarcyDev();
         endDarcy();
     }
 #else
-    if (darcy == 1)
+    if (darcy == 1 && params.nu > 0.0)
         endDarcy();
 #endif
 

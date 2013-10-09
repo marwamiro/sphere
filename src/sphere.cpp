@@ -59,6 +59,11 @@ DEM::DEM(const std::string inputbin,
             transferToConstantDeviceMemory();
         }
 
+        if (params.nu > 0.0 && darcy == 1) {
+            initDarcy();
+            initDarcyMemDev();
+        }
+
         // Allocate device memory for particle variables,
         // tied to previously declared pointers in structures
         allocateGlobalDeviceMemory();

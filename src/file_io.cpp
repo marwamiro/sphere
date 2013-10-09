@@ -248,8 +248,8 @@ void DEM::readbin(const char *target)
         if (verbose == 1)
             cout << "  - Reading LBM values:\t\t\t\t  ";
 
-        f = new Float[grid.num[0]*grid.num[1]*grid.num[2]*19];
-        f_new = new Float[grid.num[0]*grid.num[1]*grid.num[2]*19];
+        //f = new Float[grid.num[0]*grid.num[1]*grid.num[2]*19];
+        //f_new = new Float[grid.num[0]*grid.num[1]*grid.num[2]*19];
         v_rho = new Float4[grid.num[0]*grid.num[1]*grid.num[2]];
 
         for (z = 0; z<grid.num[2]; ++z) {
@@ -269,7 +269,8 @@ void DEM::readbin(const char *target)
 
     } else if (params.nu > 0.0 && darcy == 1) {    // Darcy flow
 
-        initDarcy();
+        const Float cellsizemultiplier = 1.0;
+        initDarcyMem(cellsizemultiplier);
 
         if (verbose == 1)
             cout << "  - Reading Darcy values:\t\t\t  ";
