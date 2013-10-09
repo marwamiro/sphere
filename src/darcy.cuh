@@ -59,8 +59,8 @@ void DEM::transferDarcyToGlobalDeviceMemory(int statusmsg)
     checkForCudaErrors("Before attempting cudaMemcpy in "
             "transferDarcyToGlobalDeviceMemory");
 
-    if (verbose == 1 && statusmsg == 1)
-        std::cout << "  Transfering fluid data to the device:           ";
+    //if (verbose == 1 && statusmsg == 1)
+        //std::cout << "  Transfering fluid data to the device:           ";
 
     // number of cells
     //unsigned int ncells = d_nx*d_ny*d_nz; // without ghost nodes
@@ -80,8 +80,8 @@ void DEM::transferDarcyToGlobalDeviceMemory(int statusmsg)
     cudaMemcpy(dev_d_phi, d_phi, memSizeF, cudaMemcpyHostToDevice);
 
     checkForCudaErrors("End of transferDarcyToGlobalDeviceMemory");
-    if (verbose == 1 && statusmsg == 1)
-        std::cout << "Done" << std::endl;
+    //if (verbose == 1 && statusmsg == 1)
+        //std::cout << "Done" << std::endl;
 }
 
 // Transfer from device
