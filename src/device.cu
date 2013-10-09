@@ -1185,36 +1185,40 @@ __host__ void DEM::startTime()
         double t_sum = t_calcParticleCellID + t_thrustsort + t_reorderArrays
             + t_topology + t_interact + t_summation + t_integrateWalls;
         cout << "\nKernel profiling statistics:\n"
-            << "  - calcParticleCellID:\t" << t_calcParticleCellID/1000.0 << " s"
+            << "  - calcParticleCellID:\t\t" << t_calcParticleCellID/1000.0 << " s"
             << "\t(" << 100.0*t_calcParticleCellID/t_sum << " %)\n"
-            << "  - thrustsort:\t\t" << t_thrustsort/1000.0 << " s"
+            << "  - thrustsort:\t\t\t" << t_thrustsort/1000.0 << " s"
             << "\t(" << 100.0*t_thrustsort/t_sum << " %)\n"
-            << "  - reorderArrays:\t" << t_reorderArrays/1000.0 << " s"
+            << "  - reorderArrays:\t\t" << t_reorderArrays/1000.0 << " s"
             << "\t(" << 100.0*t_reorderArrays/t_sum << " %)\n"
-            << "  - topology:\t\t" << t_topology/1000.0 << " s"
+            << "  - topology:\t\t\t" << t_topology/1000.0 << " s"
             << "\t(" << 100.0*t_topology/t_sum << " %)\n"
-            << "  - interact:\t\t" << t_interact/1000.0 << " s"
+            << "  - interact:\t\t\t" << t_interact/1000.0 << " s"
             << "\t(" << 100.0*t_interact/t_sum << " %)\n"
-            << "  - bondsLinear:\t" << t_bondsLinear/1000.0 << " s"
-            << "\t(" << 100.0*t_bondsLinear/t_sum << " %)\n"
-            << "  - latticeBoltzmann:\t" << t_latticeBoltzmannD3Q19/1000.0 << " s"
-            << "\t(" << 100.0*t_latticeBoltzmannD3Q19/t_sum << " %)\n"
-            << "  - integrate:\t\t" << t_integrate/1000.0 << " s"
+            << "  - bondsLinear:\t\t" << t_bondsLinear/1000.0 << " s"
+            << "\t(" << 100.0*t_bondsLinear/t_sum << " %)\n";
+        if (params.nu > 0.0 && darcy == 0) {
+            cout
+            << "  - latticeBoltzmann:\t\t" << t_latticeBoltzmannD3Q19/1000.0 <<
+            " s" << "\t(" << 100.0*t_latticeBoltzmannD3Q19/t_sum << " %)\n";
+        }
+        cout
+            << "  - integrate:\t\t\t" << t_integrate/1000.0 << " s"
             << "\t(" << 100.0*t_integrate/t_sum << " %)\n"
-            << "  - summation:\t\t" << t_summation/1000.0 << " s"
+            << "  - summation:\t\t\t" << t_summation/1000.0 << " s"
             << "\t(" << 100.0*t_summation/t_sum << " %)\n"
-            << "  - integrateWalls:\t" << t_integrateWalls/1000.0 << " s"
+            << "  - integrateWalls:\t\t" << t_integrateWalls/1000.0 << " s"
             << "\t(" << 100.0*t_integrateWalls/t_sum << " %)\n";
-        if (darcy == 1) {
+        if (params.nu > 0.0 && darcy == 1) {
             cout 
-            << "  - findPorositiesDev:\t" << t_findPorositiesDev/1000.0 << " s"
-            << "\t(" << 100.0*t_findPorositiesDev/t_sum << " %)\n"
-            << "  - findDarcyTransmissivitiesDev:\t" <<
+            << "  - findPorositiesDev:\t\t" << t_findPorositiesDev/1000.0
+            << " s" << "\t(" << 100.0*t_findPorositiesDev/t_sum << " %)\n"
+            << "  - findDarcyTransmis.Dev:\t" <<
             t_findDarcyTransmissivitiesDev/1000.0 << " s"
             << "\t(" << 100.0*t_findDarcyTransmissivitiesDev/t_sum << " %)\n"
             << "  - setDarcyGhostNodesDev:\t" << t_setDarcyGhostNodesDev/1000.0
             << " s" << "\t(" << 100.0*t_setDarcyGhostNodesDev/t_sum << " %)\n"
-            << "  - explDarcyStepDev:\t" << t_explDarcyStepDev/1000.0 << " s"
+            << "  - explDarcyStepDev:\t\t" << t_explDarcyStepDev/1000.0 << " s"
             << "\t(" << 100.0*t_explDarcyStepDev/t_sum << " %)\n"
             << "  - findDarcyGradientsDev:\t" << t_findDarcyGradientsDev/1000.0
             << " s"
