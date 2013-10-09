@@ -88,12 +88,25 @@ class Spherebin:
         self.V_b          = numpy.zeros(1, dtype=numpy.float64)
 
         # Wall data
+        # nw: Number of dynamic walls
+        # nw = 1: Uniaxial
+        # nw = 2: Biaxial
+        # nw = 5: Triaxial
         self.nw      = numpy.ones(1, dtype=numpy.uint32) * nw
         self.wmode   = numpy.zeros(self.nw, dtype=numpy.int32)
 
         self.w_n     = numpy.zeros((self.nw, self.nd), dtype=numpy.float64)
-        if (self.nw > 0):
+        if (self.nw >= 1):
             self.w_n[0,2] = -1.0
+        if (self.nw >= 2):
+            self.w_n[1,0] = -1.0
+        if (self.nw >= 3):
+            self.w_n[2,0] =  1.0
+        if (self.nw >= 4):
+            self.w_n[3,1] = -1.0
+        if (self.nw >= 5):
+            self.w_n[4,1] =  1.0
+            
         self.w_x     = numpy.ones(self.nw, dtype=numpy.float64)
         self.w_m     = numpy.zeros(self.nw, dtype=numpy.float64)
         self.w_vel   = numpy.zeros(self.nw, dtype=numpy.float64)
@@ -194,7 +207,45 @@ class Spherebin:
         else:
             return 1
 
-    def readbin(self, targetbin, verbose = True, bonds = True, devsmod = True, fluid = True):
+    def addParticle(self,
+            x,
+            radius,
+            xysum = numpy.zeros(2),
+            vel = numpy.zeros(3),
+            fixvel = numpy.zeros(1),
+            force = numpy.zeros(3),
+            angpos = numpy.zeros(3),
+            angvel = numpy.zeros(3),
+            torque = numpy.zeros(3),
+            es_dot = numpy.zeros(1),
+            es = numpy.zeros(1),
+            ev_dot = numpy.zeros(1),
+            ev = numpy.zeros(1),
+            p = numpy.zeros(1)):
+        ''' Add a single particle to the simulation object. The only required
+        parameters are the position (x), a length-three array, and the
+        radius (radius), a length-one array.
+        '''
+
+        self.np = self.np + 1
+
+        self.x      = numpy.append(self.x, [x], axis=0)
+        self.radius = numpy.append(self.radius, radius)
+        self.vel    = numpy.append(self.vel, [vel], axis=0)
+        self.xysum  = numpy.append(self.xysum, [xysum], axis=0)
+        self.fixvel = numpy.append(self.fixvel, fixvel)
+        self.force  = numpy.append(self.force, [force], axis=0)
+        self.angpos = numpy.append(self.angpos, [angpos], axis=0)
+        self.angvel = numpy.append(self.angvel, [angvel], axis=0)
+        self.torque = numpy.append(self.torque, [torque], axis=0)
+        self.es_dot = numpy.append(self.es_dot, es_dot)
+        self.es     = numpy.append(self.es, es)
+        self.ev_dot = numpy.append(self.ev_dot, ev_dot)
+        self.ev     = numpy.append(self.ev, ev)
+        self.p      = numpy.append(self.p, p)
+
+    def readbin(self, targetbin, verbose = True, bonds = True, devsmod = True,
+            fluid = True, esysparticle = False):
         'Reads a target SPHERE binary file'
 
         fh = None
@@ -248,6 +299,9 @@ class Spherebin:
             self.angpos = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
             self.angvel = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
             self.torque = numpy.fromfile(fh, dtype=numpy.float64, count=self.np*self.nd).reshape(self.np, self.nd)
+
+            if (esysparticle == True):
+                return
 
             # Per-particle single-value parameters
             self.es_dot  = numpy.fromfile(fh, dtype=numpy.float64, count=self.np)
@@ -462,14 +516,21 @@ class Spherebin:
                 fh.close()
 
     def readfirst(self, verbose=True):
+        ''' Read first output file of self.sid '''
         fn = "../output/{0}.output00000.bin".format(self.sid)
         self.readbin(fn, verbose)
 
     def readsecond(self, verbose=True):
+        ''' Read second output file of self.sid '''
         fn = "../output/{0}.output00001.bin".format(self.sid)
         self.readbin(fn, verbose)
 
+    def readstep(self, step, verbose=True):
+        ''' Read output binary from time step 'step' from output/ folder. '''
+        fn = "../output/{0}.output{1:0=5}.bin".format(self.sid, step)
+
     def readlast(self, verbose=True):
+        ''' Read last output binary of self.sid from output/ folder. '''
         lastfile = status(self.sid)
         fn = "../output/{0}.output{1:0=5}.bin".format(self.sid, lastfile)
         self.readbin(fn, verbose)
@@ -875,25 +936,47 @@ class Spherebin:
                 .reshape(self.np, 2)
 
     def adjustUpperWall(self, z_adjust = 1.1):
-        'Adjust grid and dynamic upper wall to max. particle height'
-
-        # Compute new grid, scaled to fit max. and min. particle positions
-        z_min = numpy.min(self.x[:,2] - self.radius)
-        z_max = numpy.max(self.x[:,2] + self.radius)
-        cellsize = self.L[0] / self.num[0]
-        self.num[2] = numpy.ceil(((z_max-z_min)*z_adjust + z_min)/cellsize)
-        self.L[2] = (z_max-z_min)*z_adjust + z_min
+        'Included for legacy purposes, calls adjustWall with idx=0'
 
         # Initialize upper wall
         self.nw = numpy.ones(1)
         self.wmode = numpy.zeros(1) # fixed BC
         self.w_n = numpy.zeros(self.nw*self.nd, dtype=numpy.float64).reshape(self.nw,self.nd)
         self.w_n[0,2] = -1.0
-        self.w_x = numpy.array([z_max])
-        self.w_m = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
         self.w_vel = numpy.zeros(1)
         self.w_force = numpy.zeros(1)
         self.w_devs = numpy.zeros(1)
+
+        self.w_x = numpy.zeros(1)
+        self.w_m = numpy.zeros(1)
+        self.adjustWall(idx=0, adjust = z_adjust)
+
+    def adjustWall(self, idx, adjust = 1.1):
+        'Adjust grid and dynamic wall to max. particle position'
+
+        if (idx == 0):
+            dim = 2
+        elif (idx == 1 or idx == 2):
+            dim = 0
+        elif (idx == 3 or idx == 4):
+            dim = 1
+        else:
+            print("adjustWall: idx value not understood")
+
+        xmin = numpy.min(self.x[:,dim] - self.radius)
+        xmax = numpy.max(self.x[:,dim] + self.radius)
+
+        cellsize = self.L[0] / self.num[0]
+
+        self.num[dim] = numpy.ceil(((xmax-xmin)*adjust + xmin)/cellsize)
+        self.L[dim] = (xmax-xmin)*adjust + xmin
+
+        # Initialize upper wall
+        if (idx == 0 or idx == 1 or idx == 3):
+            self.w_x[idx] = numpy.array([xmax])
+        else:
+            self.w_x[idx] = numpy.array([xmin])
+        self.w_m[idx] = numpy.array([self.rho[0] * self.np * math.pi * (cellsize/2.0)**3])
 
 
     def consolidate(self, deviatoric_stress = 10e3,
@@ -926,6 +1009,30 @@ class Spherebin:
         self.wmode = numpy.array([2]) # strain rate BC
         self.w_vel = numpy.array([wvel])
 
+    def triaxial(self, wvel = -0.001, deviatoric_stress = 10.0e3):
+        """ Setup triaxial experiment. The upper wall is moved at a fixed
+            velocity in m/s, default values is -0.001 m/s (i.e. downwards).
+            The side walls are exerting a deviatoric stress
+        """
+
+        # zero kinematics
+        self.zeroKinematics()
+
+        # Initialize walls
+        self.nw[0] = 5  # five dynamic walls
+        self.wmode  = numpy.array([2,1,1,1,1]) # define BCs (vel, stress, stress, ...)
+        self.w_vel  = numpy.array([1,0,0,0,0]) * wvel
+        self.w_devs = numpy.array([0,1,1,1,1]) * deviatoric_stress
+        self.w_n = numpy.array(([0,0,-1], [-1,0,0], [1,0,0], [0,-1,0], [0,1,0]),
+                dtype=numpy.float64)
+        self.w_x = numpy.zeros(5)
+        self.w_m = numpy.zeros(5)
+        self.w_force = numpy.zeros(5)
+        for i in range(5):
+            self.adjustWall(idx=i)
+
+        
+
     def shear(self,
             shear_strain_rate = 1,
             periodic = 1):
@@ -951,10 +1058,13 @@ class Spherebin:
 
         # set the thickness of the horizons of fixed particles
         #fixheight = 2*cellsize
-        fixheight = cellsize
+        #fixheight = cellsize
 
         # Fix horizontal velocity to 0.0 of lowermost particles
-        I = numpy.nonzero(self.x[:,2] < (z_min + fixheight)) # Find indices of lowermost 10%
+        d_max_below = numpy.max(self.radius[numpy.nonzero(self.x[:,2] <
+            (z_max-z_min)*0.3)])*2.0
+        #I = numpy.nonzero(self.x[:,2] < (z_min + fixheight))
+        I = numpy.nonzero(self.x[:,2] < (z_min + d_max_below))
         self.fixvel[I] = 1
         self.angvel[I,0] = 0.0
         self.angvel[I,1] = 0.0
@@ -963,7 +1073,10 @@ class Spherebin:
         self.vel[I,1] = 0.0 # y-dim
 
         # Fix horizontal velocity to specific value of uppermost particles
-        I = numpy.nonzero(self.x[:,2] > (z_max - fixheight)) # Find indices of lowermost 10%
+        d_max_top = numpy.max(self.radius[numpy.nonzero(self.x[:,2] >
+            (z_max-z_min)*0.7)])*2.0
+        #I = numpy.nonzero(self.x[:,2] > (z_max - fixheight))
+        I = numpy.nonzero(self.x[:,2] > (z_max - d_max_top))
         self.fixvel[I] = 1
         self.angvel[I,0] = 0.0
         self.angvel[I,1] = 0.0
@@ -1506,6 +1619,9 @@ class Spherebin:
         ax.set_rticks([])
         plt.savefig("bonds-" + self.sid + "-rose." + imgformat, transparent=True)
 
+    def status(self):
+        ''' Show the current simulation status '''
+        return status(self.sid)
 
     def sheardisp(self, outformat='pdf', zslices=32):
         ''' Show particle x-displacement vs. the z-pos '''
@@ -2162,6 +2278,59 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             ax4.plot(t, wforce/(sb.L[0]*sb.L[1]), '+-', label="$\sigma'$")
             ax4.legend(loc=4)
             ax4.grid()
+
+    elif method == 'triaxial':
+
+        # Read energy values from project binaries
+        sb = Spherebin()
+        for i in range(lastfile+1):
+            fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
+            sb.readbin(fn, verbose = False)
+
+            vol = (sb.w_x[0]-sb.origo[2]) * (sb.w_x[1]-sb.w_x[2]) * (sb.w_x[3] - sb.w_x[4])
+
+            # Allocate arrays on first run
+            if (i == 0):
+                axial_strain = numpy.zeros(lastfile+1, dtype=numpy.float64)
+                deviatoric_stress = numpy.zeros(lastfile+1, dtype=numpy.float64)
+                volumetric_strain = numpy.zeros(lastfile+1, dtype=numpy.float64)
+
+                w0pos0 = sb.w_x[0]
+                vol0 = vol
+
+            sigma1 = sb.w_force[0]/((sb.w_x[1]-sb.w_x[2])*(sb.w_x[3]-sb.w_x[4]))
+
+            axial_strain[i] = (w0pos0 - sb.w_x[0])/w0pos0
+            volumetric_strain[i] = (vol0-vol)/vol0
+            deviatoric_stress[i] = sigma1 / sb.w_devs[1]
+
+        #print(lastfile)
+        #print(axial_strain)
+        #print(deviatoric_stress)
+        #print(volumetric_strain)
+
+        # Plotting
+        if (outformat != 'txt'):
+
+            # linear plot of deviatoric stress
+            ax1 = plt.subplot2grid((2,1),(0,0))
+            ax1.set_xlabel('Axial strain, $\gamma_1$, [-]')
+            ax1.set_ylabel('Deviatoric stress, $\sigma_1 - \sigma_3$, [Pa]')
+            ax1.plot(axial_strain, deviatoric_stress, '+-')
+            #ax1.legend()
+            ax1.grid()
+
+            #ax2 = plt.subplot2grid((2,2),(1,0))
+            #ax2.set_xlabel('Time [s]')
+            #ax2.set_ylabel('Force [N]')
+            #ax2.plot(t, wforce, '+-')
+
+            # semilog plot of log stress vs. void ratio
+            ax2 = plt.subplot2grid((2,1),(1,0))
+            ax2.set_xlabel('Axial strain, $\gamma_1$ [-]')
+            ax2.set_ylabel('Volumetric strain, $\gamma_v$, [-]')
+            ax2.plot(axial_strain, volumetric_strain, '+-')
+            ax2.grid()
 
 
     elif method == 'shear':
