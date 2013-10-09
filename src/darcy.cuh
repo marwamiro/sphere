@@ -60,7 +60,7 @@ void DEM::transferDarcyToGlobalDeviceMemory(int statusmsg)
             "transferDarcyToGlobalDeviceMemory");
 
     if (verbose == 1 && statusmsg == 1)
-        std::cout << "  Transfering darcy data to the device:           ";
+        std::cout << "  Transfering fluid data to the device:           ";
 
     // number of cells
     //unsigned int ncells = d_nx*d_ny*d_nz; // without ghost nodes

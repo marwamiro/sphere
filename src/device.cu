@@ -702,6 +702,7 @@ __host__ void DEM::startTime()
 
     double t_findPorositiesDev = 0.0;
     double t_findDarcyTransmissivitiesDev = 0.0;
+    double t_setDarcyGhostNodesDev = 0.0;
     double t_explDarcyStepDev = 0.0;
     double t_findDarcyGradientsDev = 0.0;
     double t_findDarcyVelocitiesDev = 0.0;
@@ -926,6 +927,25 @@ __host__ void DEM::startTime()
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
                         &t_findDarcyTransmissivitiesDev);
             checkForCudaErrors("Post findDarcyTransmissivitiesDev", iter);
+
+            // Perform explicit Darcy time step
+            if (PROFILING == 1)
+                startTimer(&kernel_tic);
+            setDarcyGhostNodesDev<<<dimGridFluid, dimBlockFluid>>>(
+                    dev_d_H,
+                    dev_d_H_new,
+                    dev_d_V,
+                    dev_d_dH,
+                    dev_d_K,
+                    dev_d_T,
+                    dev_d_Ss,
+                    dev_d_W,
+                    dev_d_phi);
+            cudaThreadSynchronize();
+            if (PROFILING == 1)
+                stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
+                        &t_setDarcyGhostNodesDev);
+            checkForCudaErrors("Post setDarcyGhostNodesDev", iter);
 
             // Perform explicit Darcy time step
             if (PROFILING == 1)
@@ -1192,6 +1212,8 @@ __host__ void DEM::startTime()
             << "  - findDarcyTransmissivitiesDev:\t" <<
             t_findDarcyTransmissivitiesDev/1000.0 << " s"
             << "\t(" << 100.0*t_findDarcyTransmissivitiesDev/t_sum << " %)\n"
+            << "  - setDarcyGhostNodesDev:\t" << t_setDarcyGhostNodesDev/1000.0
+            << " s" << "\t(" << 100.0*t_setDarcyGhostNodesDev/t_sum << " %)\n"
             << "  - explDarcyStepDev:\t" << t_explDarcyStepDev/1000.0 << " s"
             << "\t(" << 100.0*t_explDarcyStepDev/t_sum << " %)\n"
             << "  - findDarcyGradientsDev:\t" << t_findDarcyGradientsDev/1000.0
