@@ -230,6 +230,9 @@ class DEM {
         // Find darcy flow velocities from specific flux (q)
         void findDarcyVelocities();
 
+        // Returns the mean particle radius
+        Float meanRadius();
+
         // Get linear (1D) index from 3D coordinate
         unsigned int idx(
                 const unsigned int x,
@@ -238,9 +241,11 @@ class DEM {
 
         // Initialize Darcy values and arrays
         void initDarcy(const Float cellsizemultiplier = 1.0);
+        void initDarcyDev(const Float cellsizemultiplier = 1.0);
 
         // Clean up Darcy arrays
         void endDarcy();
+        void endDarcyDev();
 
         // Check whether the explicit integration is going to meet the
         // stability criteria

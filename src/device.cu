@@ -27,7 +27,7 @@
 #include "integration.cuh"
 #include "raytracer.cuh"
 #include "latticeboltzmann.cuh"
-//#include "darcy.cuh"
+#include "darcy.cuh"
 
 
 // Wrapper function for initializing the CUDA components.
@@ -450,15 +450,20 @@ __host__ void DEM::transferToGlobalDeviceMemory(int statusmsg)
     }
 
     // Fluid arrays
-    if (params.nu > 0.0 && darcy == 0) {
+    if (params.nu > 0.0) {
+        if (darcy == 0) {
 #ifdef LBM_GPU
-        cudaMemcpy( dev_f, f,
-                sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
-                cudaMemcpyHostToDevice);
-        cudaMemcpy( dev_v_rho, v_rho,
-                sizeof(Float4)*grid.num[0]*grid.num[1]*grid.num[2],
-                cudaMemcpyHostToDevice);
+            cudaMemcpy( dev_f, f,
+                    sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
+                    cudaMemcpyHostToDevice);
+            cudaMemcpy( dev_v_rho, v_rho,
+                    sizeof(Float4)*grid.num[0]*grid.num[1]*grid.num[2],
+                    cudaMemcpyHostToDevice);
 #endif
+        } //else {
+            //transferDarcyToGlobalDeviceMemory(1);
+        //}
+            // Darcy arrays aren't ready yet
     }
 
     checkForCudaErrors("End of transferToGlobalDeviceMemory");
@@ -530,16 +535,20 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
             sizeof(Float4)*walls.nw, cudaMemcpyDeviceToHost);
 
     // Fluid arrays
+    if (params.nu > 0.0) {
+        if (darcy == 0) {
 #ifdef LBM_GPU
-    if (params.nu > 0.0 && darcy == 0) {
         cudaMemcpy( f, dev_f,
                 sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
                 cudaMemcpyDeviceToHost);
         cudaMemcpy(v_rho, dev_v_rho,
                 sizeof(Float4)*grid.num[0]*grid.num[1]*grid.num[2],
                 cudaMemcpyDeviceToHost);
-    }
 #endif
+        } else {
+            transferDarcyFromGlobalDeviceMemory(0);
+        }
+    }
 
     checkForCudaErrors("End of transferFromGlobalDeviceMemory");
 }
@@ -580,13 +589,13 @@ __host__ void DEM::startTime()
     unsigned int blocksPerGridBonds = iDivUp(params.nb0, threadsPerBlock); 
     dim3 dimGridBonds(blocksPerGridBonds, 1, 1); // Blocks arranged in 1D grid
 
-    // Use 3D block and grid layout for Lattice-Boltzmann fluid calculations
+    // Use 3D block and grid layout for fluid calculations
     dim3 dimBlockFluid(8, 8, 8);    // 512 threads per block
     dim3 dimGridFluid(
             iDivUp(grid.num[0], dimBlockFluid.x),
             iDivUp(grid.num[1], dimBlockFluid.y),
             iDivUp(grid.num[2], dimBlockFluid.z));
-    if (dimGridFluid.z > 64) {
+    if (dimGridFluid.z > 64 && params.nu > 0.0) {
         cerr << "Error: dimGridFluid.z > 64" << endl;
         exit(1);
     }
@@ -634,18 +643,32 @@ __host__ void DEM::startTime()
     fclose(fp);
 
     // Initialize fluid distribution array
-    if (params.nu > 0.0 && darcy == 0) {
+    Float d_factor;
+    if (params.nu > 0.0) {
+        if (darcy == 0) {
 #ifdef LBM_GPU
-        initFluid<<< dimGridFluid, dimBlockFluid >>>(dev_v_rho, dev_f);
-        cudaThreadSynchronize();
-#else
+            initFluid<<< dimGridFluid, dimBlockFluid >>>(dev_v_rho, dev_f);
+            cudaThreadSynchronize();
+#endif
+        } else if (darcy == 1) {
 #ifdef DARCY_GPU
-        initFluid(v_rho, f, grid.num[0], grid.num[1], grid.num[2]);
+            const Float cellsizemultiplier = 1.0;
+            initDarcy(cellsizemultiplier);
+            initDarcyMemDev();
+            transferDarcyToGlobalDeviceMemory(1);
+
+            // Representative grain radius
+            const Float r_bar2 = meanRadius()*2.0;
+            // Grain size factor for Kozeny-Carman relationship
+            d_factor = r_bar2*r_bar2/180.0;
 #else
-        const Float cellsizemultiplier = 1.0;
-        initDarcy(cellsizemultiplier);
+            const Float cellsizemultiplier = 1.0;
+            initDarcy(cellsizemultiplier);
 #endif
-#endif
+        } else {
+            std::cerr << "Error, darcy value (" << darcy 
+                << ") not understood." << std::endl;
+        }
     }
 
     if (verbose == 1) {
@@ -676,6 +699,12 @@ __host__ void DEM::startTime()
     double t_integrate = 0.0;
     double t_summation = 0.0;
     double t_integrateWalls = 0.0;
+
+    double t_findPorositiesDev = 0.0;
+    double t_findDarcyTransmissivitiesDev = 0.0;
+    double t_explDarcyStepDev = 0.0;
+    double t_findDarcyGradientsDev = 0.0;
+    double t_findDarcyVelocitiesDev = 0.0;
 
     if (PROFILING == 1) {
         cudaEventCreate(&kernel_tic);
@@ -866,17 +895,90 @@ __host__ void DEM::startTime()
         }
 
         // Solve darcy flow through grid
-        if (darcy == 1) {
+        if (params.nu > 0.0 && darcy == 1) {
 
 #ifdef DARCY_GPU
-            std::cout << "GPU darcy" << std::endl;
+            checkForCudaErrors("Before findPorositiesDev", iter);
+            // Find cell porosities
+            if (PROFILING == 1)
+                startTimer(&kernel_tic);
+            findPorositiesDev<<<dimGridFluid, dimBlockFluid>>>(
+                    dev_cellStart,
+                    dev_cellEnd,
+                    dev_x_sorted,
+                    dev_d_phi);
+            cudaThreadSynchronize();
+            if (PROFILING == 1)
+                stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
+                        &t_findPorositiesDev);
+            checkForCudaErrors("Post findPorositiesDev", iter);
+
+            // Find resulting cell transmissivities
+            if (PROFILING == 1)
+                startTimer(&kernel_tic);
+            findDarcyTransmissivitiesDev<<<dimGridFluid, dimBlockFluid>>>(
+                    dev_d_K,
+                    dev_d_T,
+                    dev_d_phi,
+                    d_factor);
+            cudaThreadSynchronize();
+            if (PROFILING == 1)
+                stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
+                        &t_findDarcyTransmissivitiesDev);
+            checkForCudaErrors("Post findDarcyTransmissivitiesDev", iter);
+
+            // Perform explicit Darcy time step
+            if (PROFILING == 1)
+                startTimer(&kernel_tic);
+            explDarcyStepDev<<<dimGridFluid, dimBlockFluid>>>(
+                    dev_d_H,
+                    dev_d_H_new,
+                    dev_d_T,
+                    dev_d_Ss,
+                    dev_d_W);
+            cudaThreadSynchronize();
+            if (PROFILING == 1)
+                stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
+                        &t_explDarcyStepDev);
+            checkForCudaErrors("Post explDarcyStepDev", iter);
+
+            // Flop flop
+            swapFloatArrays(dev_d_H, dev_d_H_new);
+
+            // Find the pressure gradients
+            if (PROFILING == 1)
+                startTimer(&kernel_tic);
+            findDarcyGradientsDev<<<dimGridFluid, dimBlockFluid>>>(
+                    dev_d_H, dev_d_dH);
+            cudaThreadSynchronize();
+            if (PROFILING == 1)
+                stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
+                        &t_findDarcyGradientsDev);
+            checkForCudaErrors("Post findDarcyGradientsDev", iter);
+
+            // Find the pressure gradients
+            if (PROFILING == 1)
+                startTimer(&kernel_tic);
+            findDarcyVelocitiesDev<<<dimGridFluid, dimBlockFluid>>>(
+                    dev_d_H,
+                    dev_d_dH,
+                    dev_d_V,
+                    dev_d_phi,
+                    dev_d_K);
+            cudaThreadSynchronize();
+            if (PROFILING == 1)
+                stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
+                        &t_findDarcyVelocitiesDev);
+            checkForCudaErrors("Post findDarcyVelocitiesDev", iter);
+
+#else
             // Copy device data to host memory
             transferFromGlobalDeviceMemory();
 
             // Pause the CPU thread until all CUDA calls previously issued are completed
             cudaThreadSynchronize();
 
-            // Perform explicit Darcy time step
+            // Perform a Darcy time step on the CPU
             explDarcyStep();
 
             // Transfer data from host to device memory
@@ -884,9 +986,6 @@ __host__ void DEM::startTime()
 
             // Pause the CPU thread until all CUDA calls previously issued are completed
             cudaThreadSynchronize();
-#else
-            // Perform a Darcy time step on the CPU
-            explDarcyStep();
 #endif
         }
 
@@ -1086,6 +1185,22 @@ __host__ void DEM::startTime()
             << "\t(" << 100.0*t_summation/t_sum << " %)\n"
             << "  - integrateWalls:\t" << t_integrateWalls/1000.0 << " s"
             << "\t(" << 100.0*t_integrateWalls/t_sum << " %)\n";
+        if (darcy == 1) {
+            cout 
+            << "  - findPorositiesDev:\t" << t_findPorositiesDev/1000.0 << " s"
+            << "\t(" << 100.0*t_findPorositiesDev/t_sum << " %)\n"
+            << "  - findDarcyTransmissivitiesDev:\t" <<
+            t_findDarcyTransmissivitiesDev/1000.0 << " s"
+            << "\t(" << 100.0*t_findDarcyTransmissivitiesDev/t_sum << " %)\n"
+            << "  - explDarcyStepDev:\t" << t_explDarcyStepDev/1000.0 << " s"
+            << "\t(" << 100.0*t_explDarcyStepDev/t_sum << " %)\n"
+            << "  - findDarcyGradientsDev:\t" << t_findDarcyGradientsDev/1000.0
+            << " s"
+            << "\t(" << 100.0*t_findDarcyGradientsDev/t_sum << " %)\n"
+            << "  - findDarcyVelocitiesDev:\t"
+            << t_findDarcyVelocitiesDev/1000.0 << " s"
+            << "\t(" << 100.0*t_findDarcyVelocitiesDev/t_sum << " %)\n";
+        }
     }
 
 
@@ -1098,6 +1213,11 @@ __host__ void DEM::startTime()
     delete[] k.delta_t;
 
 #ifndef DARCY_GPU
+    if (darcy == 1) {
+        endDarcyDev();
+        endDarcy();
+    }
+#else
     if (darcy == 1)
         endDarcy();
 #endif
