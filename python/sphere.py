@@ -387,16 +387,14 @@ class Spherebin:
                     for z in range(self.num[2]):
                         for y in range(self.num[1]):
                             for x in range(self.num[0]):
-                                #print(str(x) + ',' + str(y) + ',' + str(z))
-                                self.f_v[x,y,z,0] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-                                #print(numpy.fromfile(fh, dtype=numpy.float64, count=1))
-                                self.f_v[x,y,z,1] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-                                #print(numpy.fromfile(fh, dtype=numpy.float64, count=1))
-                                self.f_v[x,y,z,2] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-                                #print(numpy.fromfile(fh, dtype=numpy.float64, count=1))
-                                self.f_rho[x,y,z] = numpy.fromfile(fh, dtype=numpy.float64, count=1)
-                                #print(numpy.fromfile(fh, dtype=numpy.float64, count=1))
-
+                                self.f_v[x,y,z,0] = \
+                                numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                                self.f_v[x,y,z,1] = \
+                                numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                                self.f_v[x,y,z,2] = \
+                                numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                                self.f_rho[x,y,z] = \
+                                numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
         finally:
             if fh is not None:
@@ -1430,6 +1428,8 @@ class Spherebin:
             verbose=True):
         'Render all output files that belong to the simulation, determined by sid.'
 
+        print("Rendering {} images with the raytracer".format(self.sid))
+
         quiet = ""
         if (verbose == False):
             quiet = "-q"
@@ -2210,6 +2210,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
             ax10.plot(t, Erot, '+-r')
             ax10.legend(('$\sum E_{pot}$','$\sum E_{kin}$','$\sum E_{rot}$'), 'upper right', shadow=True)
             ax10.grid()
+
+            fig.tight_layout()
 
     elif method == 'walls':
 
