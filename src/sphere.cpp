@@ -76,6 +76,8 @@ DEM::DEM(const std::string inputbin,
 // Destructor: Liberates dynamically allocated host memory
 DEM::~DEM(void)
 {
+    if (verbose == 1)
+        std::cout << "Freeing host memory:                             ";
     delete[] k.x;
     delete[] k.xysum;
     delete[] k.vel;
@@ -90,6 +92,8 @@ DEM::~DEM(void)
     delete[] e.p;
     delete[] walls.nx;
     delete[] walls.mvfd;
+    if (verbose == 1)
+        std::cout << "Done" << std::endl;
 }
 
 

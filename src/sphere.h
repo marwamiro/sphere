@@ -325,6 +325,9 @@ class DEM {
         void printDarcyArray(FILE* stream, Float3* arr);
         void printDarcyArray(FILE* stream, Float3* arr, std::string desc);
 
+        // Write Darcy arrays to file
+        void writeDarcyArray(Float* array, const char* filename);
+        void writeDarcyArray(Float3* array, const char* filename);
 };
 
 #endif

@@ -324,7 +324,7 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
 __host__ void DEM::freeGlobalDeviceMemory()
 {
     if (verbose == 1)
-        printf("\nLiberating device memory:                        ");
+        printf("\nFreeing device memory:                           ");
     // Particle arrays
     cudaFree(dev_x);
     cudaFree(dev_xysum);
@@ -467,7 +467,7 @@ __host__ void DEM::transferToGlobalDeviceMemory(int statusmsg)
         } else if (darcy == 1) {
             transferDarcyToGlobalDeviceMemory(1);
         } else {
-            std::cerr << "darcy value not understood ("
+            std::cerr << "Error: Darcy value not understood ("
                 << darcy << ")" << std::endl;
         }
     }
@@ -552,7 +552,9 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
                 cudaMemcpyDeviceToHost);
 #endif
         } else {
+#ifdef DARCY_GPU
             transferDarcyFromGlobalDeviceMemory(0);
+#endif
         }
     }
 
@@ -698,7 +700,7 @@ __host__ void DEM::startTime()
     double t_summation = 0.0;
     double t_integrateWalls = 0.0;
 
-    double t_findPorositiesDev = 0.0;
+    double t_findPorositiesCubicDev = 0.0;
     double t_findDarcyTransmissivitiesDev = 0.0;
     double t_setDarcyGhostNodesDev = 0.0;
     double t_explDarcyStepDev = 0.0;
@@ -898,20 +900,25 @@ __host__ void DEM::startTime()
 
 #ifdef DARCY_GPU
             //*
-            checkForCudaErrors("Before findPorositiesDev", iter);
+            checkForCudaErrors("Before findPorositiesCubicDev", iter);
             // Find cell porosities
             if (PROFILING == 1)
                 startTimer(&kernel_tic);
-            findPorositiesDev<<<dimGridFluid, dimBlockFluid>>>(
+            findPorositiesCubicDev<<<dimGridFluid, dimBlockFluid>>>(
                     dev_cellStart,
                     dev_cellEnd,
                     dev_x_sorted,
                     dev_d_phi);
+            /*findPorositiesSphericalDev<<<dimGridFluid, dimBlockFluid>>>(
+                    dev_cellStart,
+                    dev_cellEnd,
+                    dev_x_sorted,
+                    dev_d_phi);*/
             cudaThreadSynchronize();
             if (PROFILING == 1)
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
-                        &t_findPorositiesDev);
-            checkForCudaErrors("Post findPorositiesDev", iter);
+                        &t_findPorositiesCubicDev);
+            checkForCudaErrors("Post findPorositiesCubicDev", iter);
 
             // Find resulting cell transmissivities
             if (PROFILING == 1)
@@ -978,7 +985,7 @@ __host__ void DEM::startTime()
                         &t_findDarcyGradientsDev);
             checkForCudaErrors("Post findDarcyGradientsDev", iter);
 
-            // Find the pressure gradients
+            // Find the velocities caused by the pressure gradients
             if (PROFILING == 1)
                 startTimer(&kernel_tic);
             findDarcyVelocitiesDev<<<dimGridFluid, dimBlockFluid>>>(
@@ -1111,6 +1118,11 @@ __host__ void DEM::startTime()
             sprintf(file,"output/%s.output%05d.bin", sid.c_str(), time.step_count);
             writebin(file);
 
+            // Write Darcy arrays
+            sprintf(file,"output/%s.d_phi.output%05d.bin", sid.c_str(), time.step_count);
+            writeDarcyArray(d_phi, file);
+            sprintf(file,"output/%s.d_K.output%05d.bin", sid.c_str(), time.step_count);
+            writeDarcyArray(d_K, file);
 
             if (CONTACTINFO == 1) {
                 // Write contact information to stdout
@@ -1187,7 +1199,7 @@ __host__ void DEM::startTime()
     if (PROFILING == 1 && verbose == 1) {
         double t_sum = t_calcParticleCellID + t_thrustsort + t_reorderArrays +
             t_topology + t_interact + t_bondsLinear + t_latticeBoltzmannD3Q19 +
-            t_integrate + t_summation + t_integrateWalls + t_findPorositiesDev +
+            t_integrate + t_summation + t_integrateWalls + t_findPorositiesCubicDev +
             t_findDarcyTransmissivitiesDev + t_setDarcyGhostNodesDev +
             t_explDarcyStepDev + t_findDarcyGradientsDev +
             t_findDarcyVelocitiesDev;
@@ -1227,8 +1239,8 @@ __host__ void DEM::startTime()
             << "\t(" << 100.0*t_integrateWalls/t_sum << " %)\n";
         if (params.nu > 0.0 && darcy == 1) {
             cout 
-            << "  - findPorositiesDev:\t\t" << t_findPorositiesDev/1000.0
-            << " s" << "\t(" << 100.0*t_findPorositiesDev/t_sum << " %)\n"
+            << "  - findPorositiesCubicDev:\t\t" << t_findPorositiesCubicDev/1000.0
+            << " s" << "\t(" << 100.0*t_findPorositiesCubicDev/t_sum << " %)\n"
             << "  - findDarcyTransmis.Dev:\t" <<
             t_findDarcyTransmissivitiesDev/1000.0 << " s"
             << "\t(" << 100.0*t_findDarcyTransmissivitiesDev/t_sum << " %)\n"
@@ -1254,15 +1266,12 @@ __host__ void DEM::startTime()
     delete[] k.distmod;
     delete[] k.delta_t;
 
-#ifndef DARCY_GPU
-    if (darcy == 1 && params.nu > 0.0)
+    if (darcy == 1 && params.nu > 0.0) {
+#ifdef DARCY_GPU
         endDarcyDev();
+#endif
         endDarcy();
     }
-#else
-    if (darcy == 1 && params.nu > 0.0)
-        endDarcy();
-#endif
 
 } /* EOF */
 // vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

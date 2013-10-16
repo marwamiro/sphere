@@ -2,7 +2,7 @@
 // CUDA implementation of Darcy flow
 
 // Enable line below to perform Darcy flow computations on the GPU, disable for
-// CPU computation
+// Enable GPU computation
 #define DARCY_GPU
 
 #include <iostream>
@@ -244,8 +244,10 @@ __global__ void setDarcyGhostNodesDev(
     }
 }
 
-// Find the porosity in each cell
-__global__ void findPorositiesDev(
+// Find the porosity in each cell on the base of a cubic grid, binning particles
+// into the cells containing their centers. This approximation causes
+// non-continuous porosities through time.
+__global__ void findPorositiesCubicDev(
         unsigned int* dev_cellStart,
         unsigned int* dev_cellEnd,
         Float4* dev_x_sorted,
@@ -280,26 +282,138 @@ __global__ void findPorositiesDev(
         // Lowest particle index in cell
         const unsigned int startIdx = dev_cellStart[cellID];
 
-        // Highest particle index in cell
-        const unsigned int endIdx = dev_cellEnd[cellID];
+        Float phi = 0.99;
 
-        // Iterate over cell particles
-        for (unsigned int i = startIdx; i<endIdx; ++i) {
+        // Make sure cell is not empty
+        if (startIdx != 0xffffffff) {
 
-            // Read particle position and radius
-            __syncthreads();
-            xr = dev_x_sorted[i];
+            // Highest particle index in cell
+            const unsigned int endIdx = dev_cellEnd[cellID];
 
-            // Subtract particle volume from void volume
-            void_volume -= 4.0/3.0*M_PI*xr.w*xr.w*xr.w;
+            // Iterate over cell particles
+            for (unsigned int i = startIdx; i<endIdx; ++i) {
+
+                // Read particle position and radius
+                __syncthreads();
+                xr = dev_x_sorted[i];
+
+                // Subtract particle volume from void volume
+                void_volume -= 4.0/3.0*M_PI*xr.w*xr.w*xr.w;
+            }
+
+            // Make sure that the porosity is in the interval ]0.0;1.0[
+            phi = fmin(0.99, fmax(0.01, void_volume/cell_volume));
         }
-
-        // Make sure that the porosity is in the interval ]0.0;1.0[
-        const Float phi = fmin(0.99, fmax(0.01, void_volume/cell_volume));
 
         // Save porosity
         __syncthreads();
+        dev_d_phi[idx(x,y,z)] = phi;
+    }
+}
 
+
+// Find the porosity in each cell on the base of a sphere, centered at the cell
+// center. This approximation is continuous through time and generally
+// preferable to findPorositiesCubicDev, although it's slower.
+__global__ void findPorositiesSphericalDev(
+        unsigned int* dev_cellStart,
+        unsigned int* dev_cellEnd,
+        Float4* dev_x_sorted,
+        Float* dev_d_phi)
+{
+    // 3D thread index
+    const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
+    const unsigned int y = blockDim.y * blockIdx.y + threadIdx.y;
+    const unsigned int z = blockDim.z * blockIdx.z + threadIdx.z;
+    
+    // Grid dimensions
+    const unsigned int nx = devC_grid.num[0];
+    const unsigned int ny = devC_grid.num[1];
+    const unsigned int nz = devC_grid.num[2];
+
+    // Cell dimensions
+    const Float dx = devC_grid.L[0]/nx;
+    const Float dy = devC_grid.L[1]/ny;
+    const Float dz = devC_grid.L[2]/nz;
+
+    // Cell sphere radius
+    const Float R = fmin(dx, fmin(dy,dz)) * 0.5;
+    const Float cell_volume = 4.0/3.0*M_PI*R*R*R;
+
+    Float void_volume = cell_volume;
+    Float4 xr;  // particle pos. and radius
+
+    // check that we are not outside the fluid grid
+    if (x < nx && y < ny && z < nz) {
+
+        // Cell sphere center position
+        const Float3 X = MAKE_FLOAT3(
+                nx*dx + 0.5*dx,
+                ny*dy + 0.5*dy,
+                nz*dz + 0.5*dz);
+
+        Float d, r;
+        Float phi = 0.99;
+
+        // Iterate over 27 neighbor cells
+        for (int z_dim=-1; z_dim<2; ++z_dim) { // z-axis
+            for (int y_dim=-1; y_dim<2; ++y_dim) { // y-axis
+                for (int x_dim=-1; x_dim<2; ++x_dim) { // x-axis
+
+        
+                    // Calculate linear cell ID
+                    const unsigned int cellID = x + y*devC_grid.num[0]
+                        + (devC_grid.num[0] * devC_grid.num[1])*z;
+
+                    // Lowest particle index in cell
+                    const unsigned int startIdx = dev_cellStart[cellID];
+
+
+                    // Make sure cell is not empty
+                    if (startIdx != 0xffffffff) {
+
+                        // Highest particle index in cell
+                        const unsigned int endIdx = dev_cellEnd[cellID];
+
+                        // Iterate over cell particles
+                        for (unsigned int i = startIdx; i<endIdx; ++i) {
+
+                            // Read particle position and radius
+                            __syncthreads();
+                            xr = dev_x_sorted[i];
+                            r = xr.w;
+
+                            // Find center distance
+                            d = length(MAKE_FLOAT3(
+                                        X.x - xr.x, 
+                                        X.y - xr.y,
+                                        X.z - xr.z));
+
+                            // if ((R + r) <= d) -> no common volume
+
+                            // Lens shaped intersection
+                            if (((R - r) < d) && (d < (R + r))) {
+                                void_volume -=
+                                    1.0/(12.0*d) * (
+                                            M_PI*(R + r - d)*(R + r - d) *
+                                            (d*d + 2.0*d*r - 3.0*r*r + 2.0*d*R
+                                             + 6.0*r*R - 3.0*R*R) );
+
+                                // Particle fully contained in cell sphere
+                            } else if (d <= (R - r)) {
+                                void_volume -= 4.0/3.0*M_PI*r*r*r;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Make sure that the porosity is in the interval ]0.0;1.0[
+        phi = fmin(0.99, fmax(0.01, void_volume/cell_volume));
+
+        // Save porosity
+        __syncthreads();
         dev_d_phi[idx(x,y,z)] = phi;
     }
 }
@@ -325,9 +439,9 @@ __global__ void findDarcyTransmissivitiesDev(
     const unsigned int nz = devC_grid.num[2];
 
     // Grid sizes
-    const Float d_dx = devC_grid.L[0]/nx;
-    const Float d_dy = devC_grid.L[1]/ny;
-    const Float d_dz = devC_grid.L[2]/nz;
+    const Float dx = devC_grid.L[0]/nx;
+    const Float dy = devC_grid.L[1]/ny;
+    const Float dz = devC_grid.L[2]/nz;
 
     // Density of the fluid [kg/m^3]
     const Float rho = 1000.0;
@@ -340,7 +454,7 @@ __global__ void findDarcyTransmissivitiesDev(
 
         __syncthreads();
 
-        // Cell porosity [-]
+        // Read the cell porosity [-]
         const Float phi = dev_d_phi[cellidx];
 
         // Calculate permeability from the Kozeny-Carman relationship
@@ -350,16 +464,17 @@ __global__ void findDarcyTransmissivitiesDev(
         // Schwartz and Zhang 2003
         Float k = phi*phi*phi/((1.0-phi)*(1.0-phi)) * d_factor;
 
-
-        __syncthreads();
-
         // Save hydraulic conductivity [m/s]
-        //const Float K = k*rho*-devC_params.g[2]/devC_params.nu;
-        const Float K = 0.5; 
-        dev_d_K[cellidx] = K;
+        const Float K = k*rho*-devC_params.g[2]/devC_params.nu;
+        //const Float K = 0.5; 
+        //const Float K = 1.0e-2; 
 
         // Hydraulic transmissivity [m2/s]
-        Float3 T = {K*d_dx, K*d_dy, K*d_dz};
+        Float3 T = {K*dx, K*dy, K*dz};
+
+        // Save values. Note! The K values are unused
+        __syncthreads();
+        dev_d_K[cellidx] = K;
         dev_d_T[cellidx] = T;
 
     }
@@ -391,25 +506,29 @@ __global__ void findDarcyGradientsDev(
 
     // Check that we are not outside the fluid grid
     Float3 gradient;
+    Float xp, xn, yp, yn, zp, zn;
     if (x < nx && y < ny && z < nz) {
 
+        // Read 6 neighbor cells
         __syncthreads();
+        xp = dev_scalarfield[idx(x+1,y,z)];
+        xn = dev_scalarfield[idx(x-1,y,z)];
+        yp = dev_scalarfield[idx(x,y+1,z)];
+        yn = dev_scalarfield[idx(x,y-1,z)];
+        zp = dev_scalarfield[idx(x,y,z+1)];
+        zn = dev_scalarfield[idx(x,y,z-1)];
 
+        // Calculate central-difference gradients
         // x
-        gradient.x =
-            (dev_scalarfield[idx(x+1,y,z)] - dev_scalarfield[idx(x-1,y,z)])
-            /(2.0*dx);
+        gradient.x = (xp - xn)/(2.0*dx);
 
         // y
-        gradient.y =
-            (dev_scalarfield[idx(x,y+1,z)] - dev_scalarfield[idx(x,y-1,z)])
-            /(2.0*dy);
+        gradient.y = (yp - yn)/(2.0*dy);
 
         // z
-        gradient.z =
-            (dev_scalarfield[idx(x,y,z+1)] - dev_scalarfield[idx(x,y,z-1)])
-            /(2.0*dz);
+        gradient.z = (zp - zn)/(2.0*dz);
 
+        // Write gradient
         __syncthreads();
         dev_vectorfield[cellidx] = gradient;
     }
@@ -443,7 +562,7 @@ __global__ void explDarcyStepDev(
     const unsigned int ny = devC_grid.num[1];
     const unsigned int nz = devC_grid.num[2];
 
-    // Grid sizes
+    // Cell sizes
     const Float dx = devC_grid.L[0]/nx;
     const Float dy = devC_grid.L[1]/ny;
     const Float dz = devC_grid.L[2]/nz;
@@ -458,52 +577,64 @@ __global__ void explDarcyStepDev(
         // new = old + production*timestep + gradient*timestep
 
         // Enforce Dirichlet BC
-        if (x == 0 || y == 0 || z == 0 ||
+        /*if (x == 0 || y == 0 || z == 0 ||
                 x == nx-1 || y == ny-1 || z == nz-1) {
             __syncthreads();
             dev_d_H_new[cellidx] = dev_d_H[cellidx];
-        } else {
+        } else {*/
 
-            // Cell hydraulic conductivity
-            __syncthreads();
-            //const Float K = dev_d_K[cellidx];
+        // Read cell and the six neighbor cell hydraulic transmissivities
+        __syncthreads();
+        const Float3 T = dev_d_T[cellidx];
+        const Float3 T_xn = dev_d_T[idx(x-1,y,z)];
+        const Float3 T_xp = dev_d_T[idx(x+1,y,z)];
+        const Float3 T_yn = dev_d_T[idx(x,y-1,z)];
+        const Float3 T_yp = dev_d_T[idx(x,y+1,z)];
+        const Float3 T_zn = dev_d_T[idx(x,y,z-1)];
+        const Float3 T_zp = dev_d_T[idx(x,y,z+1)];
 
-            // Cell hydraulic transmissivities
-            const Float3 T = dev_d_T[cellidx];
-            //const Float Tx = K*dx;
-            //const Float Ty = K*dy;
-            //const Float Tz = K*dz;
+        // Read the cell hydraulic specific storativity
+        const Float Ss = dev_d_Ss[cellidx];
 
-            // Harmonic mean of transmissivity
-            // (in neg. and pos. direction along axis from cell)
-            __syncthreads();
-            const Float Tx_n = hmeanDev(T.x, dev_d_T[idx(x-1,y,z)].x);
-            const Float Tx_p = hmeanDev(T.x, dev_d_T[idx(x+1,y,z)].x);
-            const Float Ty_n = hmeanDev(T.y, dev_d_T[idx(x,y-1,z)].y);
-            const Float Ty_p = hmeanDev(T.y, dev_d_T[idx(x,y+1,z)].y);
-            const Float Tz_n = hmeanDev(T.z, dev_d_T[idx(x,y,z-1)].z);
-            const Float Tz_p = hmeanDev(T.z, dev_d_T[idx(x,y,z+1)].z);
+        // Read the cell hydraulic volumetric flux 
+        const Float W = dev_d_W[cellidx];
 
-            // Cell hydraulic storativity
-            const Float S = dev_d_Ss[cellidx]*dx*dy*dz;
+        // Read the cell and the six neighbor cell hydraulic pressures
+        const Float H = dev_d_H[cellidx];
+        const Float H_xn = dev_d_H[idx(x-1,y,z)];
+        const Float H_xp = dev_d_H[idx(x+1,y,z)];
+        const Float H_yn = dev_d_H[idx(x,y-1,z)];
+        const Float H_yp = dev_d_H[idx(x,y+1,z)];
+        const Float H_zn = dev_d_H[idx(x,y,z-1)];
+        const Float H_zp = dev_d_H[idx(x,y,z+1)];
 
-            // Cell hydraulic head
-            const Float H = dev_d_H[cellidx];
+        // Calculate the gradients in the pressure between
+        // the cell and it's six neighbors
+        const Float dH_xn = hmeanDev(T.x, T_xn.x) * (H_xn - H)/(dx*dx);
+        const Float dH_xp = hmeanDev(T.x, T_xp.x) * (H_xp - H)/(dx*dx);
+        const Float dH_yn = hmeanDev(T.y, T_yn.y) * (H_yn - H)/(dy*dy);
+        const Float dH_yp = hmeanDev(T.y, T_yp.y) * (H_yp - H)/(dy*dy);
+        Float dH_zn = hmeanDev(T.z, T_zn.z) * (H_zn - H)/(dz*dz);
+        Float dH_zp = hmeanDev(T.z, T_zp.z) * (H_zp - H)/(dz*dz);
 
-            // Laplacian operator
-            const Float deltaH = devC_dt/S *
-                (    Tx_n * (dev_d_H[idx(x-1,y,z)] - H)/(dx*dx)
-                   + Tx_p * (dev_d_H[idx(x+1,y,z)] - H)/(dx*dx)
-                   + Ty_n * (dev_d_H[idx(x,y-1,z)] - H)/(dy*dy)
-                   + Ty_p * (dev_d_H[idx(x,y+1,z)] - H)/(dy*dy)
-                   + Tz_n * (dev_d_H[idx(x,y,z-1)] - H)/(dy*dz)
-                   + Tz_p * (dev_d_H[idx(x,y,z+1)] - H)/(dy*dz)
-                   + dev_d_W[cellidx] );
+        // Neumann (no-flow) boundary condition at +z and -z boundaries
+        // enforced by a gradient value of 0.0
+        if (z == 0)
+            dH_zn = 0.0;
+        if (z == nz-1)
+            dH_zp = 0.0;
 
-            // Calculate new hydraulic pressure in cell
-            __syncthreads();
-            dev_d_H_new[cellidx] = H + deltaH;
-        }
+        // Determine the Laplacian operator
+        const Float deltaH = devC_dt/(Ss*dx*dy*dz) *
+            (   dH_xn + dH_xp 
+              + dH_yn + dH_yp
+              + dH_zn + dH_zp
+              + W );
+
+        // Write the new hydraulic pressure in cell
+        __syncthreads();
+        dev_d_H_new[cellidx] = H + deltaH;
+        //}
     }
 }
 
@@ -557,59 +688,9 @@ __global__ void findDarcyVelocitiesDev(
     }
 }
 
-// Solve Darcy flow on a regular, cubic grid
-/*void DEM::initDarcyDev(const Float cellsizemultiplier)
-{
-    if (params.nu <= 0.0) {
-        std::cerr << "Error in initDarcy. The dymamic viscosity (params.nu), "
-            << "should be larger than 0.0, but is " << params.nu << std::endl;
-        exit(1);
-    }
-
-    // Number of cells
-    d_nx = floor(grid.num[0]*cellsizemultiplier);
-    d_ny = floor(grid.num[1]*cellsizemultiplier);
-    d_nz = floor(grid.num[2]*cellsizemultiplier);
-
-    // Cell size 
-    d_dx = grid.L[0]/d_nx;
-    d_dy = grid.L[1]/d_ny;
-    d_dz = grid.L[2]/d_nz;
-
-    if (verbose == 1) {
-        std::cout << "  - Fluid grid dimensions: "
-            << d_nx << "*"
-            << d_ny << "*"
-            << d_nz << std::endl;
-        std::cout << "  - Fluid grid cell size: "
-            << d_dx << "*"
-            << d_dy << "*"
-            << d_dz << std::endl;
-    }
-
-    initDarcyMemDev();
-    initDarcyVals();
-    findDarcyTransmissivities();
-
-    checkDarcyTimestep();
-
-    transferDarcyToGlobalDeviceMemory(1);
-}*/
-
 // Print final heads and free memory
 void DEM::endDarcyDev()
 {
-    /*FILE* Kfile;
-    if ((Kfile = fopen("d_K.txt","w"))) {
-        printDarcyArray(Kfile, d_K);
-        fclose(Kfile);
-    } else {
-        fprintf(stderr, "Error, could not open d_K.txt\n");
-    }*/
-    //printDarcyArray(stdout, d_phi, "d_phi");
-    //printDarcyArray(stdout, d_K, "d_K");
-    //printDarcyArray(stdout, d_H, "d_H");
-    //printDarcyArray(stdout, d_V, "d_V");
     freeDarcyMemDev();
 }
 

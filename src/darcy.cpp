@@ -81,17 +81,9 @@ void DEM::initDarcyVals()
 
                 cellidx = idx(ix,iy,iz);
 
-                // Initial hydraulic head [m]
-                //d_H[cellidx] = 1.0;
-                // read from input binary
-
-                // Hydraulic permeability [m^2]
-                //d_K[cellidx] = k*rho*-params.g[2]/params.nu;
-                d_K[cellidx] = 0.5;
-
                 // Hydraulic storativity [-]
-                d_Ss[cellidx] = 8.0e-3;
                 //d_Ss[cellidx] = 1.0;
+                d_Ss[cellidx] = 8.0e-3;
 
                 // Hydraulic recharge [s^-1]
                 d_W[cellidx] = 0.0;
@@ -100,12 +92,12 @@ void DEM::initDarcyVals()
     }
 
     // Extract water from all cells in center
-    ix = d_nx/2-1; iy = d_ny/2-1;
+    /*ix = d_nx/2; iy = d_ny/2;
     Float cellvolume = d_dx*d_dy*d_dz;
     for (iz=0; iz<d_nz; ++iz) {
-        //d_W[idx(ix,iy,iz)] = -0.1*cellvolume;
-        d_W[idx(ix,iy,iz)] = -1.0;
-    }
+        //d_W[idx(ix,iy,iz)] = -1.0e-4/cellvolume;
+        d_W[idx(ix,iy,iz)] = -2.0e-3;
+    }*/
 }
 
 
@@ -352,7 +344,6 @@ Float hmean(Float a, Float b) {
 }
 
 // Perform an explicit step.
-// Boundary conditions are fixed values (Dirichlet)
 void DEM::explDarcyStep()
 {
 
@@ -398,13 +389,8 @@ void DEM::explDarcyStep()
 
                 } else {*/
 
-                // Cell hydraulic conductivity
-                K = d_K[cellidx];
-
                 // Cell hydraulic transmissivities
-                Tx = K*d_dx;
-                Ty = K*d_dy;
-                Tz = K*d_dz;
+                const Float3 T = d_T[cellidx];
 
                 // Cell hydraulic head
                 H = d_H[cellidx];
@@ -443,14 +429,14 @@ void DEM::explDarcyStep()
                         * (d_H[idx(ix,iy+1,iz)] - H)/dy2;
                         */
 
-                gradx_n = hmean(Tx, d_T[idx(ix-1,iy,iz)].x)
+                gradx_n = hmean(T.x, d_T[idx(ix-1,iy,iz)].x)
                     * (d_H[idx(ix-1,iy,iz)] - H)/dxdx;
-                gradx_p = hmean(Tx, d_T[idx(ix+1,iy,iz)].x)
+                gradx_p = hmean(T.x, d_T[idx(ix+1,iy,iz)].x)
                     * (d_H[idx(ix+1,iy,iz)] - H)/dxdx;
 
-                grady_n = hmean(Ty, d_T[idx(ix,iy-1,iz)].y)
+                grady_n = hmean(T.y, d_T[idx(ix,iy-1,iz)].y)
                     * (d_H[idx(ix,iy-1,iz)] - H)/dydy;
-                grady_p = hmean(Ty, d_T[idx(ix,iy+1,iz)].y)
+                grady_p = hmean(T.y, d_T[idx(ix,iy+1,iz)].y)
                     * (d_H[idx(ix,iy+1,iz)] - H)/dydy;
 
                 // Neumann (no-flow) boundary condition at +z and -z boundaries
@@ -458,12 +444,12 @@ void DEM::explDarcyStep()
                 if (iz == 0)
                     gradz_n = 0.0;
                 else
-                    gradz_n = hmean(Tz, d_T[idx(ix,iy,iz-1)].z)
+                    gradz_n = hmean(T.z, d_T[idx(ix,iy,iz-1)].z)
                         * (d_H[idx(ix,iy,iz-1)] - H)/dzdz;
                 if (iz == d_nz-1)
                     gradz_p = 0.0;
                 else
-                    gradz_p = hmean(Tz, d_T[idx(ix,iy,iz+1)].z)
+                    gradz_p = hmean(T.z, d_T[idx(ix,iy,iz+1)].z)
                         * (d_H[idx(ix,iy,iz+1)] - H)/dzdz;
 
                 /*std::cerr << ix << ',' << iy << ',' << iz << '\t'
@@ -803,19 +789,40 @@ void DEM::initDarcy()
     checkDarcyTimestep();
 }
 
+// Write values in scalar field to file
+void DEM::writeDarcyArray(Float* array, const char* filename)
+{
+    FILE* file;
+    if ((file = fopen(filename,"w"))) {
+        printDarcyArray(file, array);
+        fclose(file);
+    } else {
+        fprintf(stderr, "Error, could not open %s.\n", filename);
+    }
+}
+
+// Write values in vector field to file
+void DEM::writeDarcyArray(Float3* array, const char* filename)
+{
+    FILE* file;
+    if ((file = fopen(filename,"w"))) {
+        printDarcyArray(file, array);
+        fclose(file);
+    } else {
+        fprintf(stderr, "Error, could not open %s.\n", filename);
+    }
+}
+
+
 // Print final heads and free memory
 void DEM::endDarcy()
 {
-    /*FILE* Kfile;
-    if ((Kfile = fopen("d_K.txt","w"))) {
-        printDarcyArray(Kfile, d_K);
-        fclose(Kfile);
-    } else {
-        fprintf(stderr, "Error, could not open d_K.txt\n");
-    }*/
-    //printDarcyArray(stdout, d_phi, "d_phi");
+    writeDarcyArray(d_phi, "d_phi.txt");
+    writeDarcyArray(d_K, "d_K.txt");
+
     //printDarcyArray(stdout, d_K, "d_K");
     //printDarcyArray(stdout, d_H, "d_H");
+    //printDarcyArray(stdout, d_H_new, "d_H_new");
     //printDarcyArray(stdout, d_V, "d_V");
     freeDarcyMem();
 }
