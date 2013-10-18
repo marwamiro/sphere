@@ -513,6 +513,168 @@ class Spherebin:
             if fh is not None:
                 fh.close()
 
+    def writeVTK(self, folder = '../output/', verbose = True):
+        'Writes to a target VTK file'
+
+        fh = None
+        try :
+            targetbin = folder + '/' + self.sid + '.vtu' # unstructured grid
+            if (verbose == True):
+                print('Output file: {0}'.format(targetbin))
+
+            fh = open(targetbin, 'w')
+
+            # the VTK data file format is documented in
+            # http://www.vtk.org/VTK/img/file-formats.pdf
+
+            fh.write('<?xml version="1.0"?>\n') # XML header
+            fh.write('<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian">\n') # VTK header
+            fh.write('  <UnstructuredGrid>\n')
+            fh.write('    <Piece NumberOfPoints="{}" NumberOfCells="0">\n'.format(self.np[0]))
+
+            # Coordinates for each point (positions)
+            fh.write('      <Points>\n')
+            fh.write('        <DataArray name="Position" type="Float32" NumberOfComponents="3" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} {} {} '.format(self.x[i,0], self.x[i,1], self.x[i,2]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+            fh.write('      </Points>\n')
+            
+            ### Data attributes
+            fh.write('      <PointData Scalars="Radius" Vectors="vector">\n')
+
+            # Radii
+            fh.write('        <DataArray type="Float32" Name="Radius" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} '.format(self.radius[i]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # xysum.x
+            fh.write('        <DataArray type="Float32" Name="Xdisplacement" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} '.format(self.xysum[i,0]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # xysum.y
+            fh.write('        <DataArray type="Float32" Name="Ydisplacement" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} '.format(self.xysum[i,1]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # Velocity
+            fh.write('        <DataArray type="Float32" Name="Velocity" NumberOfComponents="3" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} {} {} '.format(self.vel[i,0], self.vel[i,1], self.vel[i,2]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # fixvel
+            fh.write('        <DataArray type="Float32" Name="FixedVel" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} '.format(self.fixvel[i]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # Force
+            fh.write('        <DataArray type="Float32" Name="Force" NumberOfComponents="3" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} {} {} '.format(self.force[i,0], self.force[i,1], self.force[i,2]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # Angular Position
+            fh.write('        <DataArray type="Float32" Name="AngularPosition" NumberOfComponents="3" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} {} {} '.format(self.angpos[i,0], self.angpos[i,1], self.angpos[i,2]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # Angular Velocity
+            fh.write('        <DataArray type="Float32" Name="AngularVelocity" NumberOfComponents="3" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} {} {} '.format(self.angvel[i,0], self.angvel[i,1], self.angvel[i,2]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # Torque
+            fh.write('        <DataArray type="Float32" Name="Torque" NumberOfComponents="3" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} {} {} '.format(self.torque[i,0], self.torque[i,1], self.torque[i,2]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # Shear energy rate
+            fh.write('        <DataArray type="Float32" Name="ShearEnergyRate" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} '.format(self.es_dot[i]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # Shear energy
+            fh.write('        <DataArray type="Float32" Name="ShearEnergy" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} '.format(self.es[i]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # Viscous energy rate
+            fh.write('        <DataArray type="Float32" Name="ViscousEnergyRate" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} '.format(self.ev_dot[i]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # Shear energy
+            fh.write('        <DataArray type="Float32" Name="ViscousEnergy" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} '.format(self.ev[i]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            # Pressure
+            fh.write('        <DataArray type="Float32" Name="Pressure" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} '.format(self.p[i]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+
+            fh.write('      </PointData>\n')
+            fh.write('      <Cells>\n')
+            fh.write('        <DataArray type="Int32" Name="connectivity" format="ascii">\n')
+            fh.write('        </DataArray>\n')
+            fh.write('        <DataArray type="Int32" Name="offsets" format="ascii">\n')
+            fh.write('        </DataArray>\n')
+            fh.write('        <DataArray type="UInt8" Name="types" format="ascii">\n')
+            fh.write('        </DataArray>\n')
+            fh.write('      </Cells>\n')
+            fh.write('    </Piece>\n')
+            fh.write('  </UnstructuredGrid>\n')
+            fh.write('</VTKFile>')
+
+        finally:
+            if fh is not None:
+                fh.close()
+
     def readfirst(self, verbose=True):
         ''' Read first output file of self.sid '''
         fn = "../output/{0}.output00000.bin".format(self.sid)
@@ -1112,6 +1274,14 @@ class Spherebin:
         self.time_total[0] = total
         self.time_file_dt[0] = file_dt
         self.time_step_count[0] = 0
+
+    def initFluid(self, nu = 8.9e-4):
+        """ Initialize the fluid arrays and the fluid viscosity """
+        self.f_rho = numpy.ones((self.num[0], self.num[1], self.num[2]),
+                dtype=numpy.float64)
+        self.f_v = numpy.zeros((self.num[0], self.num[1], self.num[2], self.nd),
+                dtype=numpy.float64)
+
 
     def defaultParams(self,
 	    mu_s = 0.4,
@@ -1934,7 +2104,7 @@ class Spherebin:
         fig.savefig('../img_out/' + self.sid + '-ts-x1x3-slipangles.png')
         fig.clf()
 
-    def plotFluidDensities(self, y = -1, imgformat = 'png'):
+    def plotFluidDensitiesY(self, y = -1, imgformat = 'png'):
 
         if (y == -1):
             y = self.num[1]/2
@@ -1951,7 +2121,24 @@ class Spherebin:
         plt.savefig('f_rho-' + self.sid + \
                 '-y' + str(y) + '.' + imgformat, transparent=False)
 
-    def plotFluidVelocities(self, y = -1, imgformat = 'png'):
+    def plotFluidDensitiesZ(self, z = -1, imgformat = 'png'):
+
+        if (z == -1):
+            z = self.num[2]/2
+
+        plt.figure(figsize=[8,8])
+        plt.title("Fluid densities")
+        imgplt = plt.imshow(self.f_rho[:,:,z].T, origin='lower')
+        imgplt.set_interpolation('nearest')
+        #imgplt.set_interpolation('bicubic')
+        #imgplt.set_cmap('hot')
+        plt.xlabel('$x_1$')
+        plt.ylabel('$x_2$')
+        plt.colorbar()
+        plt.savefig('f_rho-' + self.sid + \
+                '-z' + str(z) + '.' + imgformat, transparent=False)
+
+    def plotFluidVelocitiesY(self, y = -1, imgformat = 'png'):
 
         if (y == -1):
             y = self.num[1]/2
@@ -1967,7 +2154,7 @@ class Spherebin:
         plt.title("$v_1$")
         plt.xlabel('$x_1$')
         plt.ylabel('$x_3$')
-        plt.colorbar()
+        plt.colorbar(orientation = 'horizontal')
 
         plt.subplot(132)
         imgplt = plt.imshow(self.f_v[:,y,:,1].T, origin='lower')
@@ -1977,7 +2164,7 @@ class Spherebin:
         plt.title("$v_2$")
         plt.xlabel('$x_1$')
         plt.ylabel('$x_3$')
-        plt.colorbar()
+        plt.colorbar(orientation = 'horizontal')
 
         plt.subplot(133)
         imgplt = plt.imshow(self.f_v[:,y,:,2].T, origin='lower')
@@ -1987,10 +2174,73 @@ class Spherebin:
         plt.title("$v_3$")
         plt.xlabel('$x_1$')
         plt.ylabel('$x_3$')
-        plt.colorbar()
+        plt.colorbar(orientation = 'horizontal')
 
         plt.savefig('f_v-' + self.sid + \
                 '-y' + str(y) + '.' + imgformat, transparent=False)
+
+    def plotFluidVelocitiesZ(self, z = -1, imgformat = 'png'):
+
+        if (z == -1):
+            z = self.num[2]/2
+
+        plt.title("Fluid velocities")
+        plt.figure(figsize=[8,8])
+
+        plt.subplot(131)
+        imgplt = plt.imshow(self.f_v[:,:,z,0].T, origin='lower')
+        imgplt.set_interpolation('nearest')
+        #imgplt.set_interpolation('bicubic')
+        #imgplt.set_cmap('hot')
+        plt.title("$v_1$")
+        plt.xlabel('$x_1$')
+        plt.ylabel('$x_2$')
+        plt.colorbar(orientation = 'horizontal')
+
+        plt.subplot(132)
+        imgplt = plt.imshow(self.f_v[:,:,z,1].T, origin='lower')
+        imgplt.set_interpolation('nearest')
+        #imgplt.set_interpolation('bicubic')
+        #imgplt.set_cmap('hot')
+        plt.title("$v_2$")
+        plt.xlabel('$x_1$')
+        plt.ylabel('$x_2$')
+        plt.colorbar(orientation = 'horizontal')
+
+        plt.subplot(133)
+        imgplt = plt.imshow(self.f_v[:,:,z,2].T, origin='lower')
+        imgplt.set_interpolation('nearest')
+        #imgplt.set_interpolation('bicubic')
+        #imgplt.set_cmap('hot')
+        plt.title("$v_3$")
+        plt.xlabel('$x_1$')
+        plt.ylabel('$x_2$')
+        plt.colorbar(orientation = 'horizontal')
+
+        plt.savefig('f_v-' + self.sid + \
+                '-z' + str(z) + '.' + imgformat, transparent=False)
+
+    def plotFluidPorositiesY(self, iteration = -1, y = -1, outformat='png'):
+        ''' Plot the porosity values from the simulation. If iteration is -1
+        (default value), the last output file will be shown. If the y value is
+        -1, the center x,z plane will be rendered '''
+
+        phi = numpy.loadtxt('../output/{}.d_phi.output{:0=5}.bin'.format(self.sid, iteration))
+
+        if (y == -1):
+            y = self.num[2]/2
+
+        plt.figure(figsize=[8,8])
+        imgplt = plt.imshow(phi[:,y,:].T, origin='lower')
+        imgplt.set_interpolation('nearest')
+        #imgplt.set_interpolation('bicubic')
+        #imgplt.set_cmap('hot')
+        plt.xlabel('$i_x$')
+        plt.ylabel('$i_z$')
+        plt.colorbar()
+        plt.savefig(self.sid + '-porosities.output{1:0=5}'.format(iteration)\
+                + '-y' + str(y) + '.' + imgformat, transparent=False)
+
 
 
 def convert(graphicsformat = "png",
@@ -2101,8 +2351,8 @@ def visualize(project, method = 'energy', savefig = True, outformat = 'png'):
     ### Plotting
     if (outformat != 'txt'):
         fig = plt.figure(figsize=(15,10),dpi=300)
-        figtitle = "{0}, simulation {1}".format(method, project)
-        fig.text(0.5,0.95,figtitle,horizontalalignment='center',fontproperties=FontProperties(size=18))
+        #figtitle = "{0}, simulation {1}".format(method, project)
+        #fig.text(0.5,0.95,figtitle,horizontalalignment='center',fontproperties=FontProperties(size=18))
 
 
     if method == 'energy':
