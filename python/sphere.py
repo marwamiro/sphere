@@ -513,6 +513,18 @@ class Spherebin:
             if fh is not None:
                 fh.close()
 
+    def writeVTKall(self):
+        'Writes all output binaries from the simulation to VTK files'
+
+        lastfile = status(self.sid)
+        sb = Spherebin()
+        for i in range(lastfile+1):
+            fn = "../output/{0}.output{1:0=5}.bin".format(self.sid, i)
+            sb.sid = self.sid + ".{:0=5}".format(i)
+            sb.readbin(fn, verbose = False)
+            sb.writeVTK()
+
+
     def writeVTK(self, folder = '../output/', verbose = True):
         'Writes to a target VTK file'
 
@@ -674,6 +686,73 @@ class Spherebin:
         finally:
             if fh is not None:
                 fh.close()
+
+    def writeFluidVTK(self, folder = '../output/', verbose = True):
+        'Writes fluid data to a target VTK file'
+
+        fh = None
+        try :
+            targetbin = folder + '/' + self.sid + '-fluid.vti' # vtkImageData
+            if (verbose == True):
+                print('Output file: {0}'.format(targetbin))
+
+            fh = open(targetbin, 'w')
+
+            # the VTK data file format is documented in
+            # http://www.vtk.org/VTK/img/file-formats.pdf
+
+            fh.write('<?xml version="1.0"?>\n') # XML header
+            fh.write('<VTKFile type="ImageData" version="0.1" byte_order="LittleEndian">\n') # VTK header
+            fh.write('  <ImageData WholeExtent="{} {} {} {} {} {}" Origin="{} {} {}" Spacing="{} {} {}">\n'.format(
+                0, self.num[0],
+                0, self.num[1],
+                0, self.num[2],
+                self.origo[0], self.origo[1], self.origo[2],
+                (self.L[0]-self.origo[0])/self.num[0],
+                (self.L[1]-self.origo[1])/self.num[1],
+                (self.L[2]-self.origo[2])/self.num[2]))
+            fh.write('    <Piece Extent="{} {} {} {} {} {}">\n'.format(
+                0, self.num[0],
+                0, self.num[1],
+                0, self.num[2]))
+
+            ### Data attributes
+            fh.write('      <PointData>\n')
+
+            # Pressure
+            # I HAVE TO FIGURE OUT HOW TO PARSE THE PRESSURES CORRECTLY
+            fh.write('        <DataArray type="Float32" Name="Pressure" format="ascii">\n')
+            fh.write('          ')
+            for z in range(self.num[2]):
+                for y in range(self.num[1]):
+                    for x in range(self.num[0]):
+                        fh.write('{} '.format(self.f_rho[x,y,z]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+
+            '''
+            # Velocity
+            fh.write('        <DataArray type="Float32" Name="Velocity" NumberOfComponents="3" format="ascii">\n')
+            fh.write('          ')
+            for i in range(self.np):
+                fh.write('{} {} {} '.format(self.f_vel[i,0], self.f_vel[i,1], self.f_vel[i,2]))
+            fh.write('\n')
+            fh.write('        </DataArray>\n')
+            '''
+
+            fh.write('      </PointData>\n')
+
+            fh.write('      <CellData>\n');
+            fh.write('      </CellData>\n');
+
+            fh.write('    </Piece>\n')
+            fh.write('  </ImageData>\n')
+            fh.write('</VTKFile>')
+
+        finally:
+            if fh is not None:
+                fh.close()
+
 
     def readfirst(self, verbose=True):
         ''' Read first output file of self.sid '''
