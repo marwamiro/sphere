@@ -1119,10 +1119,12 @@ __host__ void DEM::startTime()
             writebin(file);
 
             // Write Darcy arrays
-            sprintf(file,"output/%s.d_phi.output%05d.bin", sid.c_str(), time.step_count);
-            writeDarcyArray(d_phi, file);
-            sprintf(file,"output/%s.d_K.output%05d.bin", sid.c_str(), time.step_count);
-            writeDarcyArray(d_K, file);
+            if (params.nu > 0.0 && darcy == 1) {
+                sprintf(file,"output/%s.d_phi.output%05d.bin", sid.c_str(), time.step_count);
+                writeDarcyArray(d_phi, file);
+                sprintf(file,"output/%s.d_K.output%05d.bin", sid.c_str(), time.step_count);
+                writeDarcyArray(d_K, file);
+            }
 
             if (CONTACTINFO == 1) {
                 // Write contact information to stdout
