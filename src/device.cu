@@ -374,6 +374,19 @@ __host__ void DEM::freeGlobalDeviceMemory()
     cudaFree(dev_v_rho);
 #endif
 
+#ifdef DARCY_GPU
+    cudaFree(dev_d_H);
+    cudaFree(dev_d_H_new);
+    cudaFree(dev_d_V);
+    cudaFree(dev_d_dH);
+    cudaFree(dev_d_K);
+    cudaFree(dev_d_T);
+    cudaFree(dev_d_Ss);
+    cudaFree(dev_d_W);
+    cudaFree(dev_d_phi);
+#endif
+
+
     checkForCudaErrors("During cudaFree calls");
 
     if (verbose == 1)
