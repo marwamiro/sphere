@@ -369,21 +369,25 @@ __host__ void DEM::freeGlobalDeviceMemory()
 
     // Fluid arrays
 #ifdef LBM_GPU
-    cudaFree(dev_f);
-    cudaFree(dev_f_new);
-    cudaFree(dev_v_rho);
+    if (params.nu > 0.0 && darcy == 0) {
+        cudaFree(dev_f);
+        cudaFree(dev_f_new);
+        cudaFree(dev_v_rho);
+    }
 #endif
 
 #ifdef DARCY_GPU
-    cudaFree(dev_d_H);
-    cudaFree(dev_d_H_new);
-    cudaFree(dev_d_V);
-    cudaFree(dev_d_dH);
-    cudaFree(dev_d_K);
-    cudaFree(dev_d_T);
-    cudaFree(dev_d_Ss);
-    cudaFree(dev_d_W);
-    cudaFree(dev_d_phi);
+    if (params.nu > 0.0 && darcy == 1) {
+        cudaFree(dev_d_H);
+        cudaFree(dev_d_H_new);
+        cudaFree(dev_d_V);
+        cudaFree(dev_d_dH);
+        cudaFree(dev_d_K);
+        cudaFree(dev_d_T);
+        cudaFree(dev_d_Ss);
+        cudaFree(dev_d_W);
+        cudaFree(dev_d_phi);
+    }
 #endif
 
 
