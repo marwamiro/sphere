@@ -524,6 +524,8 @@ class Spherebin:
             sb.sid = self.sid + ".{:0=5}".format(i)
             sb.readbin(fn, verbose = False)
             sb.writeVTK()
+            if (sb.nu > 0.0):
+                sb.writeFluidVTK()
 
 
     def writeVTK(self, folder = '../output/', verbose = True):
@@ -695,8 +697,9 @@ class Spherebin:
 
         # initalize VTK data structure
         grid = vtk.vtkImageData()
-        grid.SetOrigin(self.origo)
-        grid.SetSpacing((self.L-self.origo)/self.num)
+        dx = (self.L-self.origo)/self.num   # cell center spacing
+        grid.SetOrigin(self.origo + 0.5*dx)
+        grid.SetSpacing(dx)
         grid.SetDimensions(self.num)    # no. of points in each direction
 
         # array of scalars: hydraulic pressures
