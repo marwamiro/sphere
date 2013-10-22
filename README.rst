@@ -34,6 +34,7 @@ Optional tools, required for simulation setup and data processing:
   * `Matplotlib <http://matplotlib.org>`_
   * `Imagemagick <http://www.imagemagick.org/script/index.php>`_
   * `ffmpeg <http://ffmpeg.org/>`_
+  * `Python-VTK <http://www.vtk.org>`_
 
 Optional tools, required for building the documentation:
   * `Sphinx <http://sphinx-doc.org>`_
