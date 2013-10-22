@@ -112,7 +112,7 @@ void DEM::transferDarcyFromGlobalDeviceMemory(int statusmsg)
 }
 
 // Get linear index from 3D grid position
-__device__ unsigned int idx(
+__inline__ __device__ unsigned int idx(
         const int x, const int y, const int z)
 {
     // without ghost nodes
