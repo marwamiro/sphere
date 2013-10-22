@@ -6,6 +6,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 import subprocess
+import vtk
 
 numpy.seterr(all='warn', over='raise')
 
@@ -690,68 +691,46 @@ class Spherebin:
     def writeFluidVTK(self, folder = '../output/', verbose = True):
         'Writes fluid data to a target VTK file'
 
-        fh = None
-        try :
-            targetbin = folder + '/' + self.sid + '-fluid.vti' # vtkImageData
-            if (verbose == True):
-                print('Output file: {0}'.format(targetbin))
+        filename = folder + '/' + self.sid + '-fluid.vti' # image grid
 
-            fh = open(targetbin, 'w')
+        # initalize VTK data structure
+        grid = vtk.vtkImageData()
+        grid.SetOrigin(self.origo)
+        grid.SetSpacing((self.L-self.origo)/self.num)
+        grid.SetDimensions(self.num)    # no. of points in each direction
 
-            # the VTK data file format is documented in
-            # http://www.vtk.org/VTK/img/file-formats.pdf
+        # array of scalars: hydraulic pressures
+        pres = vtk.vtkDoubleArray()    # data type
+        pres.SetName("Pressure")
+        pres.SetNumberOfComponents(1)  # this is 3 for a vector
+        pres.SetNumberOfTuples(grid.GetNumberOfPoints())
 
-            fh.write('<?xml version="1.0"?>\n') # XML header
-            fh.write('<VTKFile type="ImageData" version="0.1" byte_order="LittleEndian">\n') # VTK header
-            fh.write('  <ImageData WholeExtent="{} {} {} {} {} {}" Origin="{} {} {}" Spacing="{} {} {}">\n'.format(
-                0, self.num[0],
-                0, self.num[1],
-                0, self.num[2],
-                self.origo[0], self.origo[1], self.origo[2],
-                (self.L[0]-self.origo[0])/self.num[0],
-                (self.L[1]-self.origo[1])/self.num[1],
-                (self.L[2]-self.origo[2])/self.num[2]))
-            fh.write('    <Piece Extent="{} {} {} {} {} {}">\n'.format(
-                0, self.num[0],
-                0, self.num[1],
-                0, self.num[2]))
+        # array of vectors: hydraulic velocities
+        vel = vtk.vtkDoubleArray()    # data type
+        vel.SetName("Velocity")
+        vel.SetNumberOfComponents(3)  # this is 3 for a vector
+        vel.SetNumberOfTuples(grid.GetNumberOfPoints())
 
-            ### Data attributes
-            fh.write('      <PointData>\n')
+        # insert values
+        for z in range(self.num[2]):
+            for y in range(self.num[1]):
+                for x in range(self.num[0]):
+                    idx = x + self.num[0]*y + self.num[0]*self.num[1]*z;
+                    pres.SetValue(idx, self.f_rho[x,y,z])
+                    vel.SetTuple(idx, self.f_v[x,y,z,:])
+                    #vel.SetTuple(idx, [x,y,z])
 
-            # Pressure
-            # I HAVE TO FIGURE OUT HOW TO PARSE THE PRESSURES CORRECTLY
-            fh.write('        <DataArray type="Float32" Name="Pressure" format="ascii">\n')
-            fh.write('          ')
-            for z in range(self.num[2]):
-                for y in range(self.num[1]):
-                    for x in range(self.num[0]):
-                        fh.write('{} '.format(self.f_rho[x,y,z]))
-            fh.write('\n')
-            fh.write('        </DataArray>\n')
+        # add pres array to grid
+        grid.GetPointData().AddArray(pres)
+        grid.GetPointData().AddArray(vel)
 
-            '''
-            # Velocity
-            fh.write('        <DataArray type="Float32" Name="Velocity" NumberOfComponents="3" format="ascii">\n')
-            fh.write('          ')
-            for i in range(self.np):
-                fh.write('{} {} {} '.format(self.f_vel[i,0], self.f_vel[i,1], self.f_vel[i,2]))
-            fh.write('\n')
-            fh.write('        </DataArray>\n')
-            '''
-
-            fh.write('      </PointData>\n')
-
-            fh.write('      <CellData>\n');
-            fh.write('      </CellData>\n');
-
-            fh.write('    </Piece>\n')
-            fh.write('  </ImageData>\n')
-            fh.write('</VTKFile>')
-
-        finally:
-            if fh is not None:
-                fh.close()
+        # write VTK XML image data file
+        writer = vtk.vtkXMLImageDataWriter()
+        writer.SetFileName(filename)
+        writer.SetInput(grid)
+        writer.Update()
+        if (verbose == True):
+            print('Output file: {0}'.format(filename))
 
 
     def readfirst(self, verbose=True):
