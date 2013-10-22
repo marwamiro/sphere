@@ -28,12 +28,13 @@ The runtime requirements are:
     with compute capability 2.0 or greater.
   * A Nvidia CUDA-enabled GPU and device driver
 
-Optional tools, required for simulation setup and data processing:
+Optional tools, required/useful for simulation setup and data processing:
   * `Python 2.7 <http://www.python.org/getit/releases/2.7/>`_
   * `Numpy <http://numpy.scipy.org>`_
   * `Matplotlib <http://matplotlib.org>`_
   * `Imagemagick <http://www.imagemagick.org/script/index.php>`_
   * `ffmpeg <http://ffmpeg.org/>`_
+  * `Paraview <http://www.paraview.org>`_
   * `Python-VTK <http://www.vtk.org>`_
 
 Optional tools, required for building the documentation:

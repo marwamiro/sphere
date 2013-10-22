@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 Example of two particles colliding.
-Place script in sphere/python folder, and invoke with `python 2.7 collision.py`
+Place script in sphere/python folder, and invoke with `python collision.py`
 """
 
 # Import the sphere module for setting up, running, and analyzing the
@@ -19,8 +19,8 @@ SB = sphere.Spherebin(np = 2, sid = 'collision')
 SB.radius[:] = 0.3 # set radii to 0.3 m
 
 # Define the positions of the two particles
-SB.x[0, :] = numpy.array([0.0, 0.0, 0.0])   # particle 1 (idx 0)
-SB.x[1, :] = numpy.array([1.0, 0.0, 0.0])   # particle 2 (idx 1)
+SB.x[0, :] = numpy.array([10.0, 5.0, 5.0])   # particle 1 (idx 0)
+SB.x[1, :] = numpy.array([11.0, 5.0, 5.0])   # particle 2 (idx 1)
 
 # The default velocity is [0,0,0]. Slam particle 1 into particle 2 by defining
 # a positive x velocity for particle 1.
@@ -31,7 +31,7 @@ GRAVITY = numpy.array([0.0, 0.0, 0.0])
 
 # Set the world limits and the particle sorting grid. The particles need to stay
 # within the world limits for the entire simulation, otherwise it will stop!
-SB.initGridAndWorldsize(g = GRAVITY, margin = 10.0)
+SB.initGridAndWorldsize(g = GRAVITY, margin = 5.0)
 
 # Define the temporal parameters, e.g. the total time (total) and the file
 # output interval (file_dt), both in seconds
