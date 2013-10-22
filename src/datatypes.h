@@ -107,6 +107,22 @@ struct Walls {
     Float4* mvfd;		// Wall mass, velocity, force and dev. stress
 };
 
+// Structures containing fluid parameters
+struct Darcy {
+    int nx, ny, nz;    // Number of cells in each dim
+    Float dx, dy, dz;  // Cell length in each dim
+    Float* H;          // Cell hydraulic heads
+    Float* H_new;      // Cell hydraulic heads
+    Float3* V;         // Cell fluid velocity
+    Float3* dH;        // Cell spatial gradient in heads
+    Float* K;          // Cell hydraulic conductivities (anisotropic)
+    Float3* T;         // Cell hydraulic transmissivity
+    Float* Ss;         // Cell hydraulic storativity
+    Float* W;          // Cell hydraulic recharge
+    Float* phi;        // Cell porosity
+};
+
+
 // Image structure
 struct rgba {
     unsigned char r;	// Red

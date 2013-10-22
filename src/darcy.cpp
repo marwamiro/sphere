@@ -17,36 +17,36 @@
 void DEM::initDarcyMem(const Float cellsizemultiplier)
 {
     // Number of cells
-    d_nx = floor(grid.num[0]*cellsizemultiplier);
-    d_ny = floor(grid.num[1]*cellsizemultiplier);
-    d_nz = floor(grid.num[2]*cellsizemultiplier);
+    d.nx = floor(grid.num[0]*cellsizemultiplier);
+    d.ny = floor(grid.num[1]*cellsizemultiplier);
+    d.nz = floor(grid.num[2]*cellsizemultiplier);
 
-    //unsigned int ncells = d_nx*d_ny*d_nz; // without ghost nodes
-    unsigned int ncells = (d_nx+2)*(d_ny+2)*(d_nz+2); // with ghost nodes
+    //unsigned int ncells = d.nx*d.ny*d.nz; // without ghost nodes
+    unsigned int ncells = (d.nx+2)*(d.ny+2)*(d.nz+2); // with ghost nodes
 
-    d_H     = new Float[ncells];  // hydraulic pressure matrix
-    d_H_new = new Float[ncells];  // hydraulic pressure matrix
-    d_V     = new Float3[ncells]; // Cell hydraulic velocity
-    d_dH    = new Float3[ncells]; // Cell gradient in hydraulic pressures
-    d_K     = new Float[ncells];  // hydraulic conductivity matrix
-    d_T     = new Float3[ncells]; // hydraulic transmissivity matrix
-    d_Ss    = new Float[ncells];  // hydraulic storativity matrix
-    d_W     = new Float[ncells];  // hydraulic recharge
-    d_phi   = new Float[ncells];  // cell porosity
+    d.H     = new Float[ncells];  // hydraulic pressure matrix
+    d.H_new = new Float[ncells];  // hydraulic pressure matrix
+    d.V     = new Float3[ncells]; // Cell hydraulic velocity
+    d.dH    = new Float3[ncells]; // Cell gradient in hydraulic pressures
+    d.K     = new Float[ncells];  // hydraulic conductivity matrix
+    d.T     = new Float3[ncells]; // hydraulic transmissivity matrix
+    d.Ss    = new Float[ncells];  // hydraulic storativity matrix
+    d.W     = new Float[ncells];  // hydraulic recharge
+    d.phi   = new Float[ncells];  // cell porosity
 }
 
 // Free memory
 void DEM::freeDarcyMem()
 {
-    free(d_H);
-    free(d_H_new);
-    free(d_V);
-    free(d_dH);
-    free(d_K);
-    free(d_T);
-    free(d_Ss);
-    free(d_W);
-    free(d_phi);
+    delete[] d.H;
+    delete[] d.H_new;
+    delete[] d.V;
+    delete[] d.dH;
+    delete[] d.K;
+    delete[] d.T;
+    delete[] d.Ss;
+    delete[] d.W;
+    delete[] d.phi;
 }
 
 // 3D index to 1D index
@@ -56,11 +56,11 @@ unsigned int DEM::idx(
         const int z)
 {
     // without ghost nodes
-    //return x + d_nx*y + d_nx*d_ny*z;
+    //return x + d.nx*y + d.nx*d.ny*z;
 
     // with ghost nodes
     // the ghost nodes are placed at x,y,z = -1 and WIDTH
-    return (x+1) + (d_nx+2)*(y+1) + (d_nx+2)*(d_ny+2)*(z+1);
+    return (x+1) + (d.nx+2)*(y+1) + (d.nx+2)*(d.ny+2)*(z+1);
 }
 
 // Set initial values
@@ -75,28 +75,28 @@ void DEM::initDarcyVals()
     int ix, iy, iz, cellidx;
 
     // Set values for all cells, including ghost nodes
-    for (ix=-1; ix<=d_nx; ++ix) {
-        for (iy=-1; iy<=d_ny; ++iy) {
-            for (iz=-1; iz<=d_nz; ++iz) {
+    for (ix=-1; ix<=d.nx; ++ix) {
+        for (iy=-1; iy<=d.ny; ++iy) {
+            for (iz=-1; iz<=d.nz; ++iz) {
 
                 cellidx = idx(ix,iy,iz);
 
                 // Hydraulic storativity [-]
-                //d_Ss[cellidx] = 1.0;
-                d_Ss[cellidx] = 8.0e-3;
+                //d.Ss[cellidx] = 1.0;
+                d.Ss[cellidx] = 8.0e-3;
 
                 // Hydraulic recharge [s^-1]
-                d_W[cellidx] = 0.0;
+                d.W[cellidx] = 0.0;
             }
         }
     }
 
     // Extract water from all cells in center
-    /*ix = d_nx/2; iy = d_ny/2;
-    Float cellvolume = d_dx*d_dy*d_dz;
-    for (iz=0; iz<d_nz; ++iz) {
-        //d_W[idx(ix,iy,iz)] = -1.0e-4/cellvolume;
-        d_W[idx(ix,iy,iz)] = -2.0e-3;
+    /*ix = d.nx/2; iy = d.ny/2;
+    Float cellvolume = d.dx*d.dy*d.dz;
+    for (iz=0; iz<d.nz; ++iz) {
+        //d.W[idx(ix,iy,iz)] = -1.0e-4/cellvolume;
+        d.W[idx(ix,iy,iz)] = -2.0e-3;
     }*/
 }
 
@@ -104,15 +104,15 @@ void DEM::initDarcyVals()
 // Copy values from cell with index 'read' to cell with index 'write'
 void DEM::copyDarcyVals(unsigned int read, unsigned int write)
 {
-    d_H[write]     = d_H[read];
-    d_H_new[write] = d_H_new[read];
-    d_V[write]     = MAKE_FLOAT3(d_V[read].x, d_V[read].y, d_V[read].z);
-    d_dH[write]    = MAKE_FLOAT3(d_dH[read].x, d_dH[read].y, d_dH[read].z);
-    d_K[write]     = d_K[read];
-    d_T[write]     = MAKE_FLOAT3(d_T[read].x, d_T[read].y, d_T[read].z);
-    d_Ss[write]    = d_Ss[read];
-    d_W[write]     = d_W[read];
-    d_phi[write]   = d_phi[read];
+    d.H[write]     = d.H[read];
+    d.H_new[write] = d.H_new[read];
+    d.V[write]     = MAKE_FLOAT3(d.V[read].x, d.V[read].y, d.V[read].z);
+    d.dH[write]    = MAKE_FLOAT3(d.dH[read].x, d.dH[read].y, d.dH[read].z);
+    d.K[write]     = d.K[read];
+    d.T[write]     = MAKE_FLOAT3(d.T[read].x, d.T[read].y, d.T[read].z);
+    d.Ss[write]    = d.Ss[read];
+    d.W[write]     = d.W[read];
+    d.phi[write]   = d.phi[read];
 }
 
 // Update ghost nodes from their parent cell values
@@ -122,50 +122,50 @@ void DEM::setDarcyGhostNodes()
     int ix, iy, iz;
 
     // The x-normal plane
-    for (iy=0; iy<d_ny; ++iy) {
-        for (iz=0; iz<d_nz; ++iz) {
+    for (iy=0; iy<d.ny; ++iy) {
+        for (iz=0; iz<d.nz; ++iz) {
 
             // Ghost nodes at x=-1
             copyDarcyVals(
-                    idx(d_nx-1,iy,iz),  // Read from this cell
+                    idx(d.nx-1,iy,iz),  // Read from this cell
                     idx(-1,iy,iz));     // Copy to this cell
 
-            // Ghost nodes at x=d_nx
+            // Ghost nodes at x=d.nx
             copyDarcyVals(
                     idx(0,iy,iz),
-                    idx(d_nx,iy,iz));
+                    idx(d.nx,iy,iz));
         }
     }
 
     // The y-normal plane
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iz=0; iz<d_nz; ++iz) {
+    for (ix=0; ix<d.nx; ++ix) {
+        for (iz=0; iz<d.nz; ++iz) {
 
             // Ghost nodes at y=-1
             copyDarcyVals(
-                    idx(ix,d_ny-1,iz),
+                    idx(ix,d.ny-1,iz),
                     idx(ix,-1,iz));
 
-            // Ghost nodes at y=d_ny
+            // Ghost nodes at y=d.ny
             copyDarcyVals(
                     idx(ix,0,iz),
-                    idx(ix,d_ny,iz));
+                    idx(ix,d.ny,iz));
         }
     }
 
     // The z-normal plane
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iy=0; iy<d_ny; ++iy) {
+    for (ix=0; ix<d.nx; ++ix) {
+        for (iy=0; iy<d.ny; ++iy) {
 
             // Ghost nodes at z=-1
             copyDarcyVals(
-                    idx(ix,iy,d_nz-1),
+                    idx(ix,iy,d.nz-1),
                     idx(ix,iy,-1));
 
-            // Ghost nodes at z=d_nz
+            // Ghost nodes at z=d.nz
             copyDarcyVals(
                     idx(ix,iy,0),
-                    idx(ix,iy,d_nz));
+                    idx(ix,iy,d.nz));
         }
     }
 }
@@ -190,14 +190,14 @@ void DEM::findDarcyTransmissivities()
 
     int ix, iy, iz, cellidx;
     Float K, k;
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iy=0; iy<d_ny; ++iy) {
-            for (iz=0; iz<d_nz; ++iz) {
+    for (ix=0; ix<d.nx; ++ix) {
+        for (iy=0; iy<d.ny; ++iy) {
+            for (iz=0; iz<d.nz; ++iz) {
 
                 cellidx = idx(ix,iy,iz);
 
                 // Read cell porosity
-                Float phi = d_phi[cellidx];
+                Float phi = d.phi[cellidx];
 
                 // Calculate permeability from the Kozeny-Carman relationship
                 // Nelson 1994 eq. 1c
@@ -207,14 +207,14 @@ void DEM::findDarcyTransmissivities()
                 k = phi*phi*phi/((1.0-phi)*(1.0-phi)) * d_factor;
 
                 // Save hydraulic conductivity [m/s]
-                //K = d_K[cellidx];
+                //K = d.K[cellidx];
                 //K = k*rho*-params.g[2]/params.nu;
                 K = 0.5; 
-                d_K[cellidx] = K;
+                d.K[cellidx] = K;
 
                 // Hydraulic transmissivity [m2/s]
-                Float3 T = {K*d_dx, K*d_dy, K*d_dz};
-                d_T[cellidx] = T;
+                Float3 T = {K*d.dx, K*d.dy, K*d.dz};
+                d.T[cellidx] = T;
             }
         }
     }
@@ -226,33 +226,33 @@ void DEM::setDarcyBCNeumannZero()
 {
     Float3 z3 = MAKE_FLOAT3(0.0, 0.0, 0.0);
     int ix, iy, iz;
-    int nx = d_nx-1;
-    int ny = d_ny-1;
-    int nz = d_nz-1;
+    int nx = d.nx-1;
+    int ny = d.ny-1;
+    int nz = d.nz-1;
 
     // I don't care that the values at four edges are written twice
 
-    // x-y plane at z=0 and z=d_dz-1
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iy=0; iy<d_ny; ++iy) {
-            d_dH[idx(ix,iy, 0)] = z3;
-            d_dH[idx(ix,iy,nz)] = z3;
+    // x-y plane at z=0 and z=d.dz-1
+    for (ix=0; ix<d.nx; ++ix) {
+        for (iy=0; iy<d.ny; ++iy) {
+            d.dH[idx(ix,iy, 0)] = z3;
+            d.dH[idx(ix,iy,nz)] = z3;
         }
     }
 
-    // x-z plane at y=0 and y=d_dy-1
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iz=0; iz<d_nz; ++iz) {
-            d_dH[idx(ix, 0,iz)] = z3;
-            d_dH[idx(ix,ny,iz)] = z3;
+    // x-z plane at y=0 and y=d.dy-1
+    for (ix=0; ix<d.nx; ++ix) {
+        for (iz=0; iz<d.nz; ++iz) {
+            d.dH[idx(ix, 0,iz)] = z3;
+            d.dH[idx(ix,ny,iz)] = z3;
         }
     }
 
-    // y-z plane at x=0 and x=d_nx-1
-    for (iy=0; iy<d_ny; ++iy) {
-        for (iz=0; iz<d_nz; ++iz) {
-            d_dH[idx( 0,iy,iz)] = z3;
-            d_dH[idx(nx,iy,iz)] = z3;
+    // y-z plane at x=0 and x=d.nx-1
+    for (iy=0; iy<d.ny; ++iy) {
+        for (iz=0; iz<d.nz; ++iz) {
+            d.dH[idx( 0,iy,iz)] = z3;
+            d.dH[idx(nx,iy,iz)] = z3;
         }
     }
 }
@@ -262,70 +262,67 @@ void DEM::setDarcyBCNeumannZero()
 void DEM::findDarcyGradients()
 {
     // Cell sizes squared
-    //const Float dx2 = d_dx*d_dx;
-    //const Float dx2 = d_dx*d_dx;
-    //const Float dy2 = d_dy*d_dy;
-    const Float dx2 = 2.0*d_dx;
-    const Float dy2 = 2.0*d_dy;
-    const Float dz2 = 2.0*d_dz;
+    //const Float dx2 = d.dx*d.dx;
+    //const Float dx2 = d.dx*d.dx;
+    //const Float dy2 = d.dy*d.dy;
+    const Float dx2 = 2.0*d.dx;
+    const Float dy2 = 2.0*d.dy;
+    const Float dz2 = 2.0*d.dz;
 
     //Float H;
     int ix, iy, iz, cellidx;
 
     // Without ghost-nodes
-    /*for (ix=1; ix<d_nx-1; ++ix) {
-        for (iy=1; iy<d_ny-1; ++iy) {
-            for (iz=1; iz<d_nz-1; ++iz) {*/
+    /*for (ix=1; ix<d.nx-1; ++ix) {
+        for (iy=1; iy<d.ny-1; ++iy) {
+            for (iz=1; iz<d.nz-1; ++iz) {*/
 
     // With ghost-nodes
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iy=0; iy<d_ny; ++iy) {
-            //for (iz=1; iz<d_nz-1; ++iz) {
-            for (iz=0; iz<d_nz; ++iz) {
+    for (ix=0; ix<d.nx; ++ix) {
+        for (iy=0; iy<d.ny; ++iy) {
+            //for (iz=1; iz<d.nz-1; ++iz) {
+            for (iz=0; iz<d.nz; ++iz) {
 
                 cellidx = idx(ix,iy,iz);
 
-                //H = d_H[cellidx];   // cell hydraulic pressure
+                //H = d.H[cellidx];   // cell hydraulic pressure
 
                 // First order central differences
                 // x-boundary
-                d_dH[cellidx].x
-                 = (d_H[idx(ix+1,iy,iz)] - d_H[idx(ix-1,iy,iz)])/dx2;
-                 //= (d_H[idx(ix+1,iy,iz)] - 2.0*H + d_H[idx(ix-1,iy,iz)])/dx2;
+                d.dH[cellidx].x
+                 = (d.H[idx(ix+1,iy,iz)] - d.H[idx(ix-1,iy,iz)])/dx2;
 
                 // y-boundary
-                d_dH[cellidx].y
-                 = (d_H[idx(ix,iy+1,iz)] - d_H[idx(ix,iy-1,iz)])/dy2;
-                 //= (d_H[idx(ix,iy+1,iz)] - 2.0*H + d_H[idx(ix,iy-1,iz)])/dy2;
+                d.dH[cellidx].y
+                 = (d.H[idx(ix,iy+1,iz)] - d.H[idx(ix,iy-1,iz)])/dy2;
 
                 // z-boundary
-                d_dH[cellidx].z
-                 = (d_H[idx(ix,iy,iz+1)] - d_H[idx(ix,iy,iz-1)])/dz2;
-                 //= (d_H[idx(ix,iy,iz+1)] - 2.0*H + d_H[idx(ix,iy,iz-1)])/dz2;
+                d.dH[cellidx].z
+                 = (d.H[idx(ix,iy,iz+1)] - d.H[idx(ix,iy,iz-1)])/dz2;
 
                 /*
                 // Periodic x boundaries
                 if (ix == 0) {
-                    d_dH[cellidx].x = (d_H[idx(ix+1,iy,iz)]
-                                - 2.0*H + d_H[idx(d_nx-1,iy,iz)])/dx2;
-                } else if (ix == d_nx-1) {
-                    d_dH[cellidx].x = (d_H[idx(0,iy,iz)]
-                                - 2.0*H + d_H[idx(ix-1,iy,iz)])/dx2;
+                    d.dH[cellidx].x = (d.H[idx(ix+1,iy,iz)]
+                                - 2.0*H + d.H[idx(d.nx-1,iy,iz)])/dx2;
+                } else if (ix == d.nx-1) {
+                    d.dH[cellidx].x = (d.H[idx(0,iy,iz)]
+                                - 2.0*H + d.H[idx(ix-1,iy,iz)])/dx2;
                 } else {
-                    d_dH[cellidx].x = (d_H[idx(ix+1,iy,iz)]
-                                - 2.0*H + d_H[idx(ix-1,iy,iz)])/dx2;
+                    d.dH[cellidx].x = (d.H[idx(ix+1,iy,iz)]
+                                - 2.0*H + d.H[idx(ix-1,iy,iz)])/dx2;
                 }
                 
                 // Periodic y boundaries
                 if (iy == 0) {
-                    d_dH[cellidx].y = (d_H[idx(ix,iy+1,iz)]
-                                - 2.0*H + d_H[idx(ix,d_ny-1,iz)])/dy2;
-                } else if (iy == d_ny-1) {
-                    d_dH[cellidx].y = (d_H[idx(ix,0,iz)]
-                                - 2.0*H + d_H[idx(ix,iy-1,iz)])/dy2;
+                    d.dH[cellidx].y = (d.H[idx(ix,iy+1,iz)]
+                                - 2.0*H + d.H[idx(ix,d.ny-1,iz)])/dy2;
+                } else if (iy == d.ny-1) {
+                    d.dH[cellidx].y = (d.H[idx(ix,0,iz)]
+                                - 2.0*H + d.H[idx(ix,iy-1,iz)])/dy2;
                 } else {
-                    d_dH[cellidx].y = (d_H[idx(ix,iy+1,iz)]
-                            - 2.0*H + d_H[idx(ix,iy-1,iz)])/dy2;
+                    d.dH[cellidx].y = (d.H[idx(ix,iy+1,iz)]
+                            - 2.0*H + d.H[idx(ix,iy-1,iz)])/dy2;
                 }*/
 
             }
@@ -334,12 +331,12 @@ void DEM::findDarcyGradients()
 }
 
 // Arithmetic mean of two numbers
-Float amean(Float a, Float b) {
+inline Float amean(Float a, Float b) {
     return (a+b)*0.5;
 }
 
 // Harmonic mean of two numbers
-Float hmean(Float a, Float b) {
+inline Float hmean(Float a, Float b) {
     return (2.0*a*b)/(a+b);
 }
 
@@ -354,10 +351,10 @@ void DEM::explDarcyStep()
     checkDarcyTimestep();
 
     // Cell dims squared
-    const Float dxdx = d_dx*d_dx;
-    const Float dydy = d_dy*d_dy;
-    const Float dzdz = d_dz*d_dz;
-    const Float dxdydz = d_dx*d_dy*d_dz;
+    const Float dxdx = d.dx*d.dx;
+    const Float dydy = d.dy*d.dy;
+    const Float dzdz = d.dz*d.dz;
+    const Float dxdydz = d.dx*d.dy*d.dz;
 
     //setDarcyBCNeumannZero();
 
@@ -371,29 +368,29 @@ void DEM::explDarcyStep()
     Float Tx, Ty, Tz, S;
     //Float Tx_n, Tx_p, Ty_n, Ty_p, Tz_n, Tz_p;
     Float gradx_n, gradx_p, grady_n, grady_p, gradz_n, gradz_p;
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iy=0; iy<d_ny; ++iy) {
-            for (iz=0; iz<d_nz; ++iz) {
+    for (ix=0; ix<d.nx; ++ix) {
+        for (iy=0; iy<d.ny; ++iy) {
+            for (iz=0; iz<d.nz; ++iz) {
 
                 // Cell linear index
                 cellidx = idx(ix,iy,iz);
 
                 // If x,y,z boundaries are fixed values: Enforce Dirichlet BC
                 /*if (ix == 0 || iy == 0 || iz == 0 ||
-                        ix == d_nx-1 || iy == d_ny-1 || iz == d_nz-1) {
-                    d_H_new[cellidx] = d_H[cellidx];*/
+                        ix == d.nx-1 || iy == d.ny-1 || iz == d.nz-1) {
+                    d.H_new[cellidx] = d.H[cellidx];*/
 
                 // If z boundaries are fixed val, x and y are periodic:
-                /*if (iz == 0 || iz == d_nz-1) {
-                    d_H_new[cellidx] = d_H[cellidx];
+                /*if (iz == 0 || iz == d.nz-1) {
+                    d.H_new[cellidx] = d.H[cellidx];
 
                 } else {*/
 
                 // Cell hydraulic transmissivities
-                const Float3 T = d_T[cellidx];
+                const Float3 T = d.T[cellidx];
 
                 // Cell hydraulic head
-                H = d_H[cellidx];
+                H = d.H[cellidx];
 
                 // Harmonic mean of transmissivity
                 // (in neg. and pos. direction along axis from cell)
@@ -401,56 +398,56 @@ void DEM::explDarcyStep()
                 // without ghost nodes
                 /*
                 if (ix == 0)
-                    gradx_n = hmean(Tx, d_T[idx(d_nx-1,iy,iz)].x)
-                        * (d_H[idx(d_nx-1,iy,iz)] - H)/dx2;
+                    gradx_n = hmean(Tx, d.T[idx(d.nx-1,iy,iz)].x)
+                        * (d.H[idx(d.nx-1,iy,iz)] - H)/dx2;
                 else
-                    gradx_n = hmean(Tx, d_T[idx(ix-1,iy,iz)].x)
-                        * (d_H[idx(ix-1,iy,iz)] - H)/dx2;
+                    gradx_n = hmean(Tx, d.T[idx(ix-1,iy,iz)].x)
+                        * (d.H[idx(ix-1,iy,iz)] - H)/dx2;
 
-                if (ix == d_nx-1)
-                    gradx_p = hmean(Tx, d_T[idx(0,iy,iz)].x)
-                        * (d_H[idx(0,iy,iz)] - H)/dx2;
+                if (ix == d.nx-1)
+                    gradx_p = hmean(Tx, d.T[idx(0,iy,iz)].x)
+                        * (d.H[idx(0,iy,iz)] - H)/dx2;
                 else
-                    gradx_p = hmean(Tx, d_T[idx(ix+1,iy,iz)].x)
-                        * (d_H[idx(ix+1,iy,iz)] - H)/dx2;
+                    gradx_p = hmean(Tx, d.T[idx(ix+1,iy,iz)].x)
+                        * (d.H[idx(ix+1,iy,iz)] - H)/dx2;
 
                 if (iy == 0)
-                    grady_n = hmean(Ty, d_T[idx(ix,d_ny-1,iz)].y)
-                        * (d_H[idx(ix,d_ny-1,iz)] - H)/dy2;
+                    grady_n = hmean(Ty, d.T[idx(ix,d.ny-1,iz)].y)
+                        * (d.H[idx(ix,d.ny-1,iz)] - H)/dy2;
                 else
-                    grady_n = hmean(Ty, d_T[idx(ix,iy-1,iz)].y)
-                        * (d_H[idx(ix,iy-1,iz)] - H)/dy2;
+                    grady_n = hmean(Ty, d.T[idx(ix,iy-1,iz)].y)
+                        * (d.H[idx(ix,iy-1,iz)] - H)/dy2;
 
-                if (iy == d_ny-1)
-                    grady_p = hmean(Ty, d_T[idx(ix,0,iz)].y)
-                        * (d_H[idx(ix,0,iz)] - H)/dy2;
+                if (iy == d.ny-1)
+                    grady_p = hmean(Ty, d.T[idx(ix,0,iz)].y)
+                        * (d.H[idx(ix,0,iz)] - H)/dy2;
                 else
-                    grady_p = hmean(Ty, d_T[idx(ix,iy+1,iz)].y)
-                        * (d_H[idx(ix,iy+1,iz)] - H)/dy2;
+                    grady_p = hmean(Ty, d.T[idx(ix,iy+1,iz)].y)
+                        * (d.H[idx(ix,iy+1,iz)] - H)/dy2;
                         */
 
-                gradx_n = hmean(T.x, d_T[idx(ix-1,iy,iz)].x)
-                    * (d_H[idx(ix-1,iy,iz)] - H)/dxdx;
-                gradx_p = hmean(T.x, d_T[idx(ix+1,iy,iz)].x)
-                    * (d_H[idx(ix+1,iy,iz)] - H)/dxdx;
+                gradx_n = hmean(T.x, d.T[idx(ix-1,iy,iz)].x)
+                    * (d.H[idx(ix-1,iy,iz)] - H)/dxdx;
+                gradx_p = hmean(T.x, d.T[idx(ix+1,iy,iz)].x)
+                    * (d.H[idx(ix+1,iy,iz)] - H)/dxdx;
 
-                grady_n = hmean(T.y, d_T[idx(ix,iy-1,iz)].y)
-                    * (d_H[idx(ix,iy-1,iz)] - H)/dydy;
-                grady_p = hmean(T.y, d_T[idx(ix,iy+1,iz)].y)
-                    * (d_H[idx(ix,iy+1,iz)] - H)/dydy;
+                grady_n = hmean(T.y, d.T[idx(ix,iy-1,iz)].y)
+                    * (d.H[idx(ix,iy-1,iz)] - H)/dydy;
+                grady_p = hmean(T.y, d.T[idx(ix,iy+1,iz)].y)
+                    * (d.H[idx(ix,iy+1,iz)] - H)/dydy;
 
                 // Neumann (no-flow) boundary condition at +z and -z boundaries
                 // enforced by a gradient value of 0.0
                 if (iz == 0)
                     gradz_n = 0.0;
                 else
-                    gradz_n = hmean(T.z, d_T[idx(ix,iy,iz-1)].z)
-                        * (d_H[idx(ix,iy,iz-1)] - H)/dzdz;
-                if (iz == d_nz-1)
+                    gradz_n = hmean(T.z, d.T[idx(ix,iy,iz-1)].z)
+                        * (d.H[idx(ix,iy,iz-1)] - H)/dzdz;
+                if (iz == d.nz-1)
                     gradz_p = 0.0;
                 else
-                    gradz_p = hmean(T.z, d_T[idx(ix,iy,iz+1)].z)
-                        * (d_H[idx(ix,iy,iz+1)] - H)/dzdz;
+                    gradz_p = hmean(T.z, d.T[idx(ix,iy,iz+1)].z)
+                        * (d.H[idx(ix,iy,iz+1)] - H)/dzdz;
 
                 /*std::cerr << ix << ',' << iy << ',' << iz << '\t'
                     << H << '\t' << Tx << ',' << Ty << ',' << Tz << '\t'
@@ -459,26 +456,26 @@ void DEM::explDarcyStep()
                     << gradz_n << ',' << gradz_p << std::endl;*/
 
                 // Cell hydraulic storativity
-                S = d_Ss[cellidx]*dxdydz;
+                S = d.Ss[cellidx]*dxdydz;
 
                 // Laplacian operator
                 deltaH = time.dt/S *
                     (  gradx_n + gradx_p
                      + grady_n + grady_p
                      + gradz_n + gradz_p
-                     + d_W[cellidx] );
+                     + d.W[cellidx] );
 
                 // Calculate new hydraulic pressure in cell
-                d_H_new[cellidx] = H + deltaH;
+                d.H_new[cellidx] = H + deltaH;
                 //}
             }
         }
     }
 
-    // Swap d_H and d_H_new
-    Float* tmp = d_H;
-    d_H = d_H_new;
-    d_H_new = tmp;
+    // Swap d.H and d.H_new
+    Float* tmp = d.H;
+    d.H = d.H_new;
+    d.H_new = tmp;
 
     // Find macroscopic cell fluid velocities
     findDarcyVelocities();
@@ -488,9 +485,9 @@ void DEM::explDarcyStep()
 void DEM::printDarcyArray(FILE* stream, Float* arr)
 {
     int x, y, z;
-    for (z=0; z<d_nz; z++) {
-        for (y=0; y<d_ny; y++) {
-            for (x=0; x<d_nx; x++) {
+    for (z=0; z<d.nz; z++) {
+        for (y=0; y<d.ny; y++) {
+            for (x=0; x<d.nx; x++) {
                 fprintf(stream, "%f\t", arr[idx(x,y,z)]);
             }
             fprintf(stream, "\n");
@@ -510,9 +507,9 @@ void DEM::printDarcyArray(FILE* stream, Float* arr, std::string desc)
 void DEM::printDarcyArray(FILE* stream, Float3* arr)
 {
     int x, y, z;
-    for (z=0; z<d_nz; z++) {
-        for (y=0; y<d_ny; y++) {
-            for (x=0; x<d_nx; x++) {
+    for (z=0; z<d.nz; z++) {
+        for (y=0; y<d.ny; y++) {
+            for (x=0; x<d.nx; x++) {
                 fprintf(stream, "%f,%f,%f\t",
                         arr[idx(x,y,z)].x,
                         arr[idx(x,y,z)].y,
@@ -547,57 +544,57 @@ void DEM::findDarcyVelocities()
     findDarcyGradients();
 
     int ix, iy, iz, cellidx;
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iy=0; iy<d_ny; ++iy) {
-            for (iz=0; iz<d_nz; ++iz) {
+    for (ix=0; ix<d.nx; ++ix) {
+        for (iy=0; iy<d.ny; ++iy) {
+            for (iz=0; iz<d.nz; ++iz) {
                 
                 cellidx = idx(ix,iy,iz);
-                dH = d_dH[cellidx];
+                dH = d.dH[cellidx];
 
                 // Approximate cell porosity
-                Float phi = d_phi[cellidx];
+                Float phi = d.phi[cellidx];
 
                 // Calculate flux
                 // The sign might need to be reversed, depending on the
                 // grid orientation
-                q.x = -d_K[cellidx]/nu * dH.x;
-                q.y = -d_K[cellidx]/nu * dH.y;
-                q.z = -d_K[cellidx]/nu * dH.z;
+                q.x = -d.K[cellidx]/nu * dH.x;
+                q.y = -d.K[cellidx]/nu * dH.y;
+                q.z = -d.K[cellidx]/nu * dH.z;
                 
                 // Calculate velocity
                 v.x = q.x/phi;
                 v.y = q.y/phi;
                 v.z = q.z/phi;
-                d_V[cellidx] = v;
+                d.V[cellidx] = v;
             }
         }
     }
 }
 
 // Return the lower corner coordinates of a cell
-Float3 DEM::cellMinBoundaryDarcy(
+inline Float3 DEM::cellMinBoundaryDarcy(
         const int x,
         const int y,
         const int z)
 {
-    const Float3 x_min = {x*d_dx, y*d_dy, z*d_dz};
+    const Float3 x_min = {x*d.dx, y*d.dy, z*d.dz};
     return x_min;
 }
 
 // Return the upper corner coordinates of a cell
-Float3 DEM::cellMaxBoundaryDarcy(
+inline Float3 DEM::cellMaxBoundaryDarcy(
         const int x,
         const int y,
         const int z)
 {
-    const Float3 x_max = {(x+1)*d_dx, (y+1)*d_dy, (z+1)*d_dz};
+    const Float3 x_max = {(x+1)*d.dx, (y+1)*d.dy, (z+1)*d.dz};
     return x_max;
 }
 
 // Return the volume of a cell
-Float DEM::cellVolumeDarcy()
+inline Float DEM::cellVolumeDarcy()
 {
-    const Float cell_volume = d_dx*d_dy*d_dz;
+    const Float cell_volume = d.dx*d.dy*d.dz;
     return cell_volume;
 }
 
@@ -635,10 +632,10 @@ Float DEM::cellPorosity(
 void DEM::findPorosities()
 {
     int ix, iy, iz, cellidx;
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iy=0; iy<d_ny; ++iy) {
-            for (iz=0; iz<d_nz; ++iz) {
-                d_phi[idx(ix,iy,iz)] = cellPorosity(ix,iy,iz);
+    for (ix=0; ix<d.nx; ++ix) {
+        for (iy=0; iy<d.ny; ++iy) {
+            for (iz=0; iz<d.nz; ++iz) {
+                d.phi[idx(ix,iy,iz)] = cellPorosity(ix,iy,iz);
             }
         }
     }
@@ -696,10 +693,10 @@ Float DEM::getTmax()
     Float max = -1.0e13; // initialize with a small number
     int ix,iy,iz;
     Float3 val;
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iy=0; iy<d_ny; ++iy) {
-            for (iz=0; iz<d_nz; ++iz) {
-                val = d_T[idx(ix,iy,iz)];
+    for (ix=0; ix<d.nx; ++ix) {
+        for (iy=0; iy<d.ny; ++iy) {
+            for (iz=0; iz<d.nz; ++iz) {
+                val = d.T[idx(ix,iy,iz)];
                 if (val.x > max)
                     max = val.x;
                 if (val.y > max)
@@ -717,10 +714,10 @@ Float DEM::getSsmin()
     Float min = 1.0e13; // initialize with a small number
     int ix,iy,iz;
     Float val;
-    for (ix=0; ix<d_nx; ++ix) {
-        for (iy=0; iy<d_ny; ++iy) {
-            for (iz=0; iz<d_nz; ++iz) {
-                val = d_Ss[idx(ix,iy,iz)];
+    for (ix=0; ix<d.nx; ++ix) {
+        for (iy=0; iy<d.ny; ++iy) {
+            for (iz=0; iz<d.nz; ++iz) {
+                val = d.Ss[idx(ix,iy,iz)];
                 if (val < min)
                     min = val;
             }
@@ -735,11 +732,11 @@ Float DEM::getSsmin()
 void DEM::checkDarcyTimestep()
 {
     Float T_max = getTmax();
-    Float S_min = getSsmin()*d_dx*d_dy*d_dz;
+    Float S_min = getSsmin()*d.dx*d.dy*d.dz;
 
     // Use numerical criterion from Sonnenborg & Henriksen 2005
     Float value = T_max/S_min
-        * (time.dt/(d_dx*d_dx) + time.dt/(d_dy*d_dy) + time.dt/(d_dz*d_dz));
+        * (time.dt/(d.dx*d.dx) + time.dt/(d.dy*d.dy) + time.dt/(d.dz*d.dz));
 
     if (value > 0.5) {
         std::cerr << "Error! The explicit Darcy solution will be unstable.\n"
@@ -767,19 +764,19 @@ void DEM::initDarcy()
     }
 
     // Cell size 
-    d_dx = grid.L[0]/d_nx;
-    d_dy = grid.L[1]/d_ny;
-    d_dz = grid.L[2]/d_nz;
+    d.dx = grid.L[0]/d.nx;
+    d.dy = grid.L[1]/d.ny;
+    d.dz = grid.L[2]/d.nz;
 
     if (verbose == 1) {
         std::cout << "  - Fluid grid dimensions: "
-            << d_nx << "*"
-            << d_ny << "*"
-            << d_nz << std::endl;
+            << d.nx << "*"
+            << d.ny << "*"
+            << d.nz << std::endl;
         std::cout << "  - Fluid grid cell size: "
-            << d_dx << "*"
-            << d_dy << "*"
-            << d_dz << std::endl;
+            << d.dx << "*"
+            << d.dy << "*"
+            << d.dz << std::endl;
     }
 
     //initDarcyMem(); // done in readbin
@@ -817,13 +814,13 @@ void DEM::writeDarcyArray(Float3* array, const char* filename)
 // Print final heads and free memory
 void DEM::endDarcy()
 {
-    writeDarcyArray(d_phi, "d_phi.txt");
-    writeDarcyArray(d_K, "d_K.txt");
+    writeDarcyArray(d.phi, "d_phi.txt");
+    writeDarcyArray(d.K, "d_K.txt");
 
-    //printDarcyArray(stdout, d_K, "d_K");
-    //printDarcyArray(stdout, d_H, "d_H");
-    //printDarcyArray(stdout, d_H_new, "d_H_new");
-    //printDarcyArray(stdout, d_V, "d_V");
+    //printDarcyArray(stdout, d.K, "d.K");
+    //printDarcyArray(stdout, d.H, "d.H");
+    //printDarcyArray(stdout, d.H_new, "d.H_new");
+    //printDarcyArray(stdout, d.V, "d.V");
     freeDarcyMem();
 }
 

@@ -148,17 +148,7 @@ class DEM {
         int darcy;  // 0: no, 1: yes
 
         // Darcy values, host
-        int d_nx, d_ny, d_nz;     // Number of cells in each dim
-        Float d_dx, d_dy, d_dz;   // Cell length in each dim
-        Float* d_H;   // Cell hydraulic heads
-        Float* d_H_new;   // Cell hydraulic heads
-        Float3* d_V;  // Cell fluid velocity
-        Float3* d_dH; // Cell spatial gradient in heads
-        Float* d_K;   // Cell hydraulic conductivities (anisotropic)
-        Float3* d_T;   // Cell hydraulic transmissivity
-        Float* d_Ss;   // Cell hydraulic storativity
-        Float* d_W;   // Cell hydraulic recharge
-        Float* d_phi;   // Cell porosity
+        Darcy d;
 
         // Darcy values, device
         Float* dev_d_H;   // Cell hydraulic heads

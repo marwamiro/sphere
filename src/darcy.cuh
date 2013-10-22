@@ -22,8 +22,8 @@
 void DEM::initDarcyMemDev(void)
 {
     // number of cells
-    //unsigned int ncells = d_nx*d_ny*d_nz; // without ghost nodes
-    unsigned int ncells = (d_nx+2)*(d_ny+2)*(d_nz+2); // with ghost nodes
+    //unsigned int ncells = d.nx*d.ny*d.nz; // without ghost nodes
+    unsigned int ncells = (d.nx+2)*(d.ny+2)*(d.nz+2); // with ghost nodes
     unsigned int memSizeF  = sizeof(Float) * ncells;
 
     cudaMalloc((void**)&dev_d_H, memSizeF);     // hydraulic pressure
@@ -63,21 +63,21 @@ void DEM::transferDarcyToGlobalDeviceMemory(int statusmsg)
         //std::cout << "  Transfering fluid data to the device:           ";
 
     // number of cells
-    //unsigned int ncells = d_nx*d_ny*d_nz; // without ghost nodes
-    unsigned int ncells = (d_nx+2)*(d_ny+2)*(d_nz+2); // with ghost nodes
+    //unsigned int ncells = d.nx*d.ny*d.nz; // without ghost nodes
+    unsigned int ncells = (d.nx+2)*(d.ny+2)*(d.nz+2); // with ghost nodes
     unsigned int memSizeF  = sizeof(Float) * ncells;
 
     // Kinematic particle values
-    cudaMemcpy(dev_d_H, d_H, memSizeF, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_d_H, d.H, memSizeF, cudaMemcpyHostToDevice);
     checkForCudaErrors("transferDarcyToGlobalDeviceMemory after first cudaMemcpy");
-    cudaMemcpy(dev_d_H_new, d_H_new, memSizeF, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_d_V, d_V, memSizeF*3, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_d_dH, d_dH, memSizeF*3, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_d_K, d_K, memSizeF, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_d_T, d_T, memSizeF*3, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_d_Ss, d_Ss, memSizeF, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_d_W, d_W, memSizeF, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_d_phi, d_phi, memSizeF, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_d_H_new, d.H_new, memSizeF, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_d_V, d.V, memSizeF*3, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_d_dH, d.dH, memSizeF*3, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_d_K, d.K, memSizeF, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_d_T, d.T, memSizeF*3, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_d_Ss, d.Ss, memSizeF, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_d_W, d.W, memSizeF, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_d_phi, d.phi, memSizeF, cudaMemcpyHostToDevice);
 
     checkForCudaErrors("End of transferDarcyToGlobalDeviceMemory");
     //if (verbose == 1 && statusmsg == 1)
@@ -91,20 +91,20 @@ void DEM::transferDarcyFromGlobalDeviceMemory(int statusmsg)
         std::cout << "  Transfering darcy data from the device:         ";
 
     // number of cells
-    //unsigned int ncells = d_nx*d_ny*d_nz; // without ghost nodes
-    unsigned int ncells = (d_nx+2)*(d_ny+2)*(d_nz+2); // with ghost nodes
+    //unsigned int ncells = d.nx*d.ny*d.nz; // without ghost nodes
+    unsigned int ncells = (d.nx+2)*(d.ny+2)*(d.nz+2); // with ghost nodes
     unsigned int memSizeF  = sizeof(Float) * ncells;
 
     // Kinematic particle values
-    cudaMemcpy(d_H, dev_d_H, memSizeF, cudaMemcpyDeviceToHost);
-    cudaMemcpy(d_H_new, dev_d_H_new, memSizeF, cudaMemcpyDeviceToHost);
-    cudaMemcpy(d_V, dev_d_V, memSizeF*3, cudaMemcpyDeviceToHost);
-    cudaMemcpy(d_dH, dev_d_dH, memSizeF*3, cudaMemcpyDeviceToHost);
-    cudaMemcpy(d_K, dev_d_K, memSizeF, cudaMemcpyDeviceToHost);
-    cudaMemcpy(d_T, dev_d_T, memSizeF*3, cudaMemcpyDeviceToHost);
-    cudaMemcpy(d_Ss, dev_d_Ss, memSizeF, cudaMemcpyDeviceToHost);
-    cudaMemcpy(d_W, dev_d_W, memSizeF, cudaMemcpyDeviceToHost);
-    cudaMemcpy(d_phi, dev_d_phi, memSizeF, cudaMemcpyDeviceToHost);
+    cudaMemcpy(d.H, dev_d_H, memSizeF, cudaMemcpyDeviceToHost);
+    cudaMemcpy(d.H_new, dev_d_H_new, memSizeF, cudaMemcpyDeviceToHost);
+    cudaMemcpy(d.V, dev_d_V, memSizeF*3, cudaMemcpyDeviceToHost);
+    cudaMemcpy(d.dH, dev_d_dH, memSizeF*3, cudaMemcpyDeviceToHost);
+    cudaMemcpy(d.K, dev_d_K, memSizeF, cudaMemcpyDeviceToHost);
+    cudaMemcpy(d.T, dev_d_T, memSizeF*3, cudaMemcpyDeviceToHost);
+    cudaMemcpy(d.Ss, dev_d_Ss, memSizeF, cudaMemcpyDeviceToHost);
+    cudaMemcpy(d.W, dev_d_W, memSizeF, cudaMemcpyDeviceToHost);
+    cudaMemcpy(d.phi, dev_d_phi, memSizeF, cudaMemcpyDeviceToHost);
 
     checkForCudaErrors("End of transferDarcyFromGlobalDeviceMemory");
     if (verbose == 1 && statusmsg == 1)

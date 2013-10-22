@@ -132,6 +132,16 @@ void DEM::checkValues(void)
         exit(1);
     }
 
+    // Check origo placement
+    if (grid.origo[0] < 0.0 || grid.origo[1] < 0.0 || grid.origo[2] < 0.0) {
+        cerr << "Error: Negative values in grid.origo are known to cause "
+            << "problems. \n"
+            << "grid.origo[0] = " << grid.origo[0] << " m, "
+            << "grid.origo[1] = " << grid.origo[1] << " m, "
+            << "grid.origo[2] = " << grid.origo[2] << " m.\n";
+        exit(1);
+    }
+
     // Check world size
     if (grid.L[0] <= 0.0 || grid.L[1] <= 0.0 || grid.L[2] <= 0.0) {
         cerr << "Error: grid.L[0] = " << grid.L[0] << " m, "

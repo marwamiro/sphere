@@ -308,12 +308,14 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
 
     // Fluid arrays
 #ifdef LBM_GPU
-    cudaMalloc((void**)&dev_f,
-            sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19);
-    cudaMalloc((void**)&dev_f_new,
-            sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19);
-    cudaMalloc((void**)&dev_v_rho,
-            sizeof(Float4)*grid.num[0]*grid.num[1]*grid.num[2]);
+    if (params.nu > 0.0 && darcy == 0) {
+        cudaMalloc((void**)&dev_f,
+                sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19);
+        cudaMalloc((void**)&dev_f_new,
+                sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19);
+        cudaMalloc((void**)&dev_v_rho,
+                sizeof(Float4)*grid.num[0]*grid.num[1]*grid.num[2]);
+    }
 #endif
 
     checkForCudaErrors("End of allocateGlobalDeviceMemory");
@@ -1137,9 +1139,9 @@ __host__ void DEM::startTime()
             // Write Darcy arrays
             if (params.nu > 0.0 && darcy == 1) {
                 sprintf(file,"output/%s.d_phi.output%05d.bin", sid.c_str(), time.step_count);
-                writeDarcyArray(d_phi, file);
+                writeDarcyArray(d.phi, file);
                 sprintf(file,"output/%s.d_K.output%05d.bin", sid.c_str(), time.step_count);
-                writeDarcyArray(d_K, file);
+                writeDarcyArray(d.K, file);
             }
 
             if (CONTACTINFO == 1) {
