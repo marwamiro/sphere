@@ -916,7 +916,7 @@ __host__ void DEM::startTime()
         if (params.nu > 0.0 && darcy == 1) {
 
 #ifdef DARCY_GPU
-            //*
+            
             checkForCudaErrors("Before findPorositiesCubicDev", iter);
             // Find cell porosities
             if (PROFILING == 1)
@@ -926,11 +926,11 @@ __host__ void DEM::startTime()
                     dev_cellEnd,
                     dev_x_sorted,
                     dev_d_phi);
-            /*findPorositiesSphericalDev<<<dimGridFluid, dimBlockFluid>>>(
-                    dev_cellStart,
-                    dev_cellEnd,
-                    dev_x_sorted,
-                    dev_d_phi);*/
+            //findPorositiesSphericalDev<<<dimGridFluid, dimBlockFluid>>>(
+                    //dev_cellStart,
+                    //dev_cellEnd,
+                    //dev_x_sorted,
+                    //dev_d_phi);
             cudaThreadSynchronize();
             if (PROFILING == 1)
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
@@ -1016,7 +1016,6 @@ __host__ void DEM::startTime()
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
                         &t_findDarcyVelocitiesDev);
             checkForCudaErrors("Post findDarcyVelocitiesDev", iter);
-            //*/
 
 #else
             // Copy device data to host memory
