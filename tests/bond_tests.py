@@ -26,7 +26,8 @@ smallval = 1e-8
 s2_1 = numpy.ones((2,1))*smallval
 
 # Inter-particle distances to try (neg. for overlap)
-distances = [0.2, 0.0, -0.2]
+#distances = [0.2, 0.0, -0.2]
+distances = [0.2, 0.0]
 #distances = [0.2]
 
 for d in distances:
@@ -38,8 +39,8 @@ for d in distances:
     cleanup(sb)
 
     # setup particles, bond, and simulation
-    sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
-    sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
+    sb.x[0,:] = numpy.array((10.0, 10.0, 10.0))
+    sb.x[1,:] = numpy.array((10.0+2.0*radii+d, 10.0, 10.0))
     sb.radius = numpy.ones(sb.np)*radii
     sb.initGridAndWorldsize(margin = 10, periodic = 1, contactmodel = 2, g = numpy.array([0.0, 0.0, 0.0]))
     sb.bond(0, 1)
@@ -50,8 +51,8 @@ for d in distances:
 
 
     print("# Stability test")
-    sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
-    sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
+    sb.x[0,:] = numpy.array((10.0, 10.0, 10.0))
+    sb.x[1,:] = numpy.array((10.0+2.0*radii+d, 10.0, 10.0))
     sb.zeroKinematics()
     sb.initTemporal(total=0.2, file_dt=0.01)
     #sb.initTemporal(total=0.01, file_dt=0.0001)
@@ -68,8 +69,8 @@ for d in distances:
     #printKinematics(sb)
 
     print("# Normal expansion")
-    sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
-    sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
+    sb.x[0,:] = numpy.array((10.0, 10.0, 10.0))
+    sb.x[1,:] = numpy.array((10.0+2.0*radii+d, 10.0, 10.0))
     sb.zeroKinematics()
     sb.initTemporal(total=0.2, file_dt=0.01)
     sb.vel[1,0] = 1e-4
@@ -108,8 +109,8 @@ for d in distances:
     #printKinematics(sb)
 
     print("# Shear")
-    sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
-    sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
+    sb.x[0,:] = numpy.array((10.0, 10.0, 10.0))
+    sb.x[1,:] = numpy.array((10.0+2.0*radii+d, 10.0, 10.0))
     sb.zeroKinematics()
     sb.initTemporal(total=0.2, file_dt=0.01)
     sb.vel[1,2] = 1e-4
@@ -142,8 +143,8 @@ for d in distances:
 
     #'''
     print("# Twist")
-    sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
-    sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
+    sb.x[0,:] = numpy.array((10.0, 10.0, 10.0))
+    sb.x[1,:] = numpy.array((10.0+2.0*radii+d, 10.0, 10.0))
     sb.zeroKinematics()
     sb.initTemporal(total=0.2, file_dt=0.01)
     #sb.initTemporal(total=0.001, file_dt=0.00001)
@@ -167,8 +168,8 @@ for d in distances:
 
     #'''
     print("# Bend")
-    sb.x[0,:] = numpy.array((2.0, 2.0, 2.0))
-    sb.x[1,:] = numpy.array((2.0+2.0*radii+d, 2.0, 2.0))
+    sb.x[0,:] = numpy.array((10.0, 10.0, 10.0))
+    sb.x[1,:] = numpy.array((10.0+2.0*radii+d, 10.0, 10.0))
     sb.zeroKinematics()
     sb.initTemporal(total=0.2, file_dt=0.01)
     sb.angvel[0,1] = -1e-4
