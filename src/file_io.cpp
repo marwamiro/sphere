@@ -283,6 +283,8 @@ void DEM::readbin(const char *target)
                     ifs.read(as_bytes(d.V[i].y), sizeof(Float));
                     ifs.read(as_bytes(d.V[i].z), sizeof(Float));
                     ifs.read(as_bytes(d.H[i]), sizeof(Float));
+                    ifs.read(as_bytes(d.phi[i]), sizeof(Float));
+                    ifs.read(as_bytes(d.K[i]), sizeof(Float));
                 }
             }
         }
@@ -470,7 +472,8 @@ void DEM::writebin(const char *target)
                         ofs.write(as_bytes(d.V[i].y), sizeof(Float));
                         ofs.write(as_bytes(d.V[i].z), sizeof(Float));
                         ofs.write(as_bytes(d.H[i]), sizeof(Float));
-                        //printf("%d,%d,%d: d.H[%d] = %f\n", x,y,z, i, d.H[i]);
+                        ofs.write(as_bytes(d.phi[i]), sizeof(Float));
+                        ofs.write(as_bytes(d.K[i]), sizeof(Float));
                     }
                 }
             }

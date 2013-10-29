@@ -134,6 +134,10 @@ class Spherebin:
             dtype=numpy.float64)
         self.f_rho = numpy.zeros((self.num[0], self.num[1], self.num[2]),
                                dtype=numpy.float64)
+        self.f_phi = numpy.zeros((self.num[0], self.num[1], self.num[2]),
+                               dtype=numpy.float64)
+        self.f_K = numpy.zeros((self.num[0], self.num[1], self.num[2]),
+                               dtype=numpy.float64)
 
     def __cmp__(self, other):
         """ Called when to Spherebin objects are compared.
@@ -202,7 +206,9 @@ class Spherebin:
                 self.bonds_omega_t == other.bonds_omega_t and\
                 self.nu == other.nu and\
                 (self.f_v == other.f_v).all() and\
-                (self.f_rho == other.f_rho).all()\
+                (self.f_rho == other.f_rho).all() and\
+                (self.f_K == other.f_K).all() and\
+                (self.f_phi == other.f_phi).all()\
                 ).all() == True):
                     return 0 # All equal
         else:
@@ -385,6 +391,8 @@ class Spherebin:
                             (self.num[0], self.num[1], self.num[2], self.nd),
                             dtype=numpy.float64)
                     self.f_rho = numpy.empty((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
+                    self.f_phi = numpy.empty((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
+                    self.f_K = numpy.empty((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
                     for z in range(self.num[2]):
                         for y in range(self.num[1]):
                             for x in range(self.num[0]):
@@ -395,6 +403,10 @@ class Spherebin:
                                 self.f_v[x,y,z,2] = \
                                 numpy.fromfile(fh, dtype=numpy.float64, count=1)
                                 self.f_rho[x,y,z] = \
+                                numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                                self.f_phi[x,y,z] = \
+                                numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                                self.f_K[x,y,z] = \
                                 numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
         finally:
@@ -509,6 +521,8 @@ class Spherebin:
                             fh.write(self.f_v[x,y,z,1].astype(numpy.float64))
                             fh.write(self.f_v[x,y,z,2].astype(numpy.float64))
                             fh.write(self.f_rho[x,y,z].astype(numpy.float64))
+                            fh.write(self.f_phi[x,y,z].astype(numpy.float64))
+                            fh.write(self.f_K[x,y,z].astype(numpy.float64))
 
         finally:
             if fh is not None:
@@ -693,7 +707,7 @@ class Spherebin:
     def writeFluidVTK(self, folder = '../output/', verbose = True):
         'Writes fluid data to a target VTK file'
 
-        filename = folder + '/' + self.sid + '-fluid.vti' # image grid
+        filename = folder + '/fluid-' + self.sid + '.vti' # image grid
 
         # initalize VTK data structure
         grid = vtk.vtkImageData()
@@ -703,16 +717,29 @@ class Spherebin:
         grid.SetDimensions(self.num)    # no. of points in each direction
 
         # array of scalars: hydraulic pressures
-        pres = vtk.vtkDoubleArray()    # data type
+        pres = vtk.vtkDoubleArray()
         pres.SetName("Pressure")
-        pres.SetNumberOfComponents(1)  # this is 3 for a vector
+        pres.SetNumberOfComponents(1)
         pres.SetNumberOfTuples(grid.GetNumberOfPoints())
 
         # array of vectors: hydraulic velocities
-        vel = vtk.vtkDoubleArray()    # data type
+        vel = vtk.vtkDoubleArray()
         vel.SetName("Velocity")
-        vel.SetNumberOfComponents(3)  # this is 3 for a vector
+        vel.SetNumberOfComponents(3)
         vel.SetNumberOfTuples(grid.GetNumberOfPoints())
+
+        # array of scalars: porosities
+        poros = vtk.vtkDoubleArray()
+        poros.SetName("Porosity change")
+        poros.SetNumberOfComponents(1)
+        poros.SetNumberOfTuples(grid.GetNumberOfPoints())
+
+        # array of scalars: hydraulic conductivities
+        cond = vtk.vtkDoubleArray()
+        cond.SetName("Conductivity")
+        cond.SetNumberOfComponents(1)
+        cond.SetNumberOfTuples(grid.GetNumberOfPoints())
+
 
         # insert values
         for z in range(self.num[2]):
@@ -721,11 +748,14 @@ class Spherebin:
                     idx = x + self.num[0]*y + self.num[0]*self.num[1]*z;
                     pres.SetValue(idx, self.f_rho[x,y,z])
                     vel.SetTuple(idx, self.f_v[x,y,z,:])
-                    #vel.SetTuple(idx, [x,y,z])
+                    poros.SetValue(idx, self.f_phi[x,y,z])
+                    cond.SetValue(idx, self.f_K[x,y,z])
 
         # add pres array to grid
         grid.GetPointData().AddArray(pres)
         grid.GetPointData().AddArray(vel)
+        grid.GetPointData().AddArray(poros)
+        grid.GetPointData().AddArray(cond)
 
         # write VTK XML image data file
         writer = vtk.vtkXMLImageDataWriter()
@@ -845,6 +875,8 @@ class Spherebin:
         # Init fluid arrays
         self.f_v = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
         self.f_rho = numpy.ones((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
+        self.f_phi = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
+        self.f_K = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
 
 
         # Particle positions randomly distributed without overlap
@@ -893,6 +925,8 @@ class Spherebin:
         # Init fluid arrays
         self.f_v = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
         self.f_rho = numpy.ones((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
+        self.f_phi = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
+        self.f_K = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
 
 
         # Put upper wall at top boundary
@@ -938,6 +972,8 @@ class Spherebin:
         # Init fluid arrays
         self.f_v = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
         self.f_rho = numpy.ones((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
+        self.f_phi = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
+        self.f_K = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
 
 
         self.contactmodel[0] = contactmodel
@@ -1008,6 +1044,8 @@ class Spherebin:
         # Init fluid arrays
         self.f_v = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
         self.f_rho = numpy.ones((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
+        self.f_phi = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
+        self.f_K = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
 
         self.contactmodel[0] = contactmodel
 
@@ -1073,6 +1111,8 @@ class Spherebin:
         # Init fluid arrays
         self.f_v = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
         self.f_rho = numpy.ones((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
+        self.f_phi = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
+        self.f_K = numpy.zeros((self.num[0],self.num[1],self.num[2],self.nd), dtype=numpy.float64)
 
     def createBondPair(self, i, j, spacing=-0.1):
         """ Bond particles i and j. Particle j is moved adjacent to particle i,
@@ -1341,6 +1381,10 @@ class Spherebin:
         self.f_rho = numpy.ones((self.num[0], self.num[1], self.num[2]),
                 dtype=numpy.float64)
         self.f_v = numpy.zeros((self.num[0], self.num[1], self.num[2], self.nd),
+                dtype=numpy.float64)
+        self.f_phi = numpy.ones((self.num[0], self.num[1], self.num[2]),
+                dtype=numpy.float64)
+        self.f_K = numpy.ones((self.num[0], self.num[1], self.num[2]),
                 dtype=numpy.float64)
 
 
