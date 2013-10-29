@@ -35,6 +35,7 @@ void DEM::initDarcyMemDev(void)
     cudaMalloc((void**)&dev_d_Ss, memSizeF);    // hydraulic storativi
     cudaMalloc((void**)&dev_d_W, memSizeF);     // hydraulic recharge
     cudaMalloc((void**)&dev_d_phi, memSizeF);   // cell porosity
+    cudaMalloc((void**)&dev_d_dphi, memSizeF);  // cell porosity change
 
     checkForCudaErrors("End of initDarcyMemDev");
 }
@@ -51,6 +52,7 @@ void DEM::freeDarcyMemDev()
     cudaFree(dev_d_Ss);
     cudaFree(dev_d_W);
     cudaFree(dev_d_phi);
+    cudaFree(dev_d_dphi);
 }
 
 // Transfer to device
@@ -78,6 +80,7 @@ void DEM::transferDarcyToGlobalDeviceMemory(int statusmsg)
     cudaMemcpy(dev_d_Ss, d.Ss, memSizeF, cudaMemcpyHostToDevice);
     cudaMemcpy(dev_d_W, d.W, memSizeF, cudaMemcpyHostToDevice);
     cudaMemcpy(dev_d_phi, d.phi, memSizeF, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_d_dphi, d.dphi, memSizeF, cudaMemcpyHostToDevice);
 
     checkForCudaErrors("End of transferDarcyToGlobalDeviceMemory");
     //if (verbose == 1 && statusmsg == 1)
@@ -105,6 +108,7 @@ void DEM::transferDarcyFromGlobalDeviceMemory(int statusmsg)
     cudaMemcpy(d.Ss, dev_d_Ss, memSizeF, cudaMemcpyDeviceToHost);
     cudaMemcpy(d.W, dev_d_W, memSizeF, cudaMemcpyDeviceToHost);
     cudaMemcpy(d.phi, dev_d_phi, memSizeF, cudaMemcpyDeviceToHost);
+    cudaMemcpy(d.dphi, dev_d_dphi, memSizeF, cudaMemcpyDeviceToHost);
 
     checkForCudaErrors("End of transferDarcyFromGlobalDeviceMemory");
     if (verbose == 1 && statusmsg == 1)
@@ -130,7 +134,8 @@ __device__ void copyDarcyValsDev(
         Float3* dev_d_V, Float3* dev_d_dH,
         Float* dev_d_K, Float3* dev_d_T,
         Float* dev_d_Ss, Float* dev_d_W,
-        Float* dev_d_phi)
+        Float* dev_d_phi,
+        Float* dev_d_dphi)
 {
     // Coalesced read
     const Float  H     = dev_d_H[read];
@@ -142,6 +147,7 @@ __device__ void copyDarcyValsDev(
     const Float  Ss    = dev_d_Ss[read];
     const Float  W     = dev_d_W[read];
     const Float  phi   = dev_d_phi[read];
+    const Float  dphi  = dev_d_dphi[read];
 
     // Coalesced write
     __syncthreads();
@@ -154,6 +160,7 @@ __device__ void copyDarcyValsDev(
     dev_d_Ss[write]    = Ss;
     dev_d_W[write]     = W;
     dev_d_phi[write]   = phi;
+    dev_d_dphi[write]  = dphi;
 }
 
 // Update ghost nodes from their parent cell values
@@ -164,7 +171,8 @@ __global__ void setDarcyGhostNodesDev(
         Float3* dev_d_V, Float3* dev_d_dH,
         Float* dev_d_K, Float3* dev_d_T,
         Float* dev_d_Ss, Float* dev_d_W,
-        Float* dev_d_phi)
+        Float* dev_d_phi,
+        Float* dev_d_dphi)
 {
     // 3D thread index
     const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -192,7 +200,8 @@ __global__ void setDarcyGhostNodesDev(
                     dev_d_V, dev_d_dH,
                     dev_d_K, dev_d_T,
                     dev_d_Ss, dev_d_W,
-                    dev_d_phi);
+                    dev_d_phi,
+                    dev_d_dphi);
         }
         if (x == nx-1) {
             writeidx = idx(-1,y,z);
@@ -201,7 +210,8 @@ __global__ void setDarcyGhostNodesDev(
                     dev_d_V, dev_d_dH,
                     dev_d_K, dev_d_T,
                     dev_d_Ss, dev_d_W,
-                    dev_d_phi);
+                    dev_d_phi,
+                    dev_d_dphi);
         }
 
         if (y == 0) {
@@ -211,7 +221,8 @@ __global__ void setDarcyGhostNodesDev(
                     dev_d_V, dev_d_dH,
                     dev_d_K, dev_d_T,
                     dev_d_Ss, dev_d_W,
-                    dev_d_phi);
+                    dev_d_phi,
+                    dev_d_dphi);
         }
         if (y == ny-1) {
             writeidx = idx(x,-1,z);
@@ -220,7 +231,8 @@ __global__ void setDarcyGhostNodesDev(
                     dev_d_V, dev_d_dH,
                     dev_d_K, dev_d_T,
                     dev_d_Ss, dev_d_W,
-                    dev_d_phi);
+                    dev_d_phi,
+                    dev_d_dphi);
         }
 
         if (z == 0) {
@@ -230,7 +242,8 @@ __global__ void setDarcyGhostNodesDev(
                     dev_d_V, dev_d_dH,
                     dev_d_K, dev_d_T,
                     dev_d_Ss, dev_d_W,
-                    dev_d_phi);
+                    dev_d_phi,
+                    dev_d_dphi);
         }
         if (z == nz-1) {
             writeidx = idx(x,y,-1);
@@ -239,7 +252,8 @@ __global__ void setDarcyGhostNodesDev(
                     dev_d_V, dev_d_dH,
                     dev_d_K, dev_d_T,
                     dev_d_Ss, dev_d_W,
-                    dev_d_phi);
+                    dev_d_phi,
+                    dev_d_dphi);
         }
     }
 }
@@ -251,7 +265,8 @@ __global__ void findPorositiesCubicDev(
         unsigned int* dev_cellStart,
         unsigned int* dev_cellEnd,
         Float4* dev_x_sorted,
-        Float* dev_d_phi)
+        Float* dev_d_phi,
+        Float* dev_d_dphi)
 {
     // 3D thread index
     const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -282,6 +297,10 @@ __global__ void findPorositiesCubicDev(
         // Lowest particle index in cell
         const unsigned int startIdx = dev_cellStart[cellID];
 
+        // Read old porosity
+        __syncthreads();
+        Float phi_0 = dev_d_phi[idx(x,y,z)];
+
         Float phi = 0.99;
 
         // Make sure cell is not empty
@@ -305,9 +324,10 @@ __global__ void findPorositiesCubicDev(
             phi = fmin(0.99, fmax(0.01, void_volume/cell_volume));
         }
 
-        // Save porosity
+        // Save porosity and porosity change
         __syncthreads();
-        dev_d_phi[idx(x,y,z)] = phi;
+        dev_d_phi[idx(x,y,z)]  = phi;
+        dev_d_dphi[idx(x,y,z)] = phi - phi_0;
     }
 }
 
@@ -319,7 +339,9 @@ __global__ void findPorositiesSphericalDev(
         unsigned int* dev_cellStart,
         unsigned int* dev_cellEnd,
         Float4* dev_x_sorted,
-        Float* dev_d_phi)
+        Float* dev_d_phi,
+        Float* dev_d_dphi,
+        unsigned int iteration)
 {
     // 3D thread index
     const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -348,60 +370,85 @@ __global__ void findPorositiesSphericalDev(
 
         // Cell sphere center position
         const Float3 X = MAKE_FLOAT3(
-                nx*dx + 0.5*dx,
-                ny*dy + 0.5*dy,
-                nz*dz + 0.5*dz);
+                x*dx + 0.5*dx,
+                y*dy + 0.5*dy,
+                z*dz + 0.5*dz);
 
         Float d, r;
         Float phi = 0.99;
+
+        // Read old porosity
+        __syncthreads();
+        Float phi_0 = dev_d_phi[idx(x,y,z)];
+
+        // The cell 3d index
+        const int3 gridPos = make_int3((int)x,(int)y,(int)z);
+
+        // The neighbor cell 3d index
+        int3 targetCell;
+
+        // The distance modifier for particles across periodic boundaries
+        Float3 dist, distmod;
 
         // Iterate over 27 neighbor cells
         for (int z_dim=-1; z_dim<2; ++z_dim) { // z-axis
             for (int y_dim=-1; y_dim<2; ++y_dim) { // y-axis
                 for (int x_dim=-1; x_dim<2; ++x_dim) { // x-axis
 
-        
-                    // Calculate linear cell ID
-                    const unsigned int cellID = x + y*devC_grid.num[0]
-                        + (devC_grid.num[0] * devC_grid.num[1])*z;
+                    // Index of neighbor cell this iteration is looking at
+                    targetCell = gridPos + make_int3(x_dim, y_dim, z_dim);
 
-                    // Lowest particle index in cell
-                    const unsigned int startIdx = dev_cellStart[cellID];
+                    // Get distance modifier for interparticle
+                    // vector, if it crosses a periodic boundary
+                    // DISTMOD IS NEVER NOT 0,0,0 !!!!!!
+                    distmod = MAKE_FLOAT3(0.0, 0.0, 0.0);
+                    if (findDistMod(&targetCell, &distmod) != -1) {
 
+                        // Calculate linear cell ID
+                        const unsigned int cellID =
+                            targetCell.x + targetCell.y * devC_grid.num[0]
+                            + (devC_grid.num[0] * devC_grid.num[1])
+                            * targetCell.z; 
 
-                    // Make sure cell is not empty
-                    if (startIdx != 0xffffffff) {
+                        // Lowest particle index in cell
+                        const unsigned int startIdx = dev_cellStart[cellID];
 
-                        // Highest particle index in cell
-                        const unsigned int endIdx = dev_cellEnd[cellID];
+                        // Make sure cell is not empty
+                        if (startIdx != 0xffffffff) {
 
-                        // Iterate over cell particles
-                        for (unsigned int i = startIdx; i<endIdx; ++i) {
+                            // Highest particle index in cell
+                            const unsigned int endIdx = dev_cellEnd[cellID];
 
-                            // Read particle position and radius
-                            __syncthreads();
-                            xr = dev_x_sorted[i];
-                            r = xr.w;
+                            // Iterate over cell particles
+                            for (unsigned int i = startIdx; i<endIdx; ++i) {
 
-                            // Find center distance
-                            d = length(MAKE_FLOAT3(
-                                        X.x - xr.x, 
-                                        X.y - xr.y,
-                                        X.z - xr.z));
+                                // Read particle position and radius
+                                __syncthreads();
+                                xr = dev_x_sorted[i];
+                                r = xr.w;
 
-                            // if ((R + r) <= d) -> no common volume
+                                // Find center distance
+                                dist = MAKE_FLOAT3(
+                                            X.x - xr.x, 
+                                            X.y - xr.y,
+                                            X.z - xr.z);
+                                dist += distmod;
+                                d = length(dist);
 
-                            // Lens shaped intersection
-                            if (((R - r) < d) && (d < (R + r))) {
-                                void_volume -=
-                                    1.0/(12.0*d) * (
-                                            M_PI*(R + r - d)*(R + r - d) *
-                                            (d*d + 2.0*d*r - 3.0*r*r + 2.0*d*R
-                                             + 6.0*r*R - 3.0*R*R) );
+                                // Lens shaped intersection
+                                if ((R - r) < d && d < (R + r)) {
+                                    void_volume -=
+                                        1.0/(12.0*d) * (
+                                                M_PI*(R + r - d)*(R + r - d)
+                                                *(d*d + 2.0*d*r - 3.0*r*r
+                                                    + 2.0*d*R + 6.0*r*R
+                                                    - 3.0*R*R) );
+                                }
 
                                 // Particle fully contained in cell sphere
-                            } else if (d <= (R - r)) {
-                                void_volume -= 4.0/3.0*M_PI*r*r*r;
+                                if (d <= R - r) {
+                                    void_volume -= 4.0/3.0*M_PI*r*r*r;
+                                }
                             }
                         }
                     }
@@ -410,11 +457,19 @@ __global__ void findPorositiesSphericalDev(
         }
 
         // Make sure that the porosity is in the interval ]0.0;1.0[
-        phi = fmin(0.99, fmax(0.01, void_volume/cell_volume));
+        phi = fmin(0.9, fmax(0.1, void_volume/cell_volume));
+        //phi = void_volume/cell_volume;
 
-        // Save porosity
+        Float dphi = phi - phi_0;
+        if (iteration == 0) {
+            // Do not use the initial CPU porosity estimates
+            dphi = 0.0;
+        }
+
+        // Save porosity and porosity change
         __syncthreads();
-        dev_d_phi[idx(x,y,z)] = phi;
+        dev_d_phi[idx(x,y,z)]  = phi;
+        dev_d_dphi[idx(x,y,z)] = dphi;
     }
 }
 
@@ -465,6 +520,7 @@ __global__ void findDarcyTransmissivitiesDev(
         Float k = phi*phi*phi/((1.0-phi)*(1.0-phi)) * d_factor;
 
         // Save hydraulic conductivity [m/s]
+        //const Float K = k*rho*-devC_params.g[2]/devC_params.nu;
         const Float K = k*rho*-devC_params.g[2]/devC_params.nu;
         //const Float K = 0.5; 
         //const Float K = 1.0e-2; 
@@ -550,7 +606,8 @@ __global__ void explDarcyStepDev(
         Float* dev_d_H_new,
         Float3* dev_d_T,
         Float* dev_d_Ss,
-        Float* dev_d_W)
+        Float* dev_d_W,
+        Float* dev_d_dphi)
 {
     // 3D thread index
     const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -596,8 +653,11 @@ __global__ void explDarcyStepDev(
         // Read the cell hydraulic specific storativity
         const Float Ss = dev_d_Ss[cellidx];
 
-        // Read the cell hydraulic volumetric flux 
-        const Float W = dev_d_W[cellidx];
+        // Read the cell hydraulic recharge
+        const Float Q = dev_d_W[cellidx];
+
+        // Read the cell porosity change
+        const Float dphi = dev_d_dphi[cellidx];
 
         // Read the cell and the six neighbor cell hydraulic pressures
         const Float H = dev_d_H[cellidx];
@@ -610,30 +670,56 @@ __global__ void explDarcyStepDev(
 
         // Calculate the gradients in the pressure between
         // the cell and it's six neighbors
-        const Float dH_xn = hmeanDev(T.x, T_xn.x) * (H_xn - H)/(dx*dx);
-        const Float dH_xp = hmeanDev(T.x, T_xp.x) * (H_xp - H)/(dx*dx);
-        const Float dH_yn = hmeanDev(T.y, T_yn.y) * (H_yn - H)/(dy*dy);
-        const Float dH_yp = hmeanDev(T.y, T_yp.y) * (H_yp - H)/(dy*dy);
-        Float dH_zn = hmeanDev(T.z, T_zn.z) * (H_zn - H)/(dz*dz);
-        Float dH_zp = hmeanDev(T.z, T_zp.z) * (H_zp - H)/(dz*dz);
+        const Float TdH_xn = hmeanDev(T.x, T_xn.x) * (H_xn - H)/(dx*dx);
+        const Float TdH_xp = hmeanDev(T.x, T_xp.x) * (H_xp - H)/(dx*dx);
+        const Float TdH_yn = hmeanDev(T.y, T_yn.y) * (H_yn - H)/(dy*dy);
+        const Float TdH_yp = hmeanDev(T.y, T_yp.y) * (H_yp - H)/(dy*dy);
+              Float TdH_zn = hmeanDev(T.z, T_zn.z) * (H_zn - H)/(dz*dz);
+              Float TdH_zp = hmeanDev(T.z, T_zp.z) * (H_zp - H)/(dz*dz);
+
+        // Mean cell dimension
+        const Float dx_bar = (dx+dy+dz)/3.0;
 
         // Neumann (no-flow) boundary condition at +z and -z boundaries
         // enforced by a gradient value of 0.0
         if (z == 0)
-            dH_zn = 0.0;
+            TdH_zn = 0.0;
         if (z == nz-1)
-            dH_zp = 0.0;
+            TdH_zp = 0.0;
 
         // Determine the Laplacian operator
-        const Float deltaH = devC_dt/(Ss*dx*dy*dz) *
-            (   dH_xn + dH_xp 
-              + dH_yn + dH_yp
-              + dH_zn + dH_zp
-              + W );
+        const Float laplacianH = 
+              TdH_xn + TdH_xp 
+            + TdH_yn + TdH_yp
+            + TdH_zn + TdH_zp;
+
+        const Float porevol = -dx_bar*dphi/devC_dt;
+
+        // The change in hydraulic pressure
+        const Float deltaH = devC_dt/(Ss*dx*dy*dz)*(laplacianH + Q + porevol);
+
+        /*printf("%d,%d,%d: H = %f, deltaH = %f,\tlaplacianH = %f,"
+                "dphi = %f,\tpore = %f, "
+                "TdH_xn = %f, TdH_xp = %f, "
+                "TdH_yn = %f, TdH_yp = %f, "
+                "TdH_zn = %f, TdH_zp = %f\n"
+                "\tT_xn = %f,\tT_xp = %f,\t"
+                "T_yn = %f,\tT_yp = %f,\t"
+                "T_zn = %f,\tT_zp = %f\n",
+                x,y,z, H, deltaH, laplacianH, dphi, porevol,
+                TdH_xn, TdH_xp,
+                TdH_yn, TdH_yp,
+                TdH_zn, TdH_zp,
+                T_xn.x, T_xp.x,
+                T_yn.y, T_yp.y,
+                T_zn.z, T_zp.z);*/
+
+        // The pressure should never be negative
+        const Float H_new = fmax(0.0, H + deltaH);
 
         // Write the new hydraulic pressure in cell
         __syncthreads();
-        dev_d_H_new[cellidx] = H + deltaH;
+        dev_d_H_new[cellidx] = H_new;
         //}
     }
 }

@@ -151,15 +151,16 @@ class DEM {
         Darcy d;
 
         // Darcy values, device
-        Float* dev_d_H;   // Cell hydraulic heads
+        Float* dev_d_H;     // Cell hydraulic heads
         Float* dev_d_H_new; // Cell hydraulic heads
-        Float3* dev_d_V;  // Cell fluid velocity
-        Float3* dev_d_dH; // Cell spatial gradient in heads
-        Float* dev_d_K;   // Cell hydraulic conductivities
-        Float3* dev_d_T;  // Cell hydraulic transmissivity
-        Float* dev_d_Ss;   // Cell hydraulic storativity
-        Float* dev_d_W;   // Cell hydraulic recharge
+        Float3* dev_d_V;    // Cell fluid velocity
+        Float3* dev_d_dH;   // Cell spatial gradient in heads
+        Float* dev_d_K;     // Cell hydraulic conductivities
+        Float3* dev_d_T;    // Cell hydraulic transmissivity
+        Float* dev_d_Ss;    // Cell hydraulic storativity
+        Float* dev_d_W;     // Cell hydraulic recharge
         Float* dev_d_phi;   // Cell porosity
+        Float* dev_d_dphi;  // Cell porosity change
 
         //// Darcy functions
 

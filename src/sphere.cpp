@@ -49,6 +49,10 @@ DEM::DEM(const std::string inputbin,
     if (dry == 1)
         exit(0);
 
+    if (params.nu > 0.0 && darcy == 1) {
+        initDarcy();
+    }
+
     if (initCuda == 1) {
 
         // Initialize CUDA
@@ -60,7 +64,6 @@ DEM::DEM(const std::string inputbin,
         }
 
         if (params.nu > 0.0 && darcy == 1) {
-            initDarcy();
             initDarcyMemDev();
         }
 

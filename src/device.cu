@@ -18,8 +18,6 @@
 #include "constants.cuh"
 #include "debug.h"
 
-//#include "cuPrintf.cu"
-
 #include "sorting.cuh"	
 #include "contactmodels.cuh"
 #include "cohesion.cuh"
@@ -60,7 +58,8 @@ __host__ void DEM::initializeGPU(void)
             cout << "  System contains 1 CUDA compatible device.\n";
     } else {
         if (verbose == 1)
-            cout << "  System contains " << devicecount << " CUDA compatible devices.\n";
+            cout << "  System contains " << devicecount
+                << " CUDA compatible devices.\n";
     }
 
     cudaGetDeviceProperties(&prop, cudadevice);
@@ -77,7 +76,8 @@ __host__ void DEM::initializeGPU(void)
             << cudaRuntimeVersion%100 << std::endl;
     }
 
-    // Comment following line when using a system only containing exclusive mode GPUs
+    // Comment following line when using a system only containing exclusive mode
+    // GPUs
     cudaChooseDevice(&cudadevice, &prop); 
 
     checkForCudaErrors("While initializing CUDA device");
@@ -380,18 +380,9 @@ __host__ void DEM::freeGlobalDeviceMemory()
 
 #ifdef DARCY_GPU
     if (params.nu > 0.0 && darcy == 1) {
-        cudaFree(dev_d_H);
-        cudaFree(dev_d_H_new);
-        cudaFree(dev_d_V);
-        cudaFree(dev_d_dH);
-        cudaFree(dev_d_K);
-        cudaFree(dev_d_T);
-        cudaFree(dev_d_Ss);
-        cudaFree(dev_d_W);
-        cudaFree(dev_d_phi);
+        freeDarcyMemDev();
     }
 #endif
-
 
     checkForCudaErrors("During cudaFree calls");
 
@@ -584,9 +575,10 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
 // Iterate through time by explicit time integration
 __host__ void DEM::startTime()
 {
-    using std::cout; // Namespace directive
-    using std::cerr; // Namespace directive
-    using std::endl; // Namespace directive
+    using std::cout;
+    using std::cerr;
+    using std::endl;
+
     std::string outfile;
     char file[200];
     FILE *fp;
@@ -657,7 +649,7 @@ __host__ void DEM::startTime()
     // Initialize counter variable values
     filetimeclock = 0.0;
     long iter = 0;
-    const int stdout_report = 10; // the no of time steps between reporting to stdout
+    const int stdout_report = 10; // no of steps between reporting to stdout
 
     // Create first status.dat
     //sprintf(file,"output/%s.status.dat", sid);
@@ -682,7 +674,7 @@ __host__ void DEM::startTime()
             // Representative grain radius
             const Float r_bar2 = meanRadius()*2.0;
             // Grain size factor for Kozeny-Carman relationship
-            d_factor = r_bar2*r_bar2/180.0;
+            d_factor = r_bar2*r_bar2/180.0 * 1.0e-6;
 #endif
         } else {
             std::cerr << "Error, darcy value (" << darcy 
@@ -719,7 +711,7 @@ __host__ void DEM::startTime()
     double t_summation = 0.0;
     double t_integrateWalls = 0.0;
 
-    double t_findPorositiesCubicDev = 0.0;
+    double t_findPorositiesDev = 0.0;
     double t_findDarcyTransmissivitiesDev = 0.0;
     double t_setDarcyGhostNodesDev = 0.0;
     double t_explDarcyStepDev = 0.0;
@@ -759,32 +751,36 @@ __host__ void DEM::startTime()
         // Synchronization point
         cudaThreadSynchronize();
         if (PROFILING == 1)
-            stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_calcParticleCellID);
+            stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
+                    &t_calcParticleCellID);
         checkForCudaErrors("Post calcParticleCellID");
 
 
-        // Sort particle (key, particle ID) pairs by hash key with Thrust radix sort
+        // Sort particle (key, particle ID) pairs by hash key with Thrust radix
+        // sort
         if (PROFILING == 1)
             startTimer(&kernel_tic);
         thrust::sort_by_key(thrust::device_ptr<uint>(dev_gridParticleCellID),
                 thrust::device_ptr<uint>(dev_gridParticleCellID + np),
                 thrust::device_ptr<uint>(dev_gridParticleIndex));
-        cudaThreadSynchronize(); // Needed? Does thrust synchronize threads implicitly?
+        cudaThreadSynchronize(); // Needed? Does thrust synchronize implicitly?
         if (PROFILING == 1)
             stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed, &t_thrustsort);
         checkForCudaErrors("Post thrust::sort_by_key");
 
 
-        // Zero cell array values by setting cellStart to its highest possible value,
-        // specified with pointer value 0xffffffff, which for a 32 bit unsigned int
+        // Zero cell array values by setting cellStart to its highest possible
+        // value, specified with pointer value 0xffffffff, which for a 32 bit
+        // unsigned int
         // is 4294967295.
         cudaMemset(dev_cellStart, 0xffffffff, 
                 grid.num[0]*grid.num[1]*grid.num[2]*sizeof(unsigned int));
         cudaThreadSynchronize();
         checkForCudaErrors("Post cudaMemset");
 
-        // Use sorted order to reorder particle arrays (position, velocities, radii) to ensure
-        // coherent memory access. Save ordered configurations in new arrays (*_sorted).
+        // Use sorted order to reorder particle arrays (position, velocities,
+        // radii) to ensure coherent memory access. Save ordered configurations
+        // in new arrays (*_sorted).
         if (PROFILING == 1)
             startTimer(&kernel_tic);
         reorderArrays<<<dimGrid, dimBlock, smemSize>>>(dev_cellStart, 
@@ -919,25 +915,28 @@ __host__ void DEM::startTime()
 
 #ifdef DARCY_GPU
             
-            checkForCudaErrors("Before findPorositiesCubicDev", iter);
+            checkForCudaErrors("Before findPorositiesDev", iter);
             // Find cell porosities
             if (PROFILING == 1)
                 startTimer(&kernel_tic);
-            findPorositiesCubicDev<<<dimGridFluid, dimBlockFluid>>>(
+            /*findPorositiesCubicDev<<<dimGridFluid, dimBlockFluid>>>(
                     dev_cellStart,
                     dev_cellEnd,
                     dev_x_sorted,
-                    dev_d_phi);
-            //findPorositiesSphericalDev<<<dimGridFluid, dimBlockFluid>>>(
-                    //dev_cellStart,
-                    //dev_cellEnd,
-                    //dev_x_sorted,
-                    //dev_d_phi);
+                    dev_d_phi,
+                    dev_d_dphi);*/
+            findPorositiesSphericalDev<<<dimGridFluid, dimBlockFluid>>>(
+                    dev_cellStart,
+                    dev_cellEnd,
+                    dev_x_sorted,
+                    dev_d_phi,
+                    dev_d_dphi,
+                    iter);
             cudaThreadSynchronize();
             if (PROFILING == 1)
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
-                        &t_findPorositiesCubicDev);
-            checkForCudaErrors("Post findPorositiesCubicDev", iter);
+                        &t_findPorositiesDev);
+            checkForCudaErrors("Post findPorositiesDev", iter);
 
             // Find resulting cell transmissivities
             if (PROFILING == 1)
@@ -965,7 +964,8 @@ __host__ void DEM::startTime()
                     dev_d_T,
                     dev_d_Ss,
                     dev_d_W,
-                    dev_d_phi);
+                    dev_d_phi,
+                    dev_d_dphi);
             cudaThreadSynchronize();
             if (PROFILING == 1)
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
@@ -980,7 +980,8 @@ __host__ void DEM::startTime()
                     dev_d_H_new,
                     dev_d_T,
                     dev_d_Ss,
-                    dev_d_W);
+                    dev_d_W,
+                    dev_d_dphi);
             cudaThreadSynchronize();
             if (PROFILING == 1)
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
@@ -1185,7 +1186,9 @@ __host__ void DEM::startTime()
 
             filetimeclock = 0.0;
         }
-        //break; // Stop after the first iteration
+
+        // Uncomment break command to stop after the first iteration
+        //break;
     }
 
     // Stop clock and display calculation time spent
@@ -1219,7 +1222,7 @@ __host__ void DEM::startTime()
     if (PROFILING == 1 && verbose == 1) {
         double t_sum = t_calcParticleCellID + t_thrustsort + t_reorderArrays +
             t_topology + t_interact + t_bondsLinear + t_latticeBoltzmannD3Q19 +
-            t_integrate + t_summation + t_integrateWalls + t_findPorositiesCubicDev +
+            t_integrate + t_summation + t_integrateWalls + t_findPorositiesDev +
             t_findDarcyTransmissivitiesDev + t_setDarcyGhostNodesDev +
             t_explDarcyStepDev + t_findDarcyGradientsDev +
             t_findDarcyVelocitiesDev;
@@ -1259,8 +1262,8 @@ __host__ void DEM::startTime()
             << "\t(" << 100.0*t_integrateWalls/t_sum << " %)\n";
         if (params.nu > 0.0 && darcy == 1) {
             cout 
-            << "  - findPorositiesCubicDev:\t\t" << t_findPorositiesCubicDev/1000.0
-            << " s" << "\t(" << 100.0*t_findPorositiesCubicDev/t_sum << " %)\n"
+            << "  - findPorositiesDev:\t\t" << t_findPorositiesDev/1000.0
+            << " s" << "\t(" << 100.0*t_findPorositiesDev/t_sum << " %)\n"
             << "  - findDarcyTransmis.Dev:\t" <<
             t_findDarcyTransmissivitiesDev/1000.0 << " s"
             << "\t(" << 100.0*t_findDarcyTransmissivitiesDev/t_sum << " %)\n"

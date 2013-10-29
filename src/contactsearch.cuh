@@ -99,77 +99,77 @@ __device__ void findAndProcessContactsInCell(int3 targetCell,
     // Get distance modifier for interparticle
     // vector, if it crosses a periodic boundary
     Float3 distmod = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
-    if (findDistMod(&targetCell, &distmod) == -1)
-        return; // Target cell lies outside the grid
+    if (findDistMod(&targetCell, &distmod) != -1) {
 
 
-    //// Check and process particle-particle collisions
+        //// Check and process particle-particle collisions
 
-    // Calculate linear cell ID
-    unsigned int cellID = targetCell.x + targetCell.y * devC_grid.num[0]
-        + (devC_grid.num[0] * devC_grid.num[1]) * targetCell.z; 
+        // Calculate linear cell ID
+        unsigned int cellID = targetCell.x + targetCell.y * devC_grid.num[0]
+            + (devC_grid.num[0] * devC_grid.num[1]) * targetCell.z; 
 
-    // Lowest particle index in cell
-    unsigned int startIdx = dev_cellStart[cellID];
+        // Lowest particle index in cell
+        unsigned int startIdx = dev_cellStart[cellID];
 
-    // Make sure cell is not empty
-    if (startIdx != 0xffffffff) {
+        // Make sure cell is not empty
+        if (startIdx != 0xffffffff) {
 
-        // Highest particle index in cell + 1
-        unsigned int endIdx = dev_cellEnd[cellID];
+            // Highest particle index in cell + 1
+            unsigned int endIdx = dev_cellEnd[cellID];
 
-        // Iterate over cell particles
-        for (unsigned int idx_b = startIdx; idx_b<endIdx; ++idx_b) {
-            if (idx_b != idx_a) { // Do not collide particle with itself
+            // Iterate over cell particles
+            for (unsigned int idx_b = startIdx; idx_b<endIdx; ++idx_b) {
+                if (idx_b != idx_a) { // Do not collide particle with itself
 
-                // Fetch position and velocity of particle B.
-                Float4 x_b      = dev_x_sorted[idx_b];
-                Float  radius_b = x_b.w;
-                Float  kappa 	= devC_params.kappa;
+                    // Fetch position and velocity of particle B.
+                    Float4 x_b      = dev_x_sorted[idx_b];
+                    Float  radius_b = x_b.w;
+                    Float  kappa 	= devC_params.kappa;
 
-                // Distance between particle centers (Float4 -> Float3)
-                Float3 x_ab = MAKE_FLOAT3(x_a.x - x_b.x, 
-                        x_a.y - x_b.y, 
-                        x_a.z - x_b.z);
+                    // Distance between particle centers (Float4 -> Float3)
+                    Float3 x_ab = MAKE_FLOAT3(x_a.x - x_b.x, 
+                            x_a.y - x_b.y, 
+                            x_a.z - x_b.z);
 
-                // Adjust interparticle vector if periodic boundary/boundaries
-                // are crossed
-                x_ab += distmod;
-                Float x_ab_length = length(x_ab);
+                    // Adjust interparticle vector if periodic boundary/boundaries
+                    // are crossed
+                    x_ab += distmod;
+                    Float x_ab_length = length(x_ab);
 
-                // Distance between particle perimeters
-                Float delta_ab = x_ab_length - (radius_a + radius_b); 
+                    // Distance between particle perimeters
+                    Float delta_ab = x_ab_length - (radius_a + radius_b); 
 
-                // Check for particle overlap
-                if (delta_ab < 0.0f) {
-                    contactLinearViscous(F, T, es_dot, ev_dot, p, 
-                            idx_a, idx_b,
-                            dev_vel_sorted, 
-                            dev_angvel_sorted,
-                            radius_a, radius_b, 
-                            x_ab, x_ab_length,
-                            delta_ab, kappa);
-                } else if (delta_ab < devC_params.db) { 
-                    // Check wether particle distance satisfies the capillary bond distance
-                    capillaryCohesion_exp(F, radius_a, radius_b, delta_ab, 
-                            x_ab, x_ab_length, kappa);
-                }
+                    // Check for particle overlap
+                    if (delta_ab < 0.0f) {
+                        contactLinearViscous(F, T, es_dot, ev_dot, p, 
+                                idx_a, idx_b,
+                                dev_vel_sorted, 
+                                dev_angvel_sorted,
+                                radius_a, radius_b, 
+                                x_ab, x_ab_length,
+                                delta_ab, kappa);
+                    } else if (delta_ab < devC_params.db) { 
+                        // Check wether particle distance satisfies the capillary bond distance
+                        capillaryCohesion_exp(F, radius_a, radius_b, delta_ab, 
+                                x_ab, x_ab_length, kappa);
+                    }
 
-                // Check wether particles are bonded together
-                /*if (bonds.x == idx_b || bonds.y == idx_b ||
-                  bonds.z == idx_b || bonds.w == idx_b) {
-                  bondLinear(F, T, es_dot, p, % ev_dot missing
-                  idx_a, idx_b,
-                  dev_x_sorted, dev_vel_sorted,
-                  dev_angvel_sorted,
-                  radius_a, radius_b,
-                  x_ab, x_ab_length,
-                  delta_ab);
-                  }*/
+                    // Check wether particles are bonded together
+                    /*if (bonds.x == idx_b || bonds.y == idx_b ||
+                      bonds.z == idx_b || bonds.w == idx_b) {
+                      bondLinear(F, T, es_dot, p, % ev_dot missing
+                      idx_a, idx_b,
+                      dev_x_sorted, dev_vel_sorted,
+                      dev_angvel_sorted,
+                      radius_a, radius_b,
+                      x_ab, x_ab_length,
+                      delta_ab);
+                      }*/
 
-            } // Do not collide particle with itself end
-        } // Iterate over cell particles end
-    } // Check wether cell is empty end
+                } // Do not collide particle with itself end
+            } // Iterate over cell particles end
+        } // Check wether cell is empty end
+    } // Periodic boundary and distance adjustment end
 } // End of overlapsInCell(...)
 
 
@@ -192,118 +192,118 @@ __device__ void findContactsInCell(int3 targetCell,
     // Get distance modifier for interparticle
     // vector, if it crosses a periodic boundary
     Float3 distmod = MAKE_FLOAT3(0.0f, 0.0f, 0.0f);
-    if (findDistMod(&targetCell, &distmod) == -1)
-        return; // Target cell lies outside the grid
-
-    __syncthreads();
-
-    //// Check and process particle-particle collisions
-
-    // Calculate linear cell ID
-    unsigned int cellID = targetCell.x + targetCell.y * devC_grid.num[0]
-        + (devC_grid.num[0] * devC_grid.num[1]) * targetCell.z; 
-
-    // Lowest particle index in cell
-    unsigned int startIdx = dev_cellStart[cellID];
-
-    // Make sure cell is not empty
-    if (startIdx != 0xffffffff) {
+    if (findDistMod(&targetCell, &distmod) != -1) {
 
         __syncthreads();
 
-        // Highest particle index in cell + 1
-        unsigned int endIdx = dev_cellEnd[cellID];
+        //// Check and process particle-particle collisions
 
-        // Read the original index of particle A
-        unsigned int idx_a_orig = dev_gridParticleIndex[idx_a];
+        // Calculate linear cell ID
+        unsigned int cellID = targetCell.x + targetCell.y * devC_grid.num[0]
+            + (devC_grid.num[0] * devC_grid.num[1]) * targetCell.z; 
 
-        // Iterate over cell particles
-        for (unsigned int idx_b = startIdx; idx_b<endIdx; ++idx_b) {
-            if (idx_b != idx_a) { // Do not collide particle with itself
+        // Lowest particle index in cell
+        unsigned int startIdx = dev_cellStart[cellID];
+
+        // Make sure cell is not empty
+        if (startIdx != 0xffffffff) {
+
+            __syncthreads();
+
+            // Highest particle index in cell + 1
+            unsigned int endIdx = dev_cellEnd[cellID];
+
+            // Read the original index of particle A
+            unsigned int idx_a_orig = dev_gridParticleIndex[idx_a];
+
+            // Iterate over cell particles
+            for (unsigned int idx_b = startIdx; idx_b<endIdx; ++idx_b) {
+                if (idx_b != idx_a) { // Do not collide particle with itself
 
 
-                // Fetch position and radius of particle B.
-                Float4 x_b      = dev_x_sorted[idx_b];
-                Float  radius_b = x_b.w;
+                    // Fetch position and radius of particle B.
+                    Float4 x_b      = dev_x_sorted[idx_b];
+                    Float  radius_b = x_b.w;
 
-                // Read the original index of particle B
-                unsigned int idx_b_orig = dev_gridParticleIndex[idx_b];
+                    // Read the original index of particle B
+                    unsigned int idx_b_orig = dev_gridParticleIndex[idx_b];
 
-                //__syncthreads();
+                    //__syncthreads();
 
-                // Distance between particle centers (Float4 -> Float3)
-                Float3 x_ab = MAKE_FLOAT3(x_a.x - x_b.x, 
-                        x_a.y - x_b.y, 
-                        x_a.z - x_b.z);
+                    // Distance between particle centers (Float4 -> Float3)
+                    Float3 x_ab = MAKE_FLOAT3(x_a.x - x_b.x, 
+                            x_a.y - x_b.y, 
+                            x_a.z - x_b.z);
 
-                // Adjust interparticle vector if periodic boundary/boundaries
-                // are crossed
-                x_ab += distmod;
+                    // Adjust interparticle vector if periodic boundary/boundaries
+                    // are crossed
+                    x_ab += distmod;
 
-                Float x_ab_length = length(x_ab);
+                    Float x_ab_length = length(x_ab);
 
-                // Distance between particle perimeters
-                Float delta_ab = x_ab_length - (radius_a + radius_b); 
+                    // Distance between particle perimeters
+                    Float delta_ab = x_ab_length - (radius_a + radius_b); 
 
-                // Check for particle overlap
-                if (delta_ab < 0.0f) {
+                    // Check for particle overlap
+                    if (delta_ab < 0.0f) {
 
-                    // If the particle is not yet registered in the contact list,
-                    // use the next position in the array
-                    int cpos = *nc;
-                    unsigned int cidx;
+                        // If the particle is not yet registered in the contact list,
+                        // use the next position in the array
+                        int cpos = *nc;
+                        unsigned int cidx;
 
-                    // Find out, if particle is already registered in contact list
-                    for (int i=0; i < devC_nc; ++i) {
-                        __syncthreads();
-                        cidx = dev_contacts[(unsigned int)(idx_a_orig*devC_nc+i)];
-                        if (cidx == devC_np) // Write to position of now-deleted contact
-                            cpos = i;
-                        else if (cidx == idx_b_orig) { // Write to position of same contact
-                            cpos = i;
-                            break;
+                        // Find out, if particle is already registered in contact list
+                        for (int i=0; i < devC_nc; ++i) {
+                            __syncthreads();
+                            cidx = dev_contacts[(unsigned int)(idx_a_orig*devC_nc+i)];
+                            if (cidx == devC_np) // Write to position of now-deleted contact
+                                cpos = i;
+                            else if (cidx == idx_b_orig) { // Write to position of same contact
+                                cpos = i;
+                                break;
+                            }
                         }
+
+                        __syncthreads();
+
+                        // Write the particle index to the relevant position,
+                        // no matter if it already is there or not (concurrency of write)
+                        dev_contacts[(unsigned int)(idx_a_orig*devC_nc+cpos)] = idx_b_orig;
+
+
+                        // Write the interparticle vector and radius of particle B
+                        //dev_x_ab_r_b[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_Float4(x_ab, radius_b);
+                        dev_distmod[(unsigned int)(idx_a_orig*devC_nc+cpos)] = MAKE_FLOAT4(distmod.x, distmod.y, distmod.z, radius_b);
+
+                        // Increment contact counter
+                        ++*nc;
+
+                        // Check if the number of contacts of particle A
+                        // exceeds the max. number of contacts per particle
+                        if (*nc > devC_nc)
+                            return; // I would like to throw an error, but it doesn't seem possible...
+
                     }
 
-                    __syncthreads();
+                    // Write the inter-particle position vector correction and radius of particle B
+                    //dev_distmod[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_Float4(distmod, radius_b);
 
-                    // Write the particle index to the relevant position,
-                    // no matter if it already is there or not (concurrency of write)
-                    dev_contacts[(unsigned int)(idx_a_orig*devC_nc+cpos)] = idx_b_orig;
+                    // Check wether particles are bonded together
+                    /*if (bonds.x == idx_b || bonds.y == idx_b ||
+                      bonds.z == idx_b || bonds.w == idx_b) {
+                      bondLinear(F, T, es_dot, p, % ev_dot missing
+                      idx_a, idx_b,
+                      dev_x_sorted, dev_vel_sorted,
+                      dev_angvel_sorted,
+                      radius_a, radius_b,
+                      x_ab, x_ab_length,
+                      delta_ab);
+                      }*/
 
-
-                    // Write the interparticle vector and radius of particle B
-                    //dev_x_ab_r_b[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_Float4(x_ab, radius_b);
-                    dev_distmod[(unsigned int)(idx_a_orig*devC_nc+cpos)] = MAKE_FLOAT4(distmod.x, distmod.y, distmod.z, radius_b);
-
-                    // Increment contact counter
-                    ++*nc;
-
-                    // Check if the number of contacts of particle A
-                    // exceeds the max. number of contacts per particle
-                    if (*nc > devC_nc)
-                        return; // I would like to throw an error, but it doesn't seem possible...
-
-                }
-
-                // Write the inter-particle position vector correction and radius of particle B
-                //dev_distmod[(unsigned int)(idx_a_orig*devC_nc+cpos)] = make_Float4(distmod, radius_b);
-
-                // Check wether particles are bonded together
-                /*if (bonds.x == idx_b || bonds.y == idx_b ||
-                  bonds.z == idx_b || bonds.w == idx_b) {
-                  bondLinear(F, T, es_dot, p, % ev_dot missing
-                  idx_a, idx_b,
-                  dev_x_sorted, dev_vel_sorted,
-                  dev_angvel_sorted,
-                  radius_a, radius_b,
-                  x_ab, x_ab_length,
-                  delta_ab);
-                  }*/
-
-            } // Do not collide particle with itself end
-        } // Iterate over cell particles end
-    } // Check wether cell is empty end
+                } // Do not collide particle with itself end
+            } // Iterate over cell particles end
+        } // Check wether cell is empty end
+    } // Periodic boundary and distmod end
 } // End of findContactsInCell(...)
 
 

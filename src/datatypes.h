@@ -120,6 +120,7 @@ struct Darcy {
     Float* Ss;         // Cell hydraulic storativity
     Float* W;          // Cell hydraulic recharge
     Float* phi;        // Cell porosity
+    Float* dphi;       // Cell porosity change
 };
 
 

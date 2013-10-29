@@ -33,6 +33,7 @@ void DEM::initDarcyMem(const Float cellsizemultiplier)
     d.Ss    = new Float[ncells];  // hydraulic storativity matrix
     d.W     = new Float[ncells];  // hydraulic recharge
     d.phi   = new Float[ncells];  // cell porosity
+    d.dphi  = new Float[ncells];  // cell porosity change
 }
 
 // Free memory
@@ -47,6 +48,7 @@ void DEM::freeDarcyMem()
     delete[] d.Ss;
     delete[] d.W;
     delete[] d.phi;
+    delete[] d.dphi;
 }
 
 // 3D index to 1D index
@@ -82,8 +84,8 @@ void DEM::initDarcyVals()
                 cellidx = idx(ix,iy,iz);
 
                 // Hydraulic storativity [-]
-                //d.Ss[cellidx] = 1.0;
-                d.Ss[cellidx] = 8.0e-3;
+                d.Ss[cellidx] = 1.0;
+                //d.Ss[cellidx] = 8.0e-3;
 
                 // Hydraulic recharge [s^-1]
                 d.W[cellidx] = 0.0;
@@ -113,6 +115,7 @@ void DEM::copyDarcyVals(unsigned int read, unsigned int write)
     d.Ss[write]    = d.Ss[read];
     d.W[write]     = d.W[read];
     d.phi[write]   = d.phi[read];
+    d.dphi[write]  = d.dphi[read];
 }
 
 // Update ghost nodes from their parent cell values
@@ -179,12 +182,8 @@ void DEM::findDarcyTransmissivities()
     // Density of the fluid [kg/m^3]
     const Float rho = 1000.0;
 
-    // Kozeny-Carman parameter
-    //Float a = 1.0e-8;
-    //Float a = 1.0;
-    
     // Representative grain radius
-    Float r_bar2 = meanRadius()*2.0;
+    Float r_bar2 = meanRadius()*2.0 * 1.0e-6;
     // Grain size factor for Kozeny-Carman relationship
     Float d_factor = r_bar2*r_bar2/180.0;
 
@@ -208,8 +207,7 @@ void DEM::findDarcyTransmissivities()
 
                 // Save hydraulic conductivity [m/s]
                 //K = d.K[cellidx];
-                //K = k*rho*-params.g[2]/params.nu;
-                K = 0.5; 
+                K = k*rho*-params.g[2]/params.nu;
                 d.K[cellidx] = K;
 
                 // Hydraulic transmissivity [m2/s]
@@ -463,7 +461,7 @@ void DEM::explDarcyStep()
                     (  gradx_n + gradx_p
                      + grady_n + grady_p
                      + gradz_n + gradz_p
-                     + d.W[cellidx] );
+                     + d.W[cellidx] - d.dphi[cellidx]/time.dt);
 
                 // Calculate new hydraulic pressure in cell
                 d.H_new[cellidx] = H + deltaH;
@@ -624,7 +622,6 @@ Float DEM::cellPorosity(
 
     // Return the porosity, which should always be ]0.0;1.0[
     Float phi = fmin(0.99, fmax(0.01, void_volume/cell_volume));
-    phi = 0.5;
     return phi;
 }
 
@@ -632,10 +629,14 @@ Float DEM::cellPorosity(
 void DEM::findPorosities()
 {
     int ix, iy, iz, cellidx;
+    Float phi, phi_0;
     for (ix=0; ix<d.nx; ++ix) {
         for (iy=0; iy<d.ny; ++iy) {
             for (iz=0; iz<d.nz; ++iz) {
-                d.phi[idx(ix,iy,iz)] = cellPorosity(ix,iy,iz);
+                phi_0 = d.phi[idx(ix,iy,iz)];
+                phi = cellPorosity(ix,iy,iz);
+                d.phi[idx(ix,iy,iz)] = phi;
+                d.dphi[idx(ix,iy,iz)] = phi - phi_0;
             }
         }
     }
@@ -741,8 +742,9 @@ void DEM::checkDarcyTimestep()
     if (value > 0.5) {
         std::cerr << "Error! The explicit Darcy solution will be unstable.\n"
             << "This happens due to a combination of the following:\n"
-            << " - The transmissivity T (i.e. hydraulic conductivity, K)"
-            << " is too large (" << T_max << ")\n"
+            << " - The transmissivity T (i.e. hydraulic conductivity, K ("
+            << T_max/(d.dx)
+            << ") is too large (" << T_max << ")\n"
             << " - The storativity S is too small"
             << " (" << S_min << ")\n"
             << " - The time step is too large"
@@ -782,6 +784,15 @@ void DEM::initDarcy()
     //initDarcyMem(); // done in readbin
     initDarcyVals();
     findDarcyTransmissivities();
+
+    // set dphi values to zero
+    for (int ix=0; ix<d.nx; ++ix) {
+        for (int iy=0; iy<d.ny; ++iy) {
+            for (int iz=0; iz<d.nz; ++iz) {
+                d.dphi[idx(ix,iy,iz)] = 0.0;
+            }
+        }
+    }
 
     checkDarcyTimestep();
 }
