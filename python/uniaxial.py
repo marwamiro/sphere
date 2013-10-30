@@ -4,7 +4,7 @@
 from sphere import *
 
 ### EXPERIMENT SETUP ###
-initialization = True
+initialization = False
 consolidation  = True
 rendering      = True
 plots	       = True

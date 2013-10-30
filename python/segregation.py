@@ -18,7 +18,7 @@ sim_id = "segregation"
 
 # Deviatoric stress [Pa]
 #devslist = [80e3, 10e3, 20e3, 40e3, 60e3, 120e3]
-devslist = [80e3]
+devslist = [120e3]
 #devs = 0
 
 ### INITIALIZATION ###
@@ -30,10 +30,10 @@ init = Spherebin(np = np, nd = 3, nw = 0, sid = sim_id + "-init")
 init.generateRadii(radius_mean = 0.08)
 
 # Use default params
-init.defaultParams(gamma_n = 0.0, mu_s = 0.3, mu_d = 0.3)
+init.defaultParams(gamma_n = 0.0, mu_s = 0.4, mu_d = 0.4)
 
 # Initialize positions in random grid (also sets world size)
-hcells = np**(1.0/3.0)
+hcells = np**(1.0/3.0)*0.6
 init.initRandomGridPos(gridnum = numpy.array([hcells, hcells, 1e9]), periodic = 1, contactmodel = 2)
 
 # Decrease size of top particles
@@ -115,7 +115,63 @@ for devs in devslist:
   shear.readbin("../output/" + sim_id + "-cons-devs{}.output{:0=5}.bin".format(devs, lastf), verbose = False)
 
   # Setup shear experiment
-  shear.shear(shear_strain_rate = 0.05, periodic = init.periodic)
+  #shear.shear(shear_strain_rate = 0.05, periodic = init.periodic)
+  shear_strain_rate = 0.05
+
+  ## Custom shear function
+  # Find lowest and heighest point
+  z_min = numpy.min(shear.x[:,2] - shear.radius)
+  z_max = numpy.max(shear.x[:,2] + shear.radius)
+
+  # the grid cell size is equal to the max. particle diameter
+  cellsize = shear.L[0] / shear.num[0]
+
+  # make grid one cell heigher to allow dilation
+  shear.num[2] += 1
+  shear.L[2] = shear.num[2] * cellsize
+
+  # zero kinematics
+  shear.zeroKinematics()
+
+  # set friction coefficients
+  shear.mu_s[0] = 0.5
+  shear.mu_d[0] = 0.5
+
+  # set the thickness of the horizons of fixed particles
+  #fixheight = 2*cellsize
+  #fixheight = cellsize
+
+  # Fix horizontal velocity to 0.0 of lowermost particles
+  d_max_below = numpy.max(shear.radius[numpy.nonzero(shear.x[:,2] <
+      (z_max-z_min)*0.3)])*2.0
+  #I = numpy.nonzero(shear.x[:,2] < (z_min + fixheight))
+  I = numpy.nonzero(shear.x[:,2] < (z_min + d_max_below))
+  shear.fixvel[I] = 1
+  shear.angvel[I,0] = 0.0
+  shear.angvel[I,1] = 0.0
+  shear.angvel[I,2] = 0.0
+  shear.vel[I,0] = 0.0 # x-dim
+  shear.vel[I,1] = 0.0 # y-dim
+
+  # Copy bottom fixed particles to top
+  z_offset = z_max-z_min
+  shearvel = (z_max-z_min)*shear_strain_rate
+  for i in I[0]:
+      x = shear.x[i,:] + numpy.array([0.0, 0.0, z_offset])
+      vel = numpy.array([shearvel, 0.0, 0.0])
+      shear.addParticle(x = x, radius = shear.radius[i], fixvel = 1, vel = vel)
+      
+
+  # Set wall viscosities to zero
+  shear.gamma_wn[0] = 0.0
+  shear.gamma_wt[0] = 0.0
+
+  # Set wall friction coefficients to zero
+  shear.mu_ws[0] = 0.0
+  shear.mu_wd[0] = 0.0
+
+  # Readjust top wall
+  shear.adjustUpperWall()
 
   # Set duration of simulation
   #shear.initTemporal(total = 20.0)
