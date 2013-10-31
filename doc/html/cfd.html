@@ -1,0 +1,231 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Fluid dynamics by CFD &mdash; sphere 0.35 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/breathe.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.35',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="sphere 0.35 documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">sphere 0.35 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="fluid-dynamics-by-cfd">
+<h1>Fluid dynamics by CFD<a class="headerlink" href="#fluid-dynamics-by-cfd" title="Permalink to this headline">¶</a></h1>
+<p>Fluid flow is governed by the Navier-Stokes continuity and momentum equations,
+assuming that the fluid is incompressible. In a single phase fluid without
+grains, the continuity equation is:</p>
+<div class="math">
+<p><img src="_images/math/8a322e242c02e6e3f6456bc1c76dce8c49278c57.png" alt="\nabla \cdot \boldsymbol{v}_f = 0"/></p>
+</div><p>and the momentum equation:</p>
+<div class="math">
+<p><img src="_images/math/00d04ecbd040dc341b29c1fa4f8b9d0414ce0042.png" alt="\frac{\partial \boldsymbol{v}_f}{\partial t}
++ \bar{\boldsymbol{v}}_f \cdot \nabla \bar{\boldsymbol{v}}_f =
+- \frac{1}{\rho_f} \nabla p_f + \nu \nabla^2 \bar{\boldsymbol{v}}_f
++ \boldsymbol{f}_g"/></p>
+</div><p>Here, <img class="math" src="_images/math/66827e948e4818d3ec677995210f1bdb15909fb7.png" alt="\bar{\boldsymbol{v}}_f"/> is the averaged fluid velocity,
+and <img class="math" src="_images/math/c15a871ddb0fa13b8be399034a63cb533befb6e0.png" alt="\bar{p}_f"/> is the averaged fluid pressure. <img class="math" src="_images/math/d6a7ccf879c4a4fe694033606332cb83806db296.png" alt="\nu"/> is the fluid
+viscosity, and <img class="math" src="_images/math/25e76bc25e44f13c8ab8dbad4adc0cac4f874ffe.png" alt="\boldsymbol{f}_g"/> is the gravitational force.  The
+<a class="reference external" href="https://en.wikipedia.org/wiki/Laplace_operator">Laplacian</a> (<img class="math" src="_images/math/601942ed0022ec9cd1c0b629f9b136761dfb9e24.png" alt="\nabla^2"/>) is the <a class="reference external" href="https://en.wikipedia.org/wiki/Divergence">divergence</a> (<img class="math" src="_images/math/7ece103a81e5a32a7c5b2bfc0077d84982b1ceb5.png" alt="\nabla \cdot"/>) of
+the <a class="reference external" href="https://en.wikipedia.org/wiki/Gradient">gradient</a> (<img class="math" src="_images/math/53196dddfbaf8145fd14be11cf568c5154588ed5.png" alt="\nabla"/>):</p>
+<div class="math">
+<p><img src="_images/math/3928a3af6feb89685ad2aa30aadc29498d5a053e.png" alt="\nabla^2 = \nabla \cdot \nabla =
+\frac{\partial^2}{\partial x^2} +
+\frac{\partial^2}{\partial y^2} +
+\frac{\partial^2}{\partial z^2}"/></p>
+</div><p>The discrete Laplacian (approximation of the Laplace operator) can be obtained
+by a finite-difference seven-point stencil in a three-dimensional regular, cubic
+grid with cell spacing <img class="math" src="_images/math/8189a5b5a0917b8c93350827be4038af1839139d.png" alt="h"/>, considering the 6 face neighbors (O&#8217;Reilly and
+Beck 2006):</p>
+<div class="math">
+<p><img src="_images/math/76ba284f05a673fc5449d48ada7c65e0ebccc20c.png" alt="% OReilly and Beck 2006 A Family of Large-Stencil Discrete Laplacian
+% Approximations in Three Dimensions
+\nabla^2 f(x,y,z) \approx \frac{1}{h^2} \left(
+f(x-h,y,z) + f(x+h,y,z) + f(x,y-h,z) +
+f(x,y+h,z) + f(x,y,z-h) + f(x,y,z+h) - 6f(x,y) \right)"/></p>
+</div><p>In an averaged discretization, assuming that that the fluid is inviscid (zero
+viscosity), the continuity equation becomes:</p>
+<div class="math">
+<p><img src="_images/math/3d9c3be726284ea10391a06e5c7092fdbd9a3be9.png" alt="\nabla \cdot \bar{\boldsymbol{v}}_f = 0"/></p>
+</div><p>The bar symbol denotes that the value is averaged in the cell. The momentum
+equation becomes:</p>
+<div class="math">
+<p><img src="_images/math/5f50b00d26eadec7bee517dc1175d599662bded1.png" alt="\frac{\partial \bar{\boldsymbol{v}}_f}{\partial t}
++ \bar{\boldsymbol{v}}_f \cdot \nabla \bar{\boldsymbol{v}}_f =
+- \frac{1}{\rho_f} \nabla \bar{p}_f
++ \boldsymbol{f}_g"/></p>
+</div><p>When the fluid flow happens in a porous medium, the equations are modified to
+take account for the porosity in the cell (<img class="math" src="_images/math/2c175f60eecef1de7560c3bdea495d69f26f719d.png" alt="\phi"/>) and the averaged drag
+from the particles (<img class="math" src="_images/math/33da2aa1147b91267089ec7ed73039af4321c06c.png" alt="\boldsymbol{\bar{f}}_i"/>) (Shamy and Zeghal, 2005, and
+model A in Zhu et al. 2007). The continuity equation becomes:</p>
+<div class="math">
+<p><img src="_images/math/6e38d01f115bb59cac8751d7a25d65a8452b122c.png" alt="\frac{\partial \phi}{\partial t}
++ \nabla \cdot (\phi \bar{\boldsymbol{v}}_f) = 0"/></p>
+</div><p>and the momentum equation becomes:</p>
+<div class="math">
+<p><img src="_images/math/3f1463d07e5dbcbe7a94f15d7da66f588add5d7e.png" alt="\frac{\partial (\phi \bar{\boldsymbol{v}}_f)}{\partial t}
++ \nabla \cdot (\phi \bar{\boldsymbol{v}}_f \bar{\boldsymbol{v}}_f) =
+- \frac{1}{\rho_f} \phi \nabla \bar{p}_f
+- \frac{1}{\rho_f} \boldsymbol{\bar{f}}_i
++ \phi \boldsymbol{f}_g"/></p>
+</div><p>The solution of the above equations is performed by operator splitting methods.
+The methodology presented by Langtangen et al. (2002) is for a viscous fluid
+without particles. A velocity prediction after a forward step in time
+(<img class="math" src="_images/math/a1ffc0a012620941fe660cedabff822ce7162eca.png" alt="\Delta t"/>) in the momentum equation is found using an explicit scheme:</p>
+<div class="math">
+<p><img src="_images/math/1e3907ae788adcabeb51730916d57d1e349b06c0.png" alt="\bar{\boldsymbol{v}}^*_f = \bar{\boldsymbol{v}}^t_f
+- \Delta t \bar{\boldsymbol{v}}^t_f \cdot \nabla \bar{\boldsymbol{v}}^t_f
+- \Delta t \frac{\beta}{\rho_f} \nabla \bar{p}_f^t
++ \Delta t \nu \nabla^2 \bar{\boldsymbol{v}}_f^t
++ \Delta t \boldsymbol{f}_g^t"/></p>
+</div><p>This predicted velocity does not account for the incompressibility condition.
+The parameter <img class="math" src="_images/math/fdb63b9e51abe6bbb16acfb5d7b773ddbb5bf4a8.png" alt="\beta"/> is an adjustable, dimensionless relaxation
+parameter. The above velocity prediction is modified to account for the presence
+of particles and the fluid inviscidity:</p>
+<div class="math">
+<p><img src="_images/math/acc0a8cb6a2ff751faf90438538ed2d858b9f57a.png" alt="\bar{\boldsymbol{v}}^*_f = \bar{\boldsymbol{v}}^t_f
+- \Delta t \nabla \cdot (\phi^t \bar{\boldsymbol{v}}_f^t \bar{\boldsymbol{v}}_f^t)
+- \Delta t \frac{\beta}{\rho_f} \phi \nabla \bar{p}_f^t
+- \frac{\Delta t}{\rho_f} \boldsymbol{\bar{f}}_i^t
++ \Delta t \phi^t \boldsymbol{f}_g^t"/></p>
+</div><p>The new velocities should fulfill the continuity (here incompressibility)
+equation:</p>
+<div class="math">
+<p><img src="_images/math/b8177a765f1ef9ce10e7c068ef2694a016fca598.png" alt="\frac{\Delta \phi}{\Delta t} + \nabla \cdot (\phi
+\bar{\boldsymbol{v}}_f^{t+\Delta t}) = 0"/></p>
+</div><p>The divergence of a scalar and vector can be <a class="reference external" href="http://www.wolframalpha.com/input/?i=div(p+v)">split</a>:</p>
+<div class="math">
+<p><img src="_images/math/dcaa76ccb952af552ea420c054a1265bfacff670.png" alt="\phi \nabla \cdot \bar{\boldsymbol{v}}_f^{t+\Delta t} +
+\bar{\boldsymbol{v}}_f^{t+\Delta t} \cdot \nabla \phi
++ \frac{\Delta \phi}{\Delta t} = 0"/></p>
+</div><p>The predicted velocity is corrected using the new pressure (Langtangen et al.
+2002):</p>
+<div class="math">
+<p><img src="_images/math/3118c95461d8d1f1bd2674cbe40e7932c2b2aaea.png" alt="\bar{\boldsymbol{v}}_f^{t+\Delta t} = \bar{\boldsymbol{v}}_f^*
+- \frac{\Delta t}{\rho} \nabla \epsilon
+\quad \text{where} \quad
+\epsilon = p_f^{t+\Delta t} - \beta p_f^t"/></p>
+</div><p>The above formulation of the future velocity is put into the continuity
+equation:</p>
+<div class="math">
+<p><img src="_images/math/6fa5eb45222e5fe87c6356ff57e36f4de4b72f06.png" alt="\Rightarrow
+\phi \nabla \cdot
+\left( \bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho_f} \nabla \epsilon \right)
++
+\left( \bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho_f} \nabla \epsilon \right)
+\cdot \nabla \phi + \frac{\Delta \phi}{\Delta t} = 0"/></p>
+</div><div class="math">
+<p><img src="_images/math/3c5cc3d744aa9e6b9efc6107d6569fadfda9c5ae.png" alt="\Rightarrow
+\phi \nabla \cdot
+\bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho_f} \phi \nabla^2 \epsilon
++ \nabla \phi \cdot \bar{\boldsymbol{v}}^*_f
+- \nabla \phi \cdot \nabla \epsilon \frac{\Delta t}{\rho}
++ \frac{\Delta \phi}{\Delta t} = 0"/></p>
+</div><div class="math">
+<p><img src="_images/math/d7c73dc33cff75969256aa43b0e909415a8219ea.png" alt="\Rightarrow
+\frac{\Delta t}{\rho} \phi \nabla^2 \epsilon
+= \phi \nabla \cdot \bar{\boldsymbol{v}}^*_f
++ \nabla \phi \cdot \bar{\boldsymbol{v}}^*_f
+- \nabla \phi \cdot \nabla \epsilon \frac{\Delta t}{\rho}
++ \frac{\Delta \phi}{\Delta t}"/></p>
+</div><p>The pressure difference in time becomes a <a class="reference external" href="https://en.wikipedia.org/wiki/Poisson's_equation">Poisson equation</a> with added terms:</p>
+<div class="math">
+<p><img src="_images/math/9025f3143e085f3e9f1a887fb495a4f839419bf0.png" alt="\Rightarrow
+\nabla^2 \epsilon
+= \frac{\nabla \cdot \bar{\boldsymbol{v}}^*_f \rho}{\Delta t}
++ \frac{\nabla \phi \cdot \bar{\boldsymbol{v}}^*_f \rho}{\Delta t \phi}
+- \frac{\nabla \phi \cdot \nabla \epsilon}{\phi}
++ \frac{\Delta \phi \rho}{\Delta t^2 \phi}"/></p>
+</div><p>The value of <img class="math" src="_images/math/eaf4418fbe935c15a606516d8f55dc380cd8e822.png" alt="\epsilon"/> is found <a class="reference external" href="https://en.wikipedia.org/wiki/Relaxation_(iterative_method)">iteratively</a> by using the discrete
+Laplacian previously mentioned. When the solution is found, the value is used to
+find the new pressure and velocity:</p>
+<div class="math">
+<p><img src="_images/math/e56e5eb570de1ee059a5ff63362b614af30f2d38.png" alt="\bar{p}_f^{t+\Delta t} = \beta \bar{p}^t + \epsilon"/></p>
+</div><div class="math">
+<p><img src="_images/math/b6c0be5d6af8394d5e559a0a74f4aa9fa5c0d81a.png" alt="\bar{\boldsymbol{v}}_f^{t+\Delta t} =
+\bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho} \nabla \phi"/></p>
+</div></div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/cfd.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">sphere 0.35 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Anders Damsgaard.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
