@@ -207,8 +207,6 @@ An important note is that the \texttt{C} examples of the NVIDIA CUDA SDK should 
 *sphere* is supplied with several Makefiles, which automate the compilation process. To compile all components, open a shell, go to the \texttt{src/} subfolder and type \texttt{make}. The GNU Make will return the parameters passed to the individual CUDA and GNU compilers (\texttt{nvcc} and \texttt{gcc}). The resulting binary file (\texttt{sphere}) is placed in the *sphere* root folder. ``src/Makefile`` will also compile the raytracer.
 
 
-
-
 C++ reference
 -------------
 .. doxygenclass:: DEM

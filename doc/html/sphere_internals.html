@@ -241,14 +241,14 @@ An important note is that the texttt{C} examples of the NVIDIA CUDA SDK should b
 <div class="section" id="c-reference">
 <h2>C++ reference<a class="headerlink" href="#c-reference" title="Permalink to this headline">¶</a></h2>
 <div class="line-block">
-<div class="line"><em>class</em> <strong>DEM</strong></div>
+<div class="line" id=""><span id="project0classDEM"></span><em>class</em> <strong>DEM</strong></div>
 </div>
 <blockquote>
 <div><p></p>
 <p></p>
 <em>Public Functions</em><blockquote>
-<div><p id=""><span id="project0classDEM_1a3cd6355aefc172c712f1c91f4ffc36f2"></span><div class="line-block">
-<div class="line"> <strong>DEM</strong>(std::string inputbin, const int verbosity = 1, const int checkVals = 1, const int dry = 0, const int initCuda = 1, const int transferConstMem = 1)</div>
+<div><p id=""><span id="project0classDEM_1a59ab83e9cbdb7bbeb3f43564fbb294b4"></span><div class="line-block">
+<div class="line"> <strong>DEM</strong>(std::string inputbin, const int verbosity = 1, const int checkVals = 1, const int dry = 0, const int initCuda = 1, const int transferConstMem = 1, const int darcyflow = 0)</div>
 </div>
 </p>
 <blockquote>
@@ -353,6 +353,54 @@ An important note is that the texttt{C} examples of the NVIDIA CUDA SDK should b
 </div></blockquote>
 <p id=""><span id="project0classDEM_1ad94250277dec22f68e096bbf149ff0a8"></span><div class="line-block">
 <div class="line">void <strong>forcechains</strong>(const std::string format = &#8220;interactive&#8221;, const int threedim = 1, const double lower_cutoff = 0.0, const double upper_cutoff = 1.0e9)</div>
+</div>
+</p>
+<blockquote>
+<div><p></p>
+<p></p>
+</div></blockquote>
+<p id=""><span id="project0classDEM_1a4f398ac462ce442eff0b649286c03bcb"></span><div class="line-block">
+<div class="line">void <strong>printNSarray</strong>(FILE * stream, Float * arr)</div>
+</div>
+</p>
+<blockquote>
+<div><p></p>
+<p></p>
+</div></blockquote>
+<p id=""><span id="project0classDEM_1a5495c54f09b7a9d157352daf7de77500"></span><div class="line-block">
+<div class="line">void <strong>printNSarray</strong>(FILE * stream, Float * arr, std::string desc)</div>
+</div>
+</p>
+<blockquote>
+<div><p></p>
+<p></p>
+</div></blockquote>
+<p id=""><span id="project0classDEM_1ae7b0770eb976dbc262e76f414444f78d"></span><div class="line-block">
+<div class="line">void <strong>printNSarray</strong>(FILE * stream, Float3 * arr)</div>
+</div>
+</p>
+<blockquote>
+<div><p></p>
+<p></p>
+</div></blockquote>
+<p id=""><span id="project0classDEM_1add65316e75fc181c73ab636dff42187a"></span><div class="line-block">
+<div class="line">void <strong>printNSarray</strong>(FILE * stream, Float3 * arr, std::string desc)</div>
+</div>
+</p>
+<blockquote>
+<div><p></p>
+<p></p>
+</div></blockquote>
+<p id=""><span id="project0classDEM_1a777844d118f6d317b17466ec0760bbff"></span><div class="line-block">
+<div class="line">void <strong>writeNSarray</strong>(Float * array, const char * filename)</div>
+</div>
+</p>
+<blockquote>
+<div><p></p>
+<p></p>
+</div></blockquote>
+<p id=""><span id="project0classDEM_1a9eb88295a2de9273d24605e960e1b6f0"></span><div class="line-block">
+<div class="line">void <strong>writeNSarray</strong>(Float3 * array, const char * filename)</div>
 </div>
 </p>
 <blockquote>

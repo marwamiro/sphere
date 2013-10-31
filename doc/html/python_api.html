@@ -64,9 +64,23 @@
 <p>Contains functions for reading and writing binaries, as well as simulation
 setup and data analysis.</p>
 <dl class="method">
+<dt id="sphere.Spherebin.addParticle">
+<tt class="descname">addParticle</tt><big>(</big><em>x</em>, <em>radius</em>, <em>xysum=array([ 0.</em>, <em>0.])</em>, <em>vel=array([ 0.</em>, <em>0.</em>, <em>0.])</em>, <em>fixvel=array([ 0.])</em>, <em>force=array([ 0.</em>, <em>0.</em>, <em>0.])</em>, <em>angpos=array([ 0.</em>, <em>0.</em>, <em>0.])</em>, <em>angvel=array([ 0.</em>, <em>0.</em>, <em>0.])</em>, <em>torque=array([ 0.</em>, <em>0.</em>, <em>0.])</em>, <em>es_dot=array([ 0.])</em>, <em>es=array([ 0.])</em>, <em>ev_dot=array([ 0.])</em>, <em>ev=array([ 0.])</em>, <em>p=array([ 0.])</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.addParticle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a single particle to the simulation object. The only required
+parameters are the position (x), a length-three array, and the
+radius (radius), a length-one array.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="sphere.Spherebin.adjustUpperWall">
 <tt class="descname">adjustUpperWall</tt><big>(</big><em>z_adjust=1.1</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.adjustUpperWall" title="Permalink to this definition">¶</a></dt>
-<dd><p>Adjust grid and dynamic upper wall to max. particle height</p>
+<dd><p>Included for legacy purposes, calls adjustWall with idx=0</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sphere.Spherebin.adjustWall">
+<tt class="descname">adjustWall</tt><big>(</big><em>idx</em>, <em>adjust=1.1</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.adjustWall" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adjust grid and dynamic wall to max. particle position</p>
 </dd></dl>
 
 <dl class="method">
@@ -164,6 +178,12 @@ very low value.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="sphere.Spherebin.initFluid">
+<tt class="descname">initFluid</tt><big>(</big><em>nu=0.00089</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.initFluid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the fluid arrays and the fluid viscosity</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="sphere.Spherebin.initGrid">
 <tt class="descname">initGrid</tt><big>(</big><big>)</big><a class="headerlink" href="#sphere.Spherebin.initGrid" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize grid suitable for the particle positions set previously.
@@ -212,6 +232,14 @@ prior to these.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="sphere.Spherebin.plotFluidPorositiesY">
+<tt class="descname">plotFluidPorositiesY</tt><big>(</big><em>iteration=-1</em>, <em>y=-1</em>, <em>outformat='png'</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.plotFluidPorositiesY" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the porosity values from the simulation. If iteration is -1
+(default value), the last output file will be shown. If the y value is
+-1, the center x,z plane will be rendered</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="sphere.Spherebin.porosities">
 <tt class="descname">porosities</tt><big>(</big><em>outformat='pdf'</em>, <em>zslices=16</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.porosities" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot porosities with depth</p>
@@ -239,8 +267,32 @@ specified, due to the random selection algorithm.</p>
 
 <dl class="method">
 <dt id="sphere.Spherebin.readbin">
-<tt class="descname">readbin</tt><big>(</big><em>targetbin</em>, <em>verbose=True</em>, <em>bonds=True</em>, <em>devsmod=True</em>, <em>fluid=True</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.readbin" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">readbin</tt><big>(</big><em>targetbin</em>, <em>verbose=True</em>, <em>bonds=True</em>, <em>devsmod=True</em>, <em>fluid=True</em>, <em>esysparticle=False</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.readbin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Reads a target SPHERE binary file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sphere.Spherebin.readfirst">
+<tt class="descname">readfirst</tt><big>(</big><em>verbose=True</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.readfirst" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read first output file of self.sid</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sphere.Spherebin.readlast">
+<tt class="descname">readlast</tt><big>(</big><em>verbose=True</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.readlast" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read last output binary of self.sid from output/ folder.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sphere.Spherebin.readsecond">
+<tt class="descname">readsecond</tt><big>(</big><em>verbose=True</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.readsecond" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read second output file of self.sid</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sphere.Spherebin.readstep">
+<tt class="descname">readstep</tt><big>(</big><em>step</em>, <em>verbose=True</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.readstep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read output binary from time step &#8216;step&#8217; from output/ folder.</p>
 </dd></dl>
 
 <dl class="method">
@@ -251,7 +303,7 @@ specified, due to the random selection algorithm.</p>
 
 <dl class="method">
 <dt id="sphere.Spherebin.run">
-<tt class="descname">run</tt><big>(</big><em>verbose=True</em>, <em>hideinputfile=False</em>, <em>dry=False</em>, <em>valgrind=False</em>, <em>cudamemcheck=False</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.run" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">run</tt><big>(</big><em>verbose=True</em>, <em>hideinputfile=False</em>, <em>dry=False</em>, <em>valgrind=False</em>, <em>cudamemcheck=False</em>, <em>darcyflow=False</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Execute sphere with target project</p>
 </dd></dl>
 
@@ -283,6 +335,12 @@ initial height per second.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="sphere.Spherebin.status">
+<tt class="descname">status</tt><big>(</big><big>)</big><a class="headerlink" href="#sphere.Spherebin.status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show the current simulation status</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="sphere.Spherebin.thinsection_x1x3">
 <tt class="descname">thinsection_x1x3</tt><big>(</big><em>x2='center'</em>, <em>graphicsformat='png'</em>, <em>cbmax=None</em>, <em>arrowscale=0.01</em>, <em>velarrowscale=1.0</em>, <em>slipscale=1.0</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.thinsection_x1x3" title="Permalink to this definition">¶</a></dt>
 <dd><p>Produce a 2D image of particles on a x1,x3 plane, intersecting the second axis at x2.
@@ -303,6 +361,14 @@ gnuplot&gt; plot &#8216;&lt;sid&gt;-ts-x1x3.txt&#8217; with circles palette fs t
 </dd></dl>
 
 <dl class="method">
+<dt id="sphere.Spherebin.triaxial">
+<tt class="descname">triaxial</tt><big>(</big><em>wvel=-0.001</em>, <em>deviatoric_stress=10000.0</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.triaxial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setup triaxial experiment. The upper wall is moved at a fixed
+velocity in m/s, default values is -0.001 m/s (i.e. downwards).
+The side walls are exerting a deviatoric stress</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="sphere.Spherebin.uniaxialStrainRate">
 <tt class="descname">uniaxialStrainRate</tt><big>(</big><em>wvel=-0.001</em>, <em>periodic=1</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.uniaxialStrainRate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Setup consolidation experiment. Specify the upper wall
@@ -310,9 +376,33 @@ velocity in m/s, default value is -0.001 m/s (i.e. downwards).</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="sphere.Spherebin.video">
+<tt class="descname">video</tt><big>(</big><em>out_folder='./'</em>, <em>video_format='mp4'</em>, <em>graphics_folder='../img_out/'</em>, <em>graphics_format='png'</em>, <em>fps=25</em>, <em>qscale=1</em>, <em>bitrate=1800</em>, <em>verbose=False</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.video" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use ffmpeg to combine images to animation. All images should be rendered beforehand.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="sphere.Spherebin.voidRatio">
 <tt class="descname">voidRatio</tt><big>(</big><big>)</big><a class="headerlink" href="#sphere.Spherebin.voidRatio" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the current void ratio</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sphere.Spherebin.writeFluidVTK">
+<tt class="descname">writeFluidVTK</tt><big>(</big><em>folder='../output/'</em>, <em>verbose=True</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.writeFluidVTK" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes fluid data to a target VTK file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sphere.Spherebin.writeVTK">
+<tt class="descname">writeVTK</tt><big>(</big><em>folder='../output/'</em>, <em>verbose=True</em><big>)</big><a class="headerlink" href="#sphere.Spherebin.writeVTK" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes to a target VTK file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sphere.Spherebin.writeVTKall">
+<tt class="descname">writeVTKall</tt><big>(</big><big>)</big><a class="headerlink" href="#sphere.Spherebin.writeVTKall" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes all output binaries from the simulation to VTK files</p>
 </dd></dl>
 
 <dl class="method">
