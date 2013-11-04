@@ -31,7 +31,7 @@ class DEM {
 
         // HOST STRUCTURES
         // Structure containing individual particle kinematics
-        Kinematics k;	// host
+        Kinematics k;
 
         // Structure containing energy values
         Energies e;
@@ -55,44 +55,56 @@ class DEM {
 
 
         // DEVICE ARRAYS
-        Float4 *dev_x;
-        Float2 *dev_xysum;
-        Float4 *dev_vel;
-        Float4 *dev_vel0;
-        Float4 *dev_acc;
-        Float4 *dev_force;
-        Float4 *dev_angpos;
-        Float4 *dev_angvel;
-        Float4 *dev_angvel0;
-        Float4 *dev_angacc;
-        Float4 *dev_torque;
-        unsigned int *dev_contacts;
-        Float4 *dev_distmod;
-        Float4 *dev_delta_t;
-        Float *dev_es_dot;
-        Float *dev_es;
-        Float *dev_ev_dot;
-        Float *dev_ev;
-        Float *dev_p;
-        Float4 *dev_x_sorted;
-        Float4 *dev_vel_sorted;
-        Float4 *dev_angvel_sorted;
-        unsigned int *dev_gridParticleCellID;
-        unsigned int *dev_gridParticleIndex;
-        unsigned int *dev_cellStart;
-        unsigned int *dev_cellEnd;
-        int *dev_walls_wmode;
-        Float4 *dev_walls_nx; // normal, pos.
-        Float4 *dev_walls_mvfd; // Mass, velocity, force, dev. stress
-        Float *dev_walls_force_partial; // Pre-sum per wall
-        Float *dev_walls_force_pp; // Force per particle per wall
-        Float *dev_walls_vel0; // Half-step velocity
-        uint2 *dev_bonds;   // Particle bond pairs
-        Float4 *dev_bonds_delta; // Particle bond displacement
-        Float4 *dev_bonds_omega; // Particle bond rotation
+
+        // Particle kinematics arrays
+        Float4        *dev_x;
+        Float2        *dev_xysum;
+        Float4        *dev_vel;
+        Float4        *dev_vel0;
+        Float4        *dev_acc;
+        Float4        *dev_force;
+        Float4        *dev_angpos;
+        Float4        *dev_angvel;
+        Float4        *dev_angvel0;
+        Float4        *dev_angacc;
+        Float4        *dev_torque;
+        unsigned int  *dev_contacts;
+        Float4        *dev_distmod;
+        Float4        *dev_delta_t;
+        Float         *dev_es_dot;
+        Float         *dev_es;
+        Float         *dev_ev_dot;
+        Float         *dev_ev;
+        Float         *dev_p;
+
+        // Sorted kinematics arrays
+        Float4        *dev_x_sorted;
+        Float4        *dev_vel_sorted;
+        Float4        *dev_angvel_sorted;
+
+        // Sorting grid arrays
+        unsigned int  *dev_gridParticleCellID;
+        unsigned int  *dev_gridParticleIndex;
+        unsigned int  *dev_cellStart;
+        unsigned int  *dev_cellEnd;
+
+        // Wall arrays
+        int           *dev_walls_wmode;
+        Float4        *dev_walls_nx;        // normal, pos.
+        Float4        *dev_walls_mvfd;      // mass, velocity, force, dev. stress
+        Float         *dev_walls_force_partial; // Pre-sum per wall
+        Float         *dev_walls_force_pp;  // Force per particle per wall
+        Float         *dev_walls_vel0;      // Half-step velocity
+
+        // Bond arrays
+        uint2         *dev_bonds;           // Particle bond pairs
+        Float4        *dev_bonds_delta;     // Particle bond displacement
+        Float4        *dev_bonds_omega;     // Particle bond rotation
+
+        // Raytracer arrays
         unsigned char *dev_img;
-        float4 *dev_ray_origo;	// Ray data always single precision
-        float4 *dev_ray_direction;
+        float4        *dev_ray_origo;       // Ray data always single precision
+        float4        *dev_ray_direction;
 
 
         // GPU initialization, must be called before startTime()
@@ -144,74 +156,37 @@ class DEM {
         Float4 *v_rho;      // Fluid velocity v (xyz), and pressure rho (w) 
         Float4 *dev_v_rho;  // Device equivalent
 
-        //// Darcy-flow 
-        int darcy;  // 0: no, 1: yes
+        //// Porous flow 
+        int navierstokes;  // 0: no, 1: yes
 
-        // Darcy values, host
-        Darcy d;
+        // Navier Stokes values, host
+        NavierStokes ns;
 
-        // Darcy values, device
-        Float* dev_d_H;     // Cell hydraulic heads
-        Float* dev_d_H_new; // Cell hydraulic heads
-        Float3* dev_d_V;    // Cell fluid velocity
-        Float3* dev_d_dH;   // Cell spatial gradient in heads
-        Float* dev_d_K;     // Cell hydraulic conductivities
-        Float3* dev_d_T;    // Cell hydraulic transmissivity
-        Float* dev_d_Ss;    // Cell hydraulic storativity
-        Float* dev_d_W;     // Cell hydraulic recharge
-        Float* dev_d_phi;   // Cell porosity
-        Float* dev_d_dphi;  // Cell porosity change
+        // Navier Stokes values, device
+        Float*  dev_ns_p;           // Cell hydraulic pressure
+        //Float*  dev_ns_p_new;       // New cell hydraulic pressure
+        Float3* dev_ns_dp;          // Cell hydraulic pressure gradient
+        Float3* dev_ns_v;           // Cell fluid velocity
+        Float3* dev_ns_v_p;         // Predicted cell fluid velocity
+        Float*  dev_ns_phi;         // Cell porosity
+        Float*  dev_ns_dphi;        // Cell porosity change
+        Float3* dev_ns_div_phi_v_v; // Divegence used in velocity prediction
+        Float*  dev_ns_epsilon;     // Pressure difference
+        Float*  dev_ns_epsilon_new; // Pressure diff. after Jacobi iteration
+        Float*  dev_ns_norm;        // Normalized residual of epsilon values
+        Float*  dev_ns_f;           // Values of forcing function
+        Float*  dev_ns_f1;          // Constant terms in forcing function
+        Float3* dev_ns_f2;          // Constant slopes in forcing function
 
-        //// Darcy functions
+        //// Navier Stokes functions
 
         // Memory allocation
-        void initDarcyMem(const Float cellsizemultiplier = 1.0);
-        void freeDarcyMem();
+        void initNSmem();
+        void freeNSmem();
+
+        // Returns the number of fluid cells
+        unsigned int NScells();
         
-        // Set some values for the Darcy parameters
-        void initDarcyVals();
-
-        // Copy Darcy values from cell to cell (by index)
-        void copyDarcyVals(unsigned int read, unsigned int write);
-
-        // Update ghost nodes from their parent cell values
-        void setDarcyGhostNodes();
-
-        // Find cell transmissivities from hydraulic conductivities and cell
-        // dimensions
-        void findDarcyTransmissivities();
-
-        // Finds central difference gradients
-        void findDarcyGradients();
-        
-        // Set gradient to zero at grid edges
-        void setDarcyBCNeumannZero();
-        
-        // Find particles in cell
-        std::vector<unsigned int> particlesInCell(
-                const Float3 min, const Float3 max);
-
-        // Return the lower corner coordinates of a cell
-        Float3 cellMinBoundaryDarcy(const int x, const int y, const int z);
-
-        // Return the upper corner coordinates of a cell
-        Float3 cellMaxBoundaryDarcy(const int x, const int y, const int z);
-
-        // Returns the cell volume
-        Float cellVolumeDarcy();
-
-        // Add fluid drag to the particles inside each cell
-        void fluidDragDarcy();
-
-        // Find porosity of cell
-        Float cellPorosity(const int x, const int y, const int z);
-
-        // Find and save all cell porosities
-        void findPorosities();
-
-        // Find darcy flow velocities from specific flux (q)
-        void findDarcyVelocities();
-
         // Returns the mean particle radius
         Float meanRadius();
 
@@ -219,26 +194,23 @@ class DEM {
         unsigned int idx(const int x, const int y, const int z);
 
         // Initialize Darcy values and arrays
-        void initDarcy();
+        void initNS();
 
-        // Clean up Darcy arrays
-        void endDarcy();
-        void endDarcyDev();
+        // Clean up Navier Stokes arrays
+        void endNS();
+        void endNSdev();
 
-        // Check whether the explicit integration is going to meet the
-        // stability criteria
-        Float getTmax();
-        Float getSsmin();
-        void checkDarcyTimestep();
+        // Finds the average value of the normalized residual norm in CPU memory
+        double avgNormResNS();
 
-        // Perform a single time step, explicit integration
-        void explDarcyStep();
+        // Allocate and free memory for NS arrays on device
+        void initNSmemDev();
+        void freeNSmemDev();
 
-        //// Darcy functions, device
-        void initDarcyMemDev();
-        void freeDarcyMemDev();
-        void transferDarcyToGlobalDeviceMemory(int statusmsg);
-        void transferDarcyFromGlobalDeviceMemory(int statusmsg);
+        // Transfer array values between GPU and CPU
+        void transferNStoGlobalDeviceMemory(int statusmsg);
+        void transferNSfromGlobalDeviceMemory(int statusmsg);
+        void transferNSnormFromGlobalDeviceMemory();
 
 
     public:
@@ -307,18 +279,17 @@ class DEM {
                 const double upper_cutoff = 1.0e9);
 
         
-        ///// Darcy flow functions
+        ///// Porous flow functions
 
+        // Print fluid arrays to file stream
+        void printNSarray(FILE* stream, Float* arr);
+        void printNSarray(FILE* stream, Float* arr, std::string desc);
+        void printNSarray(FILE* stream, Float3* arr);
+        void printNSarray(FILE* stream, Float3* arr, std::string desc);
 
-        // Print Darcy arrays to file stream
-        void printDarcyArray(FILE* stream, Float* arr);
-        void printDarcyArray(FILE* stream, Float* arr, std::string desc);
-        void printDarcyArray(FILE* stream, Float3* arr);
-        void printDarcyArray(FILE* stream, Float3* arr, std::string desc);
-
-        // Write Darcy arrays to file
-        void writeDarcyArray(Float* array, const char* filename);
-        void writeDarcyArray(Float3* array, const char* filename);
+        // Write fluid arrays to file
+        void writeNSarray(Float* array, const char* filename);
+        void writeNSarray(Float3* array, const char* filename);
 };
 
 #endif

@@ -25,7 +25,7 @@
 #include "integration.cuh"
 #include "raytracer.cuh"
 #include "latticeboltzmann.cuh"
-#include "darcy.cuh"
+#include "navierstokes.cuh"
 
 
 // Wrapper function for initializing the CUDA components.
@@ -308,7 +308,7 @@ __host__ void DEM::allocateGlobalDeviceMemory(void)
 
     // Fluid arrays
 #ifdef LBM_GPU
-    if (params.nu > 0.0 && darcy == 0) {
+    if (params.nu > 0.0 && navierstokes == 0) {
         cudaMalloc((void**)&dev_f,
                 sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19);
         cudaMalloc((void**)&dev_f_new,
@@ -371,18 +371,16 @@ __host__ void DEM::freeGlobalDeviceMemory()
 
     // Fluid arrays
 #ifdef LBM_GPU
-    if (params.nu > 0.0 && darcy == 0) {
+    if (params.nu > 0.0 && navierstokes == 0) {
         cudaFree(dev_f);
         cudaFree(dev_f_new);
         cudaFree(dev_v_rho);
     }
 #endif
 
-#ifdef DARCY_GPU
-    if (params.nu > 0.0 && darcy == 1) {
-        freeDarcyMemDev();
+    if (params.nu > 0.0 && navierstokes == 1) {
+        freeNSmemDev();
     }
-#endif
 
     checkForCudaErrors("During cudaFree calls");
 
@@ -465,7 +463,7 @@ __host__ void DEM::transferToGlobalDeviceMemory(int statusmsg)
 
     // Fluid arrays
     if (params.nu > 0.0) {
-        if (darcy == 0) {
+        if (navierstokes == 0) {
 #ifdef LBM_GPU
             cudaMemcpy( dev_f, f,
                     sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
@@ -474,11 +472,11 @@ __host__ void DEM::transferToGlobalDeviceMemory(int statusmsg)
                     sizeof(Float4)*grid.num[0]*grid.num[1]*grid.num[2],
                     cudaMemcpyHostToDevice);
 #endif
-        } else if (darcy == 1) {
-            transferDarcyToGlobalDeviceMemory(1);
+        } else if (navierstokes == 1) {
+            transferNStoGlobalDeviceMemory(1);
         } else {
-            std::cerr << "Error: Darcy value not understood ("
-                << darcy << ")" << std::endl;
+            std::cerr << "Error: navierstokes value not understood ("
+                << navierstokes << ")" << std::endl;
         }
     }
 
@@ -552,7 +550,7 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
 
     // Fluid arrays
     if (params.nu > 0.0) {
-        if (darcy == 0) {
+        if (navierstokes == 0) {
 #ifdef LBM_GPU
         cudaMemcpy( f, dev_f,
                 sizeof(Float)*grid.num[0]*grid.num[1]*grid.num[2]*19,
@@ -562,9 +560,7 @@ __host__ void DEM::transferFromGlobalDeviceMemory()
                 cudaMemcpyDeviceToHost);
 #endif
         } else {
-#ifdef DARCY_GPU
-            transferDarcyFromGlobalDeviceMemory(0);
-#endif
+            transferNSfromGlobalDeviceMemory(0);
         }
     }
 
@@ -636,7 +632,7 @@ __host__ void DEM::startTime()
             << dimBlock.x << "*" << dimBlock.y << "*" << dimBlock.z << "\n"
             << "  - Shared memory required per block: " << smemSize << " bytes"
             << endl;
-        if (params.nu > 0.0 && darcy == 0) {
+        if (params.nu > 0.0 && navierstokes == 0) {
             cout << "  - Blocks per fluid grid: "
                 << dimGridFluid.x << "*" << dimGridFluid.y << "*" <<
                 dimGridFluid.z << "\n"
@@ -662,22 +658,14 @@ __host__ void DEM::startTime()
     fclose(fp);
 
     // Initialize fluid distribution array
-    Float d_factor;
     if (params.nu > 0.0) {
-        if (darcy == 0) {
+        if (navierstokes == 0) {
 #ifdef LBM_GPU
             initFluid<<< dimGridFluid, dimBlockFluid >>>(dev_v_rho, dev_f);
             cudaThreadSynchronize();
 #endif
-        } else if (darcy == 1) {
-#ifdef DARCY_GPU
-            // Representative grain radius
-            const Float r_bar2 = meanRadius()*2.0;
-            // Grain size factor for Kozeny-Carman relationship
-            d_factor = r_bar2*r_bar2/180.0 * 1.0e-6;
-#endif
         } else {
-            std::cerr << "Error, darcy value (" << darcy 
+            std::cerr << "Error, navierstokes value (" << navierstokes 
                 << ") not understood." << std::endl;
         }
     }
@@ -712,11 +700,10 @@ __host__ void DEM::startTime()
     double t_integrateWalls = 0.0;
 
     double t_findPorositiesDev = 0.0;
-    double t_findDarcyTransmissivitiesDev = 0.0;
-    double t_setDarcyGhostNodesDev = 0.0;
-    double t_explDarcyStepDev = 0.0;
-    double t_findDarcyGradientsDev = 0.0;
-    double t_findDarcyVelocitiesDev = 0.0;
+    double t_setNSghostNodesDev = 0.0;
+    double t_explNSstepDev = 0.0;
+    double t_findNSgradientsDev = 0.0;
+    double t_findNSvelocitiesDev = 0.0;
 
     if (PROFILING == 1) {
         cudaEventCreate(&kernel_tic);
@@ -879,7 +866,7 @@ __host__ void DEM::startTime()
         }
 
         // Process fluid and particle interaction in each cell
-        if (params.nu > 0.0 && darcy == 0 && grid.periodic == 1) {
+        if (params.nu > 0.0 && navierstokes == 0 && grid.periodic == 1) {
 #ifdef LBM_GPU
             if (PROFILING == 1)
                 startTimer(&kernel_tic);
@@ -910,27 +897,19 @@ __host__ void DEM::startTime()
 
         }
 
-        // Solve darcy flow through grid
-        if (params.nu > 0.0 && darcy == 1) {
+        // Solve navierstokes flow through grid
+        if (params.nu > 0.0 && navierstokes == 1) {
 
-#ifdef DARCY_GPU
-            
             checkForCudaErrors("Before findPorositiesDev", iter);
             // Find cell porosities
             if (PROFILING == 1)
                 startTimer(&kernel_tic);
-            /*findPorositiesCubicDev<<<dimGridFluid, dimBlockFluid>>>(
-                    dev_cellStart,
-                    dev_cellEnd,
-                    dev_x_sorted,
-                    dev_d_phi,
-                    dev_d_dphi);*/
             findPorositiesSphericalDev<<<dimGridFluid, dimBlockFluid>>>(
                     dev_cellStart,
                     dev_cellEnd,
                     dev_x_sorted,
-                    dev_d_phi,
-                    dev_d_dphi,
+                    dev_ns_phi,
+                    dev_ns_dphi,
                     iter);
             cudaThreadSynchronize();
             if (PROFILING == 1)
@@ -938,104 +917,101 @@ __host__ void DEM::startTime()
                         &t_findPorositiesDev);
             checkForCudaErrors("Post findPorositiesDev", iter);
 
-            // Find resulting cell transmissivities
+            if (iter == 0) {
+                // Define the first estimate of the values of epsilon
+                setNSepsilon<<<dimGridFluid, dimBlockFluid>>>(dev_ns_epsilon);
+                cudaThreadSynchronize();
+                checkForCudaErrors("Post setNSepsilon");
+
+                setNSdirichlet<<<dimGridFluid, dimBlockFluid>>>(dev_ns_epsilon);
+                cudaThreadSynchronize();
+                checkForCudaErrors("Post setNSdirichlet");
+            }
+
+            // Set the values of the ghost nodes in the grid
             if (PROFILING == 1)
                 startTimer(&kernel_tic);
-            findDarcyTransmissivitiesDev<<<dimGridFluid, dimBlockFluid>>>(
-                    dev_d_K,
-                    dev_d_T,
-                    dev_d_phi,
-                    d_factor);
+            setNSghostNodesDev<<<dimGridFluid, dimBlockFluid>>>(
+                    dev_ns_p,
+                    //dev_ns_p_new,
+                    dev_ns_dp,
+                    dev_ns_v,
+                    dev_ns_v_p,
+                    dev_ns_phi,
+                    dev_ns_dphi,
+                    dev_ns_epsilon);
             cudaThreadSynchronize();
             if (PROFILING == 1)
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
-                        &t_findDarcyTransmissivitiesDev);
-            checkForCudaErrors("Post findDarcyTransmissivitiesDev", iter);
+                        &t_setNSghostNodesDev);
+            checkForCudaErrors("Post setNSghostNodesDev", iter);
 
-            // Perform explicit Darcy time step
+            // Solve the system of epsilon using a Jacobi iterative solver.
+            // The average normalized residual is initialized to a large value.
+            double avg_norm_res;
+            const double tolerance = 1.0e-3;
+            const unsigned int maxiter = 1e6;
+            for (unsigned int nijac = 0; nijac<maxiter; ++nijac) {
+
+                // Only grad(epsilon) changes during the Jacobi iterations. The
+                // remaining terms of the forcing function are only calculated
+                // during the first iteration.
+                findNSforcing<<<dimGridFluid, dimBlockFluid>>>(
+                        dev_ns_epsilon,
+                        dev_ns_f1,
+                        dev_ns_f2,
+                        dev_ns_f,
+                        nijac);
+                cudaThreadSynchronize();
+                checkForCudaErrors("Post findNSforcings", iter);
+
+                // Perform a single Jacobi iteration
+                jacobiIterationNS<<<dimGridFluid, dimBlockFluid>>>(
+                        dev_ns_epsilon,
+                        dev_ns_epsilon_new,
+                        dev_ns_norm,
+                        dev_ns_f);
+                cudaThreadSynchronize();
+                checkForCudaErrors("Post jacobiIterationNS", iter);
+
+                // transfer normalized residuals from GPU to CPU
+                transferNSnormFromGlobalDeviceMemory();
+
+                // find average value of the normalized residuals
+                avg_norm_res = avgNormResNS();
+
+                if (avg_norm_res < tolerance)
+                    break;  // solution has converged, exit for-loop
+
+                if (nijac == maxiter-1) {
+                    std::cerr << "Iteration " << iter << ", time " 
+                        << iter*time.dt << " s: "
+                        "Error, the epsilon solution in the fluid "
+                        "calculations did not converge. Try increasing the "
+                        "value of 'maxiter' or increase 'tolerance'."
+                        << std::endl;
+                }
+            } // end Jacobi iteration loop
+
+            // Flip flop - swap new and current array pointers
+            Float* tmp         = dev_ns_epsilon;
+            dev_ns_epsilon     = dev_ns_epsilon_new;
+            dev_ns_epsilon_new = tmp;
+
+            // Find the new pressures and velocities
             if (PROFILING == 1)
                 startTimer(&kernel_tic);
-            setDarcyGhostNodesDev<<<dimGridFluid, dimBlockFluid>>>(
-                    dev_d_H,
-                    dev_d_H_new,
-                    dev_d_V,
-                    dev_d_dH,
-                    dev_d_K,
-                    dev_d_T,
-                    dev_d_Ss,
-                    dev_d_W,
-                    dev_d_phi,
-                    dev_d_dphi);
+            updateNSvelocityPressure<<<dimGridFluid, dimBlockFluid>>>(
+                    dev_ns_p,
+                    dev_ns_v,
+                    dev_ns_v_p,
+                    dev_ns_epsilon);
             cudaThreadSynchronize();
             if (PROFILING == 1)
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
-                        &t_setDarcyGhostNodesDev);
-            checkForCudaErrors("Post setDarcyGhostNodesDev", iter);
+                        &t_findNSvelocitiesDev);
+            checkForCudaErrors("Post updateNSvelocityPressure", iter);
 
-            // Perform explicit Darcy time step
-            if (PROFILING == 1)
-                startTimer(&kernel_tic);
-            explDarcyStepDev<<<dimGridFluid, dimBlockFluid>>>(
-                    dev_d_H,
-                    dev_d_H_new,
-                    dev_d_T,
-                    dev_d_Ss,
-                    dev_d_W,
-                    dev_d_dphi);
-            cudaThreadSynchronize();
-            if (PROFILING == 1)
-                stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
-                        &t_explDarcyStepDev);
-            checkForCudaErrors("Post explDarcyStepDev", iter);
-
-            // Flip flop
-            Float* tmp = dev_d_H;
-            dev_d_H = dev_d_H_new;
-            dev_d_H_new = tmp;
-            
-
-            // Find the pressure gradients
-            if (PROFILING == 1)
-                startTimer(&kernel_tic);
-            findDarcyGradientsDev<<<dimGridFluid, dimBlockFluid>>>(
-                    dev_d_H, dev_d_dH);
-            cudaThreadSynchronize();
-            if (PROFILING == 1)
-                stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
-                        &t_findDarcyGradientsDev);
-            checkForCudaErrors("Post findDarcyGradientsDev", iter);
-
-            // Find the velocities caused by the pressure gradients
-            if (PROFILING == 1)
-                startTimer(&kernel_tic);
-            findDarcyVelocitiesDev<<<dimGridFluid, dimBlockFluid>>>(
-                    dev_d_H,
-                    dev_d_dH,
-                    dev_d_V,
-                    dev_d_phi,
-                    dev_d_K);
-            cudaThreadSynchronize();
-            if (PROFILING == 1)
-                stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
-                        &t_findDarcyVelocitiesDev);
-            checkForCudaErrors("Post findDarcyVelocitiesDev", iter);
-
-#else
-            // Copy device data to host memory
-            transferFromGlobalDeviceMemory();
-
-            // Pause the CPU thread until all CUDA calls previously issued are completed
-            cudaThreadSynchronize();
-
-            // Perform a Darcy time step on the CPU
-            explDarcyStep();
-
-            // Transfer data from host to device memory
-            transferToGlobalDeviceMemory(0);
-
-            // Pause the CPU thread until all CUDA calls previously issued are completed
-            cudaThreadSynchronize();
-#endif
         }
 
         // Update particle kinematics
@@ -1106,7 +1082,7 @@ __host__ void DEM::startTime()
         break;*/
 
         // Update timers and counters
-        time.current  += time.dt;
+        time.current  = iter*time.dt;
         filetimeclock += time.dt;
         ++iter;
 
@@ -1137,13 +1113,11 @@ __host__ void DEM::startTime()
             sprintf(file,"output/%s.output%05d.bin", sid.c_str(), time.step_count);
             writebin(file);
 
-            // Write Darcy arrays
-            if (params.nu > 0.0 && darcy == 1) {
-                sprintf(file,"output/%s.d_phi.output%05d.bin", sid.c_str(), time.step_count);
-                writeDarcyArray(d.phi, file);
-                sprintf(file,"output/%s.d_K.output%05d.bin", sid.c_str(), time.step_count);
-                writeDarcyArray(d.K, file);
-            }
+            // Write fluid arrays
+            /*if (params.nu > 0.0 && navierstokes == 1) {
+                sprintf(file,"output/%s.ns_phi.output%05d.bin", sid.c_str(), time.step_count);
+                writeNSarray(ns.phi, file);
+            }*/
 
             if (CONTACTINFO == 1) {
                 // Write contact information to stdout
@@ -1223,9 +1197,7 @@ __host__ void DEM::startTime()
         double t_sum = t_calcParticleCellID + t_thrustsort + t_reorderArrays +
             t_topology + t_interact + t_bondsLinear + t_latticeBoltzmannD3Q19 +
             t_integrate + t_summation + t_integrateWalls + t_findPorositiesDev +
-            t_findDarcyTransmissivitiesDev + t_setDarcyGhostNodesDev +
-            t_explDarcyStepDev + t_findDarcyGradientsDev +
-            t_findDarcyVelocitiesDev;
+            t_setNSghostNodesDev + t_explNSstepDev + t_findNSvelocitiesDev;
 
         cout << "\nKernel profiling statistics:\n"
             << "  - calcParticleCellID:\t\t" << t_calcParticleCellID/1000.0
@@ -1248,7 +1220,7 @@ __host__ void DEM::startTime()
             << "  - bondsLinear:\t\t" << t_bondsLinear/1000.0 << " s"
             << "\t(" << 100.0*t_bondsLinear/t_sum << " %)\n";
         }
-        if (params.nu > 0.0 && darcy == 0) {
+        if (params.nu > 0.0 && navierstokes == 0) {
             cout
             << "  - latticeBoltzmann:\t\t" << t_latticeBoltzmannD3Q19/1000.0 <<
             " s" << "\t(" << 100.0*t_latticeBoltzmannD3Q19/t_sum << " %)\n";
@@ -1260,41 +1232,34 @@ __host__ void DEM::startTime()
             << "\t(" << 100.0*t_summation/t_sum << " %)\n"
             << "  - integrateWalls:\t\t" << t_integrateWalls/1000.0 << " s"
             << "\t(" << 100.0*t_integrateWalls/t_sum << " %)\n";
-        if (params.nu > 0.0 && darcy == 1) {
+        if (params.nu > 0.0 && navierstokes == 1) {
             cout 
             << "  - findPorositiesDev:\t\t" << t_findPorositiesDev/1000.0
             << " s" << "\t(" << 100.0*t_findPorositiesDev/t_sum << " %)\n"
-            << "  - findDarcyTransmis.Dev:\t" <<
-            t_findDarcyTransmissivitiesDev/1000.0 << " s"
-            << "\t(" << 100.0*t_findDarcyTransmissivitiesDev/t_sum << " %)\n"
-            << "  - setDarcyGhostNodesDev:\t" << t_setDarcyGhostNodesDev/1000.0
-            << " s" << "\t(" << 100.0*t_setDarcyGhostNodesDev/t_sum << " %)\n"
-            << "  - explDarcyStepDev:\t\t" << t_explDarcyStepDev/1000.0 << " s"
-            << "\t(" << 100.0*t_explDarcyStepDev/t_sum << " %)\n"
-            << "  - findDarcyGradientsDev:\t" << t_findDarcyGradientsDev/1000.0
+            << "  - setNSghostNodesDev:\t" << t_setNSghostNodesDev/1000.0
+            << " s" << "\t(" << 100.0*t_setNSghostNodesDev/t_sum << " %)\n"
+            << "  - explNSstepDev:\t\t" << t_explNSstepDev/1000.0 << " s"
+            << "\t(" << 100.0*t_explNSstepDev/t_sum << " %)\n"
+            << "  - findNSgradientsDev:\t" << t_findNSgradientsDev/1000.0
             << " s"
-            << "\t(" << 100.0*t_findDarcyGradientsDev/t_sum << " %)\n"
-            << "  - findDarcyVelocitiesDev:\t"
-            << t_findDarcyVelocitiesDev/1000.0 << " s"
-            << "\t(" << 100.0*t_findDarcyVelocitiesDev/t_sum << " %)\n";
+            << "\t(" << 100.0*t_findNSgradientsDev/t_sum << " %)\n"
+            << "  - findNSvelocitiesDev:\t"
+            << t_findNSvelocitiesDev/1000.0 << " s"
+            << "\t(" << 100.0*t_findNSvelocitiesDev/t_sum << " %)\n";
         }
     }
-
 
     // Free GPU device memory  
     freeGlobalDeviceMemory();
 
-    // Contact info arrays
+    // Free contact info arrays
     delete[] k.contacts;
     delete[] k.distmod;
     delete[] k.delta_t;
 
-    if (darcy == 1 && params.nu > 0.0) {
-#ifdef DARCY_GPU
-        endDarcyDev();
-#endif
-        endDarcy();
+    if (navierstokes == 1 && params.nu > 0.0) {
+        endNSdev();
+        endNS();
     }
-
-} /* EOF */
+}
 // vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

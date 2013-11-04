@@ -19,7 +19,7 @@ struct Kinematics {
     Float2 *xysum;          // Horizontal distance traveled
     Float4 *vel;            // Translational velocities + fixvels (w)
     Float4 *acc;            // Translational accelerations
-    Float4 *force;	    // Sums of forces
+    Float4 *force;          // Sums of forces
     Float4 *angpos;         // Angular positions
     Float4 *angvel;         // Angular velocities
     Float4 *angacc;         // Angular accelerations
@@ -34,62 +34,62 @@ struct Kinematics {
 
 // Structure containing individual particle energies
 struct Energies {
-    Float *es_dot;	// Frictional dissipation rates
-    Float *es;		// Frictional dissipations
-    Float *ev_dot;	// Viscous dissipation rates
-    Float *ev;		// Viscous dissipations
-    Float *p;		// Pressures
+    Float *es_dot; // Frictional dissipation rates
+    Float *es;     // Frictional dissipations
+    Float *ev_dot; // Viscous dissipation rates
+    Float *ev;     // Viscous dissipations
+    Float *p;      // Pressures
 };
 
 // Structure containing grid parameters
 struct Grid {
-    Float origo[ND];	// World coordinate system origo
-    Float L[ND];		// World dimensions
-    unsigned int num[ND];	// Neighbor-search cells along each axis
-    int periodic;		// Behavior of boundaries at 1st and 2nd world edge
+    Float origo[ND];        // World coordinate system origo
+    Float L[ND];            // World dimensions
+    unsigned int num[ND];   // Neighbor-search cells along each axis
+    int periodic;           // Behavior of boundaries at 1st and 2nd world edge
 };
 
 struct Sorting {
-    Float4 *x_sorted;	  // Positions + radii (w) (sorted)
-    Float4 *vel_sorted;	  // Translational velocities + fixvels (w) (sorted)
-    Float4 *angvel_sorted;  // Angular velocities (sorted)
+    Float4 *x_sorted;                 // Positions + radii (w) (sorted)
+    Float4 *vel_sorted;               // Translational velocities + fixvels (w) (sorted)
+    Float4 *angvel_sorted;            // Angular velocities (sorted)
     unsigned int *gridParticleCellID; // Hash key (cell index) from position in grid
     unsigned int *gridParticleIndex;  // Original indexes of particles
-    unsigned int *cellStart;	    // First index of sorted idx'es in cells
-    unsigned int *cellEnd;	    // Last index of sorted idx'es in cells
+    unsigned int *cellStart;          // First index of sorted idx'es in cells
+    unsigned int *cellEnd;            // Last index of sorted idx'es in cells
 };
 
 
 // Structure containing time parameters
 struct Time {
-    Float dt;		// Computational time step length
-    double current;	// Current time
-    double total;		// Total time (at the end of experiment)
-    Float file_dt;	// Time between output files
+    Float dt;                // Computational time step length
+    double current;          // Current time
+    double total;            // Total time (at the end of experiment)
+    Float file_dt;           // Time between output files
     unsigned int step_count; // Number of steps taken at current time
 };
 
 // Structure containing constant, global physical parameters
 struct Params {
-    Float g[ND];	  // Gravitational acceleration
-    Float k_n;		  // Normal stiffness
-    Float k_t;		  // Tangential stiffness
-    Float k_r;		  // Rotational stiffness
-    Float gamma_n;	  // Normal viscosity
-    Float gamma_t;	  // Tangential viscosity
-    Float gamma_r;	  // Rotational viscosity
-    Float mu_s; 	  // Static friction coefficient
-    Float mu_d;		  // Dynamic friction coefficient
-    Float mu_r;		  // Rotational friction coefficient
-    Float gamma_wn;	  // Wall normal viscosity
-    Float gamma_wt;	  // Wall tangential viscosity
-    Float mu_ws; 	  // Wall static friction coefficient
-    Float mu_wd;	  // Wall dynamic friction coefficient
-    Float rho;		  // Material density
+    Float g[ND];          // Gravitational acceleration
+    Float k_n;            // Normal stiffness
+    Float k_t;            // Tangential stiffness
+    Float k_r;            // Rotational stiffness
+    Float gamma_n;        // Normal viscosity
+    Float gamma_t;        // Tangential viscosity
+    Float gamma_r;        // Rotational viscosity
+    Float mu_s;           // Static friction coefficient
+    Float mu_d;           // Dynamic friction coefficient
+    Float mu_r;           // Rotational friction coefficient
+    Float gamma_wn;       // Wall normal viscosity
+    Float gamma_wt;       // Wall tangential viscosity
+    Float mu_ws;          // Wall static friction coefficient
+    Float mu_wd;          // Wall dynamic friction coefficient
+    Float rho;            // Material density
     unsigned int contactmodel; // Inter-particle contact model
-    Float kappa;	  // Capillary bond prefactor
-    Float db;		  // Capillary bond debonding distance
-    Float V_b;		  // Volume of fluid in capillary bond
+    Float kappa;          // Capillary bond prefactor
+    Float db;             // Capillary bond debonding distance
+    Float V_b;            // Volume of fluid in capillary bond
     Float lambda_bar;     // Radius multiplier to parallel-bond radii
     unsigned int nb0;     // Number of inter-particle bonds at t=0
     Float sigma_b;        // Bond tensile strength
@@ -101,35 +101,33 @@ struct Params {
 
 // Structure containing wall parameters
 struct Walls {
-    unsigned int nw;	// Number of walls (<= MAXWALLS)
-    int wmode[MAXWALLS];	// Wall modes
-    Float4* nx;		// Wall normal and position
-    Float4* mvfd;		// Wall mass, velocity, force and dev. stress
+    unsigned int nw;     // Number of walls (<= MAXWALLS)
+    int wmode[MAXWALLS]; // Wall modes
+    Float4* nx;          // Wall normal and position
+    Float4* mvfd;        // Wall mass, velocity, force and dev. stress
 };
 
 // Structures containing fluid parameters
-struct Darcy {
-    int nx, ny, nz;    // Number of cells in each dim
-    Float dx, dy, dz;  // Cell length in each dim
-    Float* H;          // Cell hydraulic heads
-    Float* H_new;      // Cell hydraulic heads
-    Float3* V;         // Cell fluid velocity
-    Float3* dH;        // Cell spatial gradient in heads
-    Float* K;          // Cell hydraulic conductivities (anisotropic)
-    Float3* T;         // Cell hydraulic transmissivity
-    Float* Ss;         // Cell hydraulic storativity
-    Float* W;          // Cell hydraulic recharge
-    Float* phi;        // Cell porosity
-    Float* dphi;       // Cell porosity change
+struct NavierStokes {
+    int     nx, ny, nz;  // Number of cells in each dim
+    Float   dx, dy, dz;  // Cell length in each dim
+    Float*  p;           // Cell hydraulic heads
+    //Float*  p_new;       // Cell hydraulic heads
+    Float3* dp;          // Cell fluid velocity
+    Float3* v;           // Cell fluid velocity
+    Float3* v_p;         // Predicted fluid velocity
+    Float*  phi;         // Cell porosity
+    Float*  dphi;        // Cell porosity change
+    Float*  norm;        // Normalized residual of epsilon updates
 };
 
 
 // Image structure
 struct rgba {
-    unsigned char r;	// Red
-    unsigned char g;	// Green
-    unsigned char b;	// Blue
-    unsigned char a;	// Alpha
+    unsigned char r;  // Red
+    unsigned char g;  // Green
+    unsigned char b;  // Blue
+    unsigned char a;  // Alpha
 };
 
 #endif
