@@ -1,5 +1,5 @@
-Fluid dynamics by CFD
-=====================
+Fluid simulation by CFD
+=======================
 Fluid flow is governed by the Navier-Stokes continuity and momentum equations,
 assuming that the fluid is incompressible. In a single phase fluid without
 grains, the continuity equation is:
@@ -11,12 +11,12 @@ and the momentum equation:
 
 .. math::
     \frac{\partial \boldsymbol{v}_f}{\partial t}
-    + \bar{\boldsymbol{v}}_f \cdot \nabla \bar{\boldsymbol{v}}_f =
-    - \frac{1}{\rho_f} \nabla p_f + \nu \nabla^2 \bar{\boldsymbol{v}}_f
+    + \boldsymbol{v}_f \cdot \nabla \boldsymbol{v}_f =
+    - \frac{1}{\rho_f} \nabla p_f + \nu \nabla^2 \boldsymbol{v}_f
     + \boldsymbol{f}_g
 
-Here, :math:`\bar{\boldsymbol{v}}_f` is the averaged fluid velocity,
-and :math:`\bar{p}_f` is the averaged fluid pressure. :math:`\nu` is the fluid
+Here, :math:`\boldsymbol{v}_f` is the fluid velocity,
+and :math:`p_f` is the fluid pressure. :math:`\nu` is the fluid
 viscosity, and :math:`\boldsymbol{f}_g` is the gravitational force.  The
 `Laplacian`_ (:math:`\nabla^2`) is the `divergence`_ (:math:`\nabla \cdot`) of
 the `gradient`_ (:math:`\nabla`):
@@ -27,26 +27,14 @@ the `gradient`_ (:math:`\nabla`):
     \frac{\partial^2}{\partial y^2} +
     \frac{\partial^2}{\partial z^2}
 
-The discrete Laplacian (approximation of the Laplace operator) can be obtained
-by a finite-difference seven-point stencil in a three-dimensional regular, cubic
-grid with cell spacing :math:`h`, considering the 6 face neighbors (O'Reilly and
-Beck 2006):
-
-.. math::
-    % OReilly and Beck 2006 A Family of Large-Stencil Discrete Laplacian
-    % Approximations in Three Dimensions
-    \nabla^2 f(x,y,z) \approx \frac{1}{h^2} \left(
-    f(x-h,y,z) + f(x+h,y,z) + f(x,y-h,z) +
-    f(x,y+h,z) + f(x,y,z-h) + f(x,y,z+h) - 6f(x,y) \right)
-
-In an averaged discretization, assuming that that the fluid is inviscid (zero
-viscosity), the continuity equation becomes:
+In an averaged discretization the continuity equation becomes:
 
 .. math::
     \nabla \cdot \bar{\boldsymbol{v}}_f = 0
 
 The bar symbol denotes that the value is averaged in the cell. The momentum
-equation becomes:
+equation, assuming that that the fluid is inviscid (zero
+viscosity), becomes:
 
 .. math::
     \frac{\partial \bar{\boldsymbol{v}}_f}{\partial t}
@@ -67,11 +55,15 @@ and the momentum equation becomes:
 
 .. math::
     \frac{\partial (\phi \bar{\boldsymbol{v}}_f)}{\partial t}
-    + \nabla \cdot (\phi \bar{\boldsymbol{v}}_f \bar{\boldsymbol{v}}_f) =
+    + \nabla \cdot (\phi \bar{\boldsymbol{v}}_f \otimes \bar{\boldsymbol{v}}_f) =
     - \frac{1}{\rho_f} \phi \nabla \bar{p}_f
     - \frac{1}{\rho_f} \boldsymbol{\bar{f}}_i
     + \phi \boldsymbol{f}_g
 
+The outer product :math:`\bar{\boldsymbol{v}}_f \otimes \bar{\boldsymbol{v}}_f`
+is equivalent to a matrix multiplication :math:`\bar{\boldsymbol{v}}_f
+\bar{\boldsymbol{v}}_f^T`, and results in a 3-by-3 matrix. The divergence of a
+matrix yields a vector field.
 The solution of the above equations is performed by operator splitting methods.
 The methodology presented by Langtangen et al. (2002) is for a viscous fluid
 without particles. A velocity prediction after a forward step in time
@@ -91,8 +83,8 @@ of particles and the fluid inviscidity:
 
 .. math::
     \bar{\boldsymbol{v}}^*_f = \bar{\boldsymbol{v}}^t_f 
-    - \Delta t \nabla \cdot (\phi^t \bar{\boldsymbol{v}}_f^t \bar{\boldsymbol{v}}_f^t)
-    - \Delta t \frac{\beta}{\rho_f} \phi \nabla \bar{p}_f^t
+    - \Delta t \nabla \cdot (\phi^t \bar{\boldsymbol{v}}_f^t \otimes \bar{\boldsymbol{v}}_f^t)
+    - \Delta t \frac{\beta}{\rho_f} \phi^t \nabla \bar{p}_f^t
     - \frac{\Delta t}{\rho_f} \boldsymbol{\bar{f}}_i^t
     + \Delta t \phi^t \boldsymbol{f}_g^t
 
@@ -100,15 +92,15 @@ The new velocities should fulfill the continuity (here incompressibility)
 equation:
 
 .. math::
-    \frac{\Delta \phi}{\Delta t} + \nabla \cdot (\phi
+    \frac{\Delta \phi^t}{\Delta t} + \nabla \cdot (\phi^t
     \bar{\boldsymbol{v}}_f^{t+\Delta t}) = 0
 
 The divergence of a scalar and vector can be `split`_:
 
 .. math::
-    \phi \nabla \cdot \bar{\boldsymbol{v}}_f^{t+\Delta t} +
-    \bar{\boldsymbol{v}}_f^{t+\Delta t} \cdot \nabla \phi
-    + \frac{\Delta \phi}{\Delta t} = 0
+    \phi^t \nabla \cdot \bar{\boldsymbol{v}}_f^{t+\Delta t} +
+    \bar{\boldsymbol{v}}_f^{t+\Delta t} \cdot \nabla \phi^t
+    + \frac{\Delta \phi^t}{\Delta t} = 0
 
 The predicted velocity is corrected using the new pressure (Langtangen et al.
 2002):
@@ -124,27 +116,27 @@ equation:
 
 .. math::
     \Rightarrow
-    \phi \nabla \cdot
+    \phi^t \nabla \cdot
     \left( \bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho_f} \nabla \epsilon \right)
     +
     \left( \bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho_f} \nabla \epsilon \right)
-    \cdot \nabla \phi + \frac{\Delta \phi}{\Delta t} = 0
+    \cdot \nabla \phi^t + \frac{\Delta \phi^t}{\Delta t} = 0
 
 .. math::
     \Rightarrow
-    \phi \nabla \cdot
-    \bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho_f} \phi \nabla^2 \epsilon
-    + \nabla \phi \cdot \bar{\boldsymbol{v}}^*_f
-    - \nabla \phi \cdot \nabla \epsilon \frac{\Delta t}{\rho}
-    + \frac{\Delta \phi}{\Delta t} = 0
+    \phi^t \nabla \cdot
+    \bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho_f} \phi^t \nabla^2 \epsilon
+    + \nabla \phi^t \cdot \bar{\boldsymbol{v}}^*_f
+    - \nabla \phi^t \cdot \nabla \epsilon \frac{\Delta t}{\rho}
+    + \frac{\Delta \phi^t}{\Delta t} = 0
 
 .. math::
     \Rightarrow
-    \frac{\Delta t}{\rho} \phi \nabla^2 \epsilon
-    = \phi \nabla \cdot \bar{\boldsymbol{v}}^*_f
-    + \nabla \phi \cdot \bar{\boldsymbol{v}}^*_f
-    - \nabla \phi \cdot \nabla \epsilon \frac{\Delta t}{\rho}
-    + \frac{\Delta \phi}{\Delta t}
+    \frac{\Delta t}{\rho} \phi^t \nabla^2 \epsilon
+    = \phi^t \nabla \cdot \bar{\boldsymbol{v}}^*_f
+    + \nabla \phi^t \cdot \bar{\boldsymbol{v}}^*_f
+    - \nabla \phi^t \cdot \nabla \epsilon \frac{\Delta t}{\rho}
+    + \frac{\Delta \phi^t}{\Delta t}
 
 The pressure difference in time becomes a `Poisson equation`_ with added terms:
 
@@ -152,20 +144,79 @@ The pressure difference in time becomes a `Poisson equation`_ with added terms:
     \Rightarrow
     \nabla^2 \epsilon
     = \frac{\nabla \cdot \bar{\boldsymbol{v}}^*_f \rho}{\Delta t}
-    + \frac{\nabla \phi \cdot \bar{\boldsymbol{v}}^*_f \rho}{\Delta t \phi}
-    - \frac{\nabla \phi \cdot \nabla \epsilon}{\phi}
-    + \frac{\Delta \phi \rho}{\Delta t^2 \phi}
+    + \frac{\nabla \phi^t \cdot \bar{\boldsymbol{v}}^*_f \rho}{\Delta t \phi^t}
+    - \frac{\nabla \phi^t \cdot \nabla \epsilon}{\phi^t}
+    + \frac{\Delta \phi^t \rho}{\Delta t^2 \phi^t}
 
-The value of :math:`\epsilon` is found `iteratively`_ by using the discrete
-Laplacian previously mentioned. When the solution is found, the value is used to
-find the new pressure and velocity:
+The right hand side of the above equation is termed the *forcing function*
+:math:`f`.  See the `Jacobi iterative solution procedure of a Poisson
+equation`_.  The value of :math:`\epsilon` is found `iteratively`_ by using the
+discrete Laplacian previously mentioned. The value of :math:`\epsilon(x,y,z)` is
+the solution sought, and the right hand side of the above equation is the
+forcing function.  Using second-order finite difference approximations of the
+Laplace operator second-order partial derivatives, the differential equations
+become a system of equations that is solved using Jacobi iterations. The total
+number of unknowns is :math:`(n_x - 1)(n_y - 1)(n_z - 1)`.
+
+The discrete Laplacian (approximation of the Laplace operator) can be obtained
+by a finite-difference seven-point stencil in a three-dimensional, cubic
+grid with cell spacing :math:`\Delta x, \Delta y, \Delta z`, considering the 6 face neighbors:
+
+.. math::
+    \nabla^2 \epsilon_{i_x,i_y,i_z}  \approx 
+    \frac{\epsilon_{i_x-1,i_y,i_z} - 2 \epsilon_{i_x,i_y,i_z}
+    + \epsilon_{i_x+1,i_y,i_z}}{\Delta x^2}
+    + \frac{\epsilon_{i_x,i_y-1,i_z} - 2 \epsilon_{i_x,i_y,i_z}
+    + \epsilon_{i_x,i_y+1,i_z}}{\Delta y^2}
+
+    + \frac{\epsilon_{i_x,i_y,i_z-1} - 2 \epsilon_{i_x,i_y,i_z}
+    + \epsilon_{i_x,i_y,i_z+1}}{\Delta z^2}
+    \approx f_{i_x,i_y,i_z}
+
+Within a Jacobi iteration, the value of the unknowns (:math:`\epsilon^n`) is
+used to find an updated solution estimate (:math:`\epsilon^{n+1}`).
+The solution for the updated value takes the form:
+
+.. math::
+    \epsilon^{n+1}_{i_x,i_y,i_z}
+    = a_x (\epsilon^n_{i_x-1,i_y,i_z} + \epsilon^n_{i_x+1,i_y,i_z})
+    + a_y (\epsilon^n_{i_x,i_y-1,i_z} + \epsilon^n_{i_x,i_y+1,i_z})
+
+    + a_z (\epsilon^n_{i_x,i_y,i_z-1} + \epsilon^n_{i_x,i_y,i_z+1})
+    - a_f f_{i_x,i_y,i_z}
+
+    \text{where}
+
+    a_x = \frac{\Delta y^2 \Delta z^2}{2(\Delta x^2 + \Delta y^2 + \Delta z^2)}
+
+    a_y = \frac{\Delta z^2 \Delta x^2}{2(\Delta x^2 + \Delta y^2 + \Delta z^2)}
+
+    a_z = \frac{\Delta x^2 \Delta y^2}{2(\Delta x^2 + \Delta y^2 + \Delta z^2)}
+
+    a_f = \frac{\Delta x^2 \Delta y^2 \Delta x^2}{2(\Delta x^2 + \Delta y^2 + \Delta z^2)}
+
+The difference between the current and updated value is termed the *normalized residual*:
+
+.. math::
+    r_{i_x,i_y,i_z} = \frac{(\epsilon^{n+1}_{i_x,i_y,i_z} - \epsilon^n_{i_x,i_y,i_z})^2}{(\epsilon^{n+1}_{i_x,i_y,i_z})^2}
+
+Note that the :math:`\epsilon` values cannot be 0 due to the above normalization
+of the residual.
+
+The updated values are at the end of the iteration stored as the current values,
+and the average value of the normalized residual is found. If this value is
+larger than a tolerance criteria, the procedure is repeated. The iterative
+procedure is ended if the number of iterations exceeds a defined limit. 
+
+After the values of :math:`\epsilon` are found, they are used to find the new
+pressures and velocities:
 
 .. math::
     \bar{p}_f^{t+\Delta t} = \beta \bar{p}^t + \epsilon
 
 .. math::
     \bar{\boldsymbol{v}}_f^{t+\Delta t} =
-    \bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho} \nabla \phi
+    \bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho} \nabla \epsilon
 
 
 
@@ -175,5 +226,6 @@ find the new pressure and velocity:
 .. _gradient: https://en.wikipedia.org/wiki/Gradient
 .. _split: http://www.wolframalpha.com/input/?i=div(p+v)
 .. _Poisson equation: https://en.wikipedia.org/wiki/Poisson's_equation
+.. _`Jacobi iterative solution procedure of a Poisson equation`: http://www.rsmas.miami.edu/personal/miskandarani/Courses/MSC321/Projects/prjpoisson.pdf
 .. _iteratively: https://en.wikipedia.org/wiki/Relaxation_(iterative_method)
 
