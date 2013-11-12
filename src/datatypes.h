@@ -94,8 +94,8 @@ struct Params {
     unsigned int nb0;     // Number of inter-particle bonds at t=0
     Float sigma_b;        // Bond tensile strength
     Float tau_b;          // Bond shear strength
-    Float devs_A;         // Amplitude of modulations in deviatoric normal stress
-    Float devs_f;         // Frequency of modulations in deviatoric normal stress
+    Float devs_A;         // Amplitude of modulations in normal stress
+    Float devs_f;         // Frequency of modulations in normal stress
     Float nu;             // Fluid dynamic viscosity
 };
 
@@ -119,6 +119,8 @@ struct NavierStokes {
     Float*  phi;         // Cell porosity
     Float*  dphi;        // Cell porosity change
     Float*  norm;        // Normalized residual of epsilon updates
+    Float*  epsilon;
+    Float*  epsilon_new;
 };
 
 

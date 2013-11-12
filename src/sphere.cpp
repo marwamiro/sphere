@@ -19,8 +19,8 @@ DEM::DEM(const std::string inputbin,
         const int dry,
         const int initCuda,
         const int transferConstMem,
-        const int darcyflow)
-: verbose(verbosity), darcy(darcyflow)
+        const int porousflow)
+: verbose(verbosity), navierstokes(porousflow)
 {
     using std::cout;
     using std::cerr;
@@ -49,8 +49,8 @@ DEM::DEM(const std::string inputbin,
     if (dry == 1)
         exit(0);
 
-    if (params.nu > 0.0 && darcy == 1) {
-        initDarcy();
+    if (params.nu > 0.0 && navierstokes == 1) {
+        initNS();
     }
 
     if (initCuda == 1) {
@@ -63,8 +63,8 @@ DEM::DEM(const std::string inputbin,
             transferToConstantDeviceMemory();
         }
 
-        if (params.nu > 0.0 && darcy == 1) {
-            initDarcyMemDev();
+        if (params.nu > 0.0 && navierstokes == 1) {
+            initNSmemDev();
         }
 
         // Allocate device memory for particle variables,

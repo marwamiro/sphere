@@ -177,6 +177,8 @@ class DEM {
         Float*  dev_ns_f;           // Values of forcing function
         Float*  dev_ns_f1;          // Constant terms in forcing function
         Float3* dev_ns_f2;          // Constant slopes in forcing function
+        Float*  dev_ns_v_prod;      // Outer product of fluid velocities
+
 
         //// Navier Stokes functions
 
@@ -200,8 +202,11 @@ class DEM {
         void endNS();
         void endNSdev();
 
-        // Finds the average value of the normalized residual norm in CPU memory
+        // Returns the average value of the normalized residual norm in host mem
         double avgNormResNS();
+
+        // Returns the maximum value of the normalized residual norm in host mem
+        double maxNormResNS();
 
         // Allocate and free memory for NS arrays on device
         void initNSmemDev();
@@ -211,6 +216,8 @@ class DEM {
         void transferNStoGlobalDeviceMemory(int statusmsg);
         void transferNSfromGlobalDeviceMemory(int statusmsg);
         void transferNSnormFromGlobalDeviceMemory();
+        void transferNSepsilonFromGlobalDeviceMemory();
+        void transferNSepsilonNewFromGlobalDeviceMemory();
 
 
     public:

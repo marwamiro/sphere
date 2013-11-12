@@ -1,9 +1,5 @@
-// darcy.cu
-// CUDA implementation of Darcy flow
-
-// Enable line below to perform Darcy flow computations on the GPU, disable for
-// Enable GPU computation
-#define DARCY_GPU
+// navierstokes.cuh
+// CUDA implementation of porous flow
 
 #include <iostream>
 #include <cuda.h>
@@ -19,7 +15,7 @@
 #include "debug.h"
 
 // Relaxation parameter, used in velocity prediction and pressure iteration
-#define BETA 0.1
+#define BETA 1.0
 
 // Initialize memory
 void DEM::initNSmemDev(void)
@@ -28,7 +24,6 @@ void DEM::initNSmemDev(void)
     unsigned int memSizeF  = sizeof(Float)*NScells();
 
     cudaMalloc((void**)&dev_ns_p, memSizeF);     // hydraulic pressure
-    //cudaMalloc((void**)&dev_ns_p_new, memSizeF); // new pressure matrix
     cudaMalloc((void**)&dev_ns_dp, memSizeF*3);  // hydraulic pressure gradient
     cudaMalloc((void**)&dev_ns_v, memSizeF*3);   // cell hydraulic velocity
     cudaMalloc((void**)&dev_ns_v_p, memSizeF*3); // predicted cell velocity
@@ -41,6 +36,7 @@ void DEM::initNSmemDev(void)
     cudaMalloc((void**)&dev_ns_f, memSizeF);     // forcing function value
     cudaMalloc((void**)&dev_ns_f1, memSizeF);    // constant addition in forcing
     cudaMalloc((void**)&dev_ns_f2, memSizeF*3);  // constant slope in forcing
+    cudaMalloc((void**)&dev_ns_v_prod, memSizeF*6); // outer product of velocity
 
     checkForCudaErrors("End of initNSmemDev");
 }
@@ -49,7 +45,6 @@ void DEM::initNSmemDev(void)
 void DEM::freeNSmemDev()
 {
     cudaFree(dev_ns_p);
-    //cudaFree(dev_ns_p_new);
     cudaFree(dev_ns_dp);
     cudaFree(dev_ns_v);
     cudaFree(dev_ns_v_p);
@@ -62,6 +57,7 @@ void DEM::freeNSmemDev()
     cudaFree(dev_ns_f);
     cudaFree(dev_ns_f1);
     cudaFree(dev_ns_f2);
+    cudaFree(dev_ns_v_prod);
 }
 
 // Transfer to device
@@ -76,9 +72,10 @@ void DEM::transferNStoGlobalDeviceMemory(int statusmsg)
     // memory size for a scalar field
     unsigned int memSizeF  = sizeof(Float)*NScells();
 
+    //writeNSarray(ns.p, "ns.p.txt");
+
     cudaMemcpy(dev_ns_p, ns.p, memSizeF, cudaMemcpyHostToDevice);
     checkForCudaErrors("transferNStoGlobalDeviceMemory after first cudaMemcpy");
-    //cudaMemcpy(dev_ns_p_new, ns.p_new, memSizeF, cudaMemcpyHostToDevice);
     cudaMemcpy(dev_ns_dp, ns.dp, memSizeF*3, cudaMemcpyHostToDevice);
     cudaMemcpy(dev_ns_v, ns.v, memSizeF*3, cudaMemcpyHostToDevice);
     cudaMemcpy(dev_ns_v_p, ns.v_p, memSizeF*3, cudaMemcpyHostToDevice);
@@ -100,7 +97,6 @@ void DEM::transferNSfromGlobalDeviceMemory(int statusmsg)
     unsigned int memSizeF  = sizeof(Float)*NScells();
 
     cudaMemcpy(ns.p, dev_ns_p, memSizeF, cudaMemcpyDeviceToHost);
-    //cudaMemcpy(ns.p_new, dev_ns_p_new, memSizeF, cudaMemcpyDeviceToHost);
     cudaMemcpy(ns.dp, dev_ns_dp, memSizeF*3, cudaMemcpyDeviceToHost);
     cudaMemcpy(ns.v, dev_ns_v, memSizeF*3, cudaMemcpyDeviceToHost);
     cudaMemcpy(ns.v_p, dev_ns_v_p, memSizeF*3, cudaMemcpyDeviceToHost);
@@ -116,19 +112,25 @@ void DEM::transferNSfromGlobalDeviceMemory(int statusmsg)
 // Transfer the normalized residuals from device to host
 void DEM::transferNSnormFromGlobalDeviceMemory()
 {
-    cudaMemcpy(ns.norm, dev_ns_norm, memSizeF, cudaMemcpyDeviceToHost);
-    checkForCudaErrors("End of transferNSfromGlobalDeviceMemory");
+    cudaMemcpy(ns.norm, dev_ns_norm, sizeof(Float)*NScells(),
+            cudaMemcpyDeviceToHost);
+    checkForCudaErrors("End of transferNSnormFromGlobalDeviceMemory");
 }
 
-// Returns the average value of the normalized residuals
-double DEM::avgNormResNS()
+// Transfer the pressure change from device to host
+void DEM::transferNSepsilonFromGlobalDeviceMemory()
 {
-    double res_sum;
-    unsigned int N = grid.num[0]*grid.num[1]*grid.num[2];
-    for (unsigned int i=0; i<N; ++i) {
-        res_sum += static_cast<double>(ns.norm[i]);
-    }
-    return res/N;
+    cudaMemcpy(ns.epsilon, dev_ns_epsilon, sizeof(Float)*NScells(),
+            cudaMemcpyDeviceToHost);
+    checkForCudaErrors("End of transferNSepsilonFromGlobalDeviceMemory");
+}
+
+// Transfer the pressure change from device to host
+void DEM::transferNSepsilonNewFromGlobalDeviceMemory()
+{
+    cudaMemcpy(ns.epsilon_new, dev_ns_epsilon_new, sizeof(Float)*NScells(),
+            cudaMemcpyDeviceToHost);
+    checkForCudaErrors("End of transferNSepsilonFromGlobalDeviceMemory");
 }
 
 // Get linear index from 3D grid position
@@ -144,7 +146,7 @@ __inline__ __device__ unsigned int idx(
         (devC_grid.num[0]+2)*(devC_grid.num[1]+2)*(z+1);
 }
 
-// Set the initial guess of the values of epsilon
+// Set the initial guess of the values of epsilon.  
 __global__ void setNSepsilon(Float* dev_ns_epsilon)
 {
     // 3D thread index
@@ -159,37 +161,48 @@ __global__ void setNSepsilon(Float* dev_ns_epsilon)
     }
 }
 
-// Set the initial guess of the values of epsilon
-__global__ void setNSdirichlet(Float* dev_ns_epsilon)
+// Set the initial guess of the values of epsilon. Since the Dirichlet boundary
+// values aren't transfered during array swapping, the values also need to be
+// written to the new array of epsilons.
+__global__ void setNSdirichlet(
+        Float* dev_ns_epsilon,
+        Float* dev_ns_epsilon_new)
 {
     // 3D thread index
     const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
     const unsigned int y = blockDim.y * blockIdx.y + threadIdx.y;
     const unsigned int z = blockDim.z * blockIdx.z + threadIdx.z;
 
-    // check that we are not outside the fluid grid, and at the top boundary
-    if (x < devC_grid.num[0] &&
-            y < devC_grid.num[1] &&
-            z == devC_grid.num[2]-1) {
+    // check that we are not outside the fluid grid, and at the z boundaries
+    if (x < devC_grid.num[0] && y < devC_grid.num[1] &&
+            (z == devC_grid.num[2]-1 || z == 0)) {
 
-        __syncthreads();
+        Float val;
+
+        if (z == 0)
+            val = 0.0;
+        if (z == devC_grid.num[2]-1)
+            val = devC_grid.num[2]-1;
+            //val = 0.0;
 
         // the new value should be identical to the old value, i.e. the temporal
         // gradient is 0
-        dev_ns_epsilon[idx(x,y,z)] = 0.0;
+        __syncthreads();
+        //dev_ns_epsilon[idx(x,y,z)] = 0.0;
+        dev_ns_epsilon[idx(x,y,z)]     = val;
+        dev_ns_epsilon_new[idx(x,y,z)] = val;
     }
 }
 
 __device__ void copyNSvalsDev(
         unsigned int read, unsigned int write,
-        Float* dev_ns_p, //Float* dev_ns_p_new,
-        Float3* dev_ns_dp, Float3* dev_ns_v, Float3* dev_ns_v_p,
+        Float* dev_ns_p, Float3* dev_ns_dp,
+        Float3* dev_ns_v, Float3* dev_ns_v_p,
         Float* dev_ns_phi, Float* dev_ns_dphi,
         Float* dev_ns_epsilon)
 {
     // Coalesced read
     const Float  p       = dev_ns_p[read];
-    //const Float  p_new   = dev_ns_p_new[read];
     const Float3 dp      = dev_ns_dp[read];
     const Float3 v       = dev_ns_v[read];
     const Float3 v_p     = dev_ns_v_p[read];
@@ -200,7 +213,6 @@ __device__ void copyNSvalsDev(
     // Coalesced write
     __syncthreads();
     dev_ns_p[write]       = p;
-    //dev_ns_p_new[write]   = p_new;
     dev_ns_dp[write]      = dp;
     dev_ns_v[write]       = v;
     dev_ns_v_p[write]     = v_p;
@@ -210,12 +222,12 @@ __device__ void copyNSvalsDev(
 }
 
 
-// Update ghost nodes from their parent cell values
-// The edge (diagonal) cells are not written since they are note read
-// Launch this kernel for all cells in the grid
+// Update ghost nodes from their parent cell values. The edge (diagonal) cells
+// are not written since they are not read. Launch this kernel for all cells in
+// the grid
 __global__ void setNSghostNodesDev(
-        Float* dev_ns_p, //Float* dev_ns_p_new,
-        Float3* dev_ns_dp, Float3* dev_ns_v, Float3* dev_ns_v_p,
+        Float* dev_ns_p, Float3* dev_ns_dp,
+        Float3* dev_ns_v, Float3* dev_ns_v_p,
         Float* dev_ns_phi, Float* dev_ns_dphi,
         Float* dev_ns_epsilon)
 {
@@ -241,16 +253,16 @@ __global__ void setNSghostNodesDev(
         if (x == 0) {
             writeidx = idx(nx,y,z);
             copyNSvalsDev(cellidx, writeidx,
-                    dev_ns_p, //dev_ns_p_new,
-                    dev_ns_dp, dev_ns_v, dev_ns_v_p,
+                    dev_ns_p, dev_ns_dp,
+                    dev_ns_v, dev_ns_v_p,
                     dev_ns_phi, dev_ns_dphi,
                     dev_ns_epsilon);
         }
         if (x == nx-1) {
             writeidx = idx(-1,y,z);
             copyNSvalsDev(cellidx, writeidx,
-                    dev_ns_p, //dev_ns_p_new,
-                    dev_ns_dp, dev_ns_v, dev_ns_v_p,
+                    dev_ns_p, dev_ns_dp,
+                    dev_ns_v, dev_ns_v_p,
                     dev_ns_phi, dev_ns_dphi,
                     dev_ns_epsilon);
         }
@@ -258,35 +270,253 @@ __global__ void setNSghostNodesDev(
         if (y == 0) {
             writeidx = idx(x,ny,z);
             copyNSvalsDev(cellidx, writeidx,
-                    dev_ns_p, //dev_ns_p_new,
-                    dev_ns_dp, dev_ns_v, dev_ns_v_p,
+                    dev_ns_p, dev_ns_dp,
+                    dev_ns_v, dev_ns_v_p,
                     dev_ns_phi, dev_ns_dphi,
                     dev_ns_epsilon);
         }
         if (y == ny-1) {
             writeidx = idx(x,-1,z);
             copyNSvalsDev(cellidx, writeidx,
-                    dev_ns_p, //dev_ns_p_new,
-                    dev_ns_dp, dev_ns_v, dev_ns_v_p,
+                    dev_ns_p, dev_ns_dp,
+                    dev_ns_v, dev_ns_v_p,
                     dev_ns_phi, dev_ns_dphi,
                     dev_ns_epsilon);
         }
 
-        if (z == 0) {
+        // Z bounadies aren't periodic
+        /*if (z == 0) {
             writeidx = idx(x,y,nz);
             copyNSvalsDev(cellidx, writeidx,
-                    dev_ns_p, //dev_ns_p_new,
-                    dev_ns_dp, dev_ns_v, dev_ns_v_p,
+                    dev_ns_p, dev_ns_dp,
+                    dev_ns_v, dev_ns_v_p,
                     dev_ns_phi, dev_ns_dphi,
                     dev_ns_epsilon);
         }
         if (z == nz-1) {
             writeidx = idx(x,y,-1);
             copyNSvalsDev(cellidx, writeidx,
-                    dev_ns_p, //dev_ns_p_new,
-                    dev_ns_dp, dev_ns_v, dev_ns_v_p,
+                    dev_ns_p, dev_ns_dp,
+                    dev_ns_v, dev_ns_v_p,
                     dev_ns_phi, dev_ns_dphi,
                     dev_ns_epsilon);
+        }*/
+    }
+}
+
+// Update a field in the ghost nodes from their parent cell values. The edge
+// (diagonal) cells are not written since they are not read. Launch this kernel
+// for all cells in the grid usind setNSghostNodes<datatype><<<.. , ..>>>( .. );
+template<typename T>
+__global__ void setNSghostNodes(T* dev_scalarfield)
+{
+    // 3D thread index
+    const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
+    const unsigned int y = blockDim.y * blockIdx.y + threadIdx.y;
+    const unsigned int z = blockDim.z * blockIdx.z + threadIdx.z;
+
+    // Grid dimensions
+    const unsigned int nx = devC_grid.num[0];
+    const unsigned int ny = devC_grid.num[1];
+    const unsigned int nz = devC_grid.num[2];
+
+    // check that we are not outside the fluid grid
+    if (x < nx && y < ny && z < nz) {
+
+        const T val = dev_scalarfield[idx(x,y,z)];
+
+        if (x == 0)
+            dev_scalarfield[idx(nx,y,z)] = val;
+        if (x == nx-1)
+            dev_scalarfield[idx(-1,y,z)] = val;
+
+        if (y == 0)
+            dev_scalarfield[idx(x,ny,z)] = val;
+        if (y == ny-1)
+            dev_scalarfield[idx(x,-1,z)] = val;
+
+        if (z == 0)
+            dev_scalarfield[idx(x,y,nz)] = val;
+        if (z == nz-1)
+            dev_scalarfield[idx(x,y,-1)] = val;
+    }
+}
+
+// Update a scalar field for ghost nodes from their parent cell values. The edge
+// (diagonal) cells are not written since they are not read. Launch this kernel
+// for all cells in the grid.
+__global__ void setNSghostNodes_v_prod(Float* dev_ns_v_prod)
+{
+    // 3D thread index
+    const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
+    const unsigned int y = blockDim.y * blockIdx.y + threadIdx.y;
+    const unsigned int z = blockDim.z * blockIdx.z + threadIdx.z;
+
+    // Grid dimensions
+    const unsigned int nx = devC_grid.num[0];
+    const unsigned int ny = devC_grid.num[1];
+    const unsigned int nz = devC_grid.num[2];
+
+    // check that we are not outside the fluid grid
+    if (x < nx && y < ny && z < nz) {
+
+        // Linear index of length-6 vector field entry
+        unsigned int cellidx6 = idx(x,y,z)*6;
+
+        // Read parent values
+        __syncthreads();
+        const Float v0 = dev_ns_v_prod[cellidx6];
+        const Float v1 = dev_ns_v_prod[cellidx6+1];
+        const Float v2 = dev_ns_v_prod[cellidx6+2];
+        const Float v3 = dev_ns_v_prod[cellidx6+3];
+        const Float v4 = dev_ns_v_prod[cellidx6+4];
+        const Float v5 = dev_ns_v_prod[cellidx6+5];
+
+        if (x == 0) {
+            cellidx6 = idx(nx,y,z)*6;
+            dev_ns_v_prod[cellidx6] = v0;
+            dev_ns_v_prod[cellidx6+1] = v1;
+            dev_ns_v_prod[cellidx6+2] = v2;
+            dev_ns_v_prod[cellidx6+3] = v3;
+            dev_ns_v_prod[cellidx6+4] = v4;
+            dev_ns_v_prod[cellidx6+5] = v5;
+        }
+        if (x == nx-1) {
+            cellidx6 = idx(-1,y,z)*6;
+            dev_ns_v_prod[cellidx6] = v0;
+            dev_ns_v_prod[cellidx6+1] = v1;
+            dev_ns_v_prod[cellidx6+2] = v2;
+            dev_ns_v_prod[cellidx6+3] = v3;
+            dev_ns_v_prod[cellidx6+4] = v4;
+            dev_ns_v_prod[cellidx6+5] = v5;
+        }
+
+        if (y == 0) {
+            cellidx6 = idx(x,ny,z)*6;
+            dev_ns_v_prod[cellidx6] = v0;
+            dev_ns_v_prod[cellidx6+1] = v1;
+            dev_ns_v_prod[cellidx6+2] = v2;
+            dev_ns_v_prod[cellidx6+3] = v3;
+            dev_ns_v_prod[cellidx6+4] = v4;
+            dev_ns_v_prod[cellidx6+5] = v5;
+        }
+        if (y == ny-1) {
+            cellidx6 = idx(x,-1,z)*6;
+            dev_ns_v_prod[cellidx6] = v0;
+            dev_ns_v_prod[cellidx6+1] = v1;
+            dev_ns_v_prod[cellidx6+2] = v2;
+            dev_ns_v_prod[cellidx6+3] = v3;
+            dev_ns_v_prod[cellidx6+4] = v4;
+            dev_ns_v_prod[cellidx6+5] = v5;
+        }
+
+        if (z == 0) {
+            cellidx6 = idx(x,y,nz)*6;
+            dev_ns_v_prod[cellidx6] = v0;
+            dev_ns_v_prod[cellidx6+1] = v1;
+            dev_ns_v_prod[cellidx6+2] = v2;
+            dev_ns_v_prod[cellidx6+3] = v3;
+            dev_ns_v_prod[cellidx6+4] = v4;
+            dev_ns_v_prod[cellidx6+5] = v5;
+        }
+        if (z == nz-1) {
+            cellidx6 = idx(x,y,-1)*6;
+            dev_ns_v_prod[cellidx6] = v0;
+            dev_ns_v_prod[cellidx6+1] = v1;
+            dev_ns_v_prod[cellidx6+2] = v2;
+            dev_ns_v_prod[cellidx6+3] = v3;
+            dev_ns_v_prod[cellidx6+4] = v4;
+            dev_ns_v_prod[cellidx6+5] = v5;
+        }
+    }
+}
+
+// Update a the forcing values in the ghost nodes from their parent cell values.
+// The edge (diagonal) cells are not written since they are not read. Launch
+// this kernel for all cells in the grid.
+__global__ void setNSghostNodesForcing(
+        Float*  dev_ns_f1,
+        Float3* dev_ns_f2,
+        Float*  dev_ns_f,
+        unsigned int nijac)
+
+{
+    // 3D thread index
+    const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
+    const unsigned int y = blockDim.y * blockIdx.y + threadIdx.y;
+    const unsigned int z = blockDim.z * blockIdx.z + threadIdx.z;
+
+    // Grid dimensions
+    const unsigned int nx = devC_grid.num[0];
+    const unsigned int ny = devC_grid.num[1];
+    const unsigned int nz = devC_grid.num[2];
+
+    // 1D thread index
+    unsigned int cellidx = idx(x,y,z);
+
+    // check that we are not outside the fluid grid
+    if (x < nx && y < ny && z < nz) {
+
+        __syncthreads();
+        const Float f  = dev_ns_f[cellidx];
+        Float  f1;
+        Float3 f2;
+
+        if (nijac == 0) {
+            __syncthreads();
+            f1 = dev_ns_f1[cellidx];
+            f2 = dev_ns_f2[cellidx];
+        }
+
+        if (x == 0) {
+            cellidx = idx(nx,y,z);
+            dev_ns_f[cellidx] = f;
+            if (nijac == 0) {
+                dev_ns_f1[cellidx] = f1;
+                dev_ns_f2[cellidx] = f2;
+            }
+        }
+        if (x == nx-1) {
+            cellidx = idx(-1,y,z);
+            dev_ns_f[cellidx] = f;
+            if (nijac == 0) {
+                dev_ns_f1[cellidx] = f1;
+                dev_ns_f2[cellidx] = f2;
+            }
+        }
+
+        if (y == 0) {
+            cellidx = idx(x,ny,z);
+            dev_ns_f[cellidx] = f;
+            if (nijac == 0) {
+                dev_ns_f1[cellidx] = f1;
+                dev_ns_f2[cellidx] = f2;
+            }
+        }
+        if (y == ny-1) {
+            cellidx = idx(x,-1,z);
+            dev_ns_f[cellidx] = f;
+            if (nijac == 0) {
+                dev_ns_f1[cellidx] = f1;
+                dev_ns_f2[cellidx] = f2;
+            }
+        }
+
+        if (z == 0) {
+            cellidx = idx(x,y,nz);
+            dev_ns_f[cellidx] = f;
+            if (nijac == 0) {
+                dev_ns_f1[cellidx] = f1;
+                dev_ns_f2[cellidx] = f2;
+            }
+        }
+        if (z == nz-1) {
+            cellidx = idx(x,y,-1);
+            dev_ns_f[cellidx] = f;
+            if (nijac == 0) {
+                dev_ns_f1[cellidx] = f1;
+                dev_ns_f2[cellidx] = f2;
+            }
         }
     }
 }
@@ -334,7 +564,7 @@ __global__ void findPorositiesCubicDev(
         __syncthreads();
         Float phi_0 = dev_ns_phi[idx(x,y,z)];
 
-        Float phi = 0.99;
+        Float phi = 1.00;
 
         // Make sure cell is not empty
         if (startIdx != 0xffffffff) {
@@ -359,6 +589,8 @@ __global__ void findPorositiesCubicDev(
 
         // Save porosity and porosity change
         __syncthreads();
+        phi = 0.99;
+        phi_0 = phi;
         dev_ns_phi[idx(x,y,z)]  = phi;
         dev_ns_dphi[idx(x,y,z)] = phi - phi_0;
     }
@@ -506,32 +738,8 @@ __global__ void findPorositiesSphericalDev(
     }
 }
 
-// Return the discrete Laplacian in a cell in a homogenous, cubic 3D scalar
-// field
-__device__ Float discreteLaplacian(
-        const Float* dev_scalarfield,
-        const unsigned int x,
-        const unsigned int y,
-        const unsigned int z,
-        const Float dx2)
-{
-    // Read neighbor values
-    __syncthreads();
-    const Float cellval = dev_scalarfield[idx(x,y,z)];
-    const Float xn = dev_scalarfield[idx(x-1,y,z)];
-    const Float xp = dev_scalarfield[idx(x+1,y,z)];
-    const Float yn = dev_scalarfield[idx(x,y-1,z)];
-    const Float yp = dev_scalarfield[idx(x,y+1,z)];
-    const Float zn = dev_scalarfield[idx(x,y,z-1)];
-    const Float zp = dev_scalarfield[idx(x,y,z+1)];
-
-    // Return the discrete Laplacian, obtained by a finite-difference seven
-    // point stencil in a three-dimensional regular, cubic grid with cell
-    // spacing dx considering the 6 face neighbors
-    return (xn + xp + yn + yp + zn + zp - 6.0*cellval)/dx2;
-}
-
-// Find the gradient in a cell in a homogeneous, cubic 3D scalar field
+// Find the gradient in a cell in a homogeneous, cubic 3D scalar field using
+// finite central differences
 __device__ Float3 gradient(
         const Float* dev_scalarfield,
         const unsigned int x,
@@ -543,12 +751,17 @@ __device__ Float3 gradient(
 {
     // Read 6 neighbor cells
     __syncthreads();
+    const Float p  = dev_scalarfield[idx(x,y,z)];
     const Float xp = dev_scalarfield[idx(x+1,y,z)];
     const Float xn = dev_scalarfield[idx(x-1,y,z)];
     const Float yp = dev_scalarfield[idx(x,y+1,z)];
     const Float yn = dev_scalarfield[idx(x,y-1,z)];
     const Float zp = dev_scalarfield[idx(x,y,z+1)];
     const Float zn = dev_scalarfield[idx(x,y,z-1)];
+
+    //__syncthreads();
+    //if (p != 0.0)
+        //printf("p[%d,%d,%d] =\t%f\n", x,y,z, p);
 
     // Calculate central-difference gradients
     return MAKE_FLOAT3(
@@ -578,41 +791,11 @@ __device__ Float divergence(
 
     // Calculate the central-difference gradients and divergence
     return
-        (xp.x - xn.x)/(2.0*dx) + 
-        (yp.y - yn.y)/(2.0*dy) + 
+        (xp.x - xn.x)/(2.0*dx) +
+        (yp.y - yn.y)/(2.0*dy) +
         (zp.z - zn.z)/(2.0*dz);
 }
 
-
-// Returns the value of Laplacian(epsilon) at a point x,y,z
-__device__ Float laplacianEpsilon(
-        Float3* dev_ns_v_p,
-        Float*  dev_ns_phi,
-        Float*  dev_ns_dphi,
-        Float*  dev_ns_epsilon,
-        const unsigned int x,
-        const unsigned int y,
-        const unsigned int z,
-        const Float dx,
-        const Float dy,
-        const Float dz)
-{
-    __syncthreads();
-    const Float3 v_p  = dev_ns_v_p[idx(x,y,z)];
-    const Float  phi  = dev_ns_phi[idx(x,y,z)];
-    const Float  dphi = dev_ns_dphi[idx(x,y,z)];
-    const Float  rho  = 1000.0;
-
-    // Calculate derivatives
-    const Float  div_v_p      = divergence(dev_ns_v_p, x, y, z, dx, dy, dz);
-    const Float3 grad_phi     = gradient(dev_ns_phi, x, y, z, dx, dy, dz);
-    const Float3 grad_epsilon = gradient(dev_ns_epsilon, x, y, z, dx, dy, dz);
-
-    return div_v_p*rho/devC_dt
-        + dot(grad_phi, v_p)*rho/(devC_dt*phi)
-        - dot(grad_phi, grad_epsilon)/phi
-        + dphi*rho/(devC_dt*devC_dt*phi);
-}
 
 
 // Find the spatial gradient in e.g. pressures per cell
@@ -660,74 +843,50 @@ __inline__ __device__ Float hmeanDev(Float a, Float b) {
     return (2.0*a*b)/(a+b);
 }
 
-
-
-
-// Perform a time step
-__global__ void explNSstepDev(
-        Float* dev_ns_p,
-        Float* dev_ns_p_new,
-        Float* dev_ns_dphi)
+// Find the outer product of v v
+__global__ void findvvOuterProdNS(
+        Float3* dev_ns_v,       // in
+        Float*  dev_ns_v_prod)  // out
 {
-    // 3D thread index
     const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
     const unsigned int y = blockDim.y * blockIdx.y + threadIdx.y;
     const unsigned int z = blockDim.z * blockIdx.z + threadIdx.z;
 
-    // Grid dimensions
-    const unsigned int nx = devC_grid.num[0];
-    const unsigned int ny = devC_grid.num[1];
-    const unsigned int nz = devC_grid.num[2];
-
-    // Cell sizes
-    //const Float dx = devC_grid.L[0]/nx;
-    //const Float dy = devC_grid.L[1]/ny;
-    //const Float dz = devC_grid.L[2]/nz;
-
     // 1D thread index
-    const unsigned int cellidx = idx(x,y,z);
+    const unsigned int cellidx6 = idx(x,y,z)*6;
 
     // Check that we are not outside the fluid grid
-    if (x < nx && y < ny && z < nz) {
+    if (x < devC_grid.num[0] && y < devC_grid.num[1] && z < devC_grid.num[2]) {
 
-        // Read cell and the six neighbor cell hydraulic transmissivities
         __syncthreads();
+        const Float3 v = dev_ns_v[idx(x,y,z)];
 
-        // Read the cell porosity change
-        //const Float dphi = dev_ns_dphi[cellidx];
+        // The outer product (v v) looks like:
+        // [[ v_x^2    v_x*v_y  v_x*v_z ]
+        //  [ v_y*v_x  v_y^2    v_y*v_z ]
+        //  [ v_z*v_x  v_z*v_y  v_z^2   ]]
 
-        // Read the cell and the six neighbor cell hydraulic pressures
-        const Float p = dev_ns_p[cellidx];
-        /*const Float H_xn = dev_d_H[idx(x-1,y,z)];
-        const Float H_xp = dev_d_H[idx(x+1,y,z)];
-        const Float H_yn = dev_d_H[idx(x,y-1,z)];
-        const Float H_yp = dev_d_H[idx(x,y+1,z)];
-        const Float H_zn = dev_d_H[idx(x,y,z-1)];
-        const Float H_zp = dev_d_H[idx(x,y,z+1)];*/
+        // The tensor is symmetrical: value i,j = j,i.
+        // Only the upper triangle is saved, with the cells given a linear index
+        // enumerated as:
+        // [[ 0 1 2 ]
+        //  [   3 4 ]
+        //  [     5 ]]
 
-        // Neumann (no-flow) boundary condition at +z and -z boundaries
-        // enforced by a gradient value of 0.0
-        //if (z == 0)
-            //TdH_zn = 0.0;
-        //if (z == nz-1)
-            //TdH_zp = 0.0;
-
-        const Float delta_p = 0.0;
-
-        // The pressure should never be negative
-        const Float p_new = fmax(0.0, p + delta_p);
-
-        // Write the new hydraulic pressure in cell
         __syncthreads();
-        dev_ns_p_new[cellidx] = p_new;
-        //}
+        dev_ns_v_prod[cellidx6]   = v.x*v.x;
+        dev_ns_v_prod[cellidx6+1] = v.x*v.y;
+        dev_ns_v_prod[cellidx6+2] = v.x*v.z;
+        dev_ns_v_prod[cellidx6+3] = v.y*v.y;
+        dev_ns_v_prod[cellidx6+4] = v.y*v.z;
+        dev_ns_v_prod[cellidx6+5] = v.z*v.z;
     }
 }
 
 // Find the divergence of phi v v
 __global__ void findNSdivphivv(
-        Float3* dev_ns_v,    // in
-        Float*  dev_ns_phi,  // in
+        Float*  dev_ns_v_prod, // in
+        Float*  dev_ns_phi,    // in
         Float3* dev_ns_div_phi_v_v) // out
 {
     // 3D thread index
@@ -740,10 +899,10 @@ __global__ void findNSdivphivv(
     const unsigned int ny = devC_grid.num[1];
     const unsigned int nz = devC_grid.num[2];
 
-    // Grid sizes
-    //const Float dx = devC_grid.L[0]/nx;
-    //const Float dy = devC_grid.L[1]/ny;
-    //const Float dz = devC_grid.L[2]/nz;
+    // Cell sizes
+    const Float dx = devC_grid.L[0]/nx;
+    const Float dy = devC_grid.L[1]/ny;
+    const Float dz = devC_grid.L[2]/nz;
 
     // 1D thread index
     const unsigned int cellidx = idx(x,y,z);
@@ -751,17 +910,9 @@ __global__ void findNSdivphivv(
     // Check that we are not outside the fluid grid
     if (x < nx && y < ny && z < nz) {
 
-        // Read 6 neighbor cells
+        // Read cell and 6 neighbor cells
         __syncthreads();
-        const Float3 v      = dev_ns_v[idx(x,y,z)];
-        const Float3 v_xp   = dev_ns_v[idx(x+1,y,z)];
-        const Float3 v_xn   = dev_ns_v[idx(x-1,y,z)];
-        const Float3 v_yp   = dev_ns_v[idx(x,y+1,z)];
-        const Float3 v_yn   = dev_ns_v[idx(x,y-1,z)];
-        const Float3 v_zp   = dev_ns_v[idx(x,y,z+1)];
-        const Float3 v_zn   = dev_ns_v[idx(x,y,z-1)];
-
-        const Float  phi    = dev_ns_phi[idx(x,y,z)];
+        //const Float  phi    = dev_ns_phi[cellidx];
         const Float  phi_xp = dev_ns_phi[idx(x+1,y,z)];
         const Float  phi_xn = dev_ns_phi[idx(x-1,y,z)];
         const Float  phi_yp = dev_ns_phi[idx(x,y+1,z)];
@@ -769,16 +920,12 @@ __global__ void findNSdivphivv(
         const Float  phi_zp = dev_ns_phi[idx(x,y,z+1)];
         const Float  phi_zn = dev_ns_phi[idx(x,y,z-1)];
 
-        // The outer product (v v) looks like:
-        // [[ v_x^2    v_x*v_y  v_x*v_z ]
-        //  [ v_y*v_x  v_y^2    v_y*v_z ]
-        //  [ v_z*v_x  v_z*v_y  v_z^2   ]]
-
-        // Given a tensor T =
-        // [[ e_xx  e_xy  e_xz ]
-        //  [ e_yx  e_yy  e_yz ]
-        //  [ e_zx  e_zy  e_zz ]]
-        //  e_ij: i-th row, j-th col
+        // The tensor is symmetrical: value i,j = j,i.
+        // Only the upper triangle is saved, with the cells given a linear index
+        // enumerated as:
+        // [[ 0 1 2 ]
+        //  [   3 4 ]
+        //  [     5 ]]
 
         // div(T) = 
         //  [ de_xx/dx + de_xy/dy + de_xz/dz ,
@@ -787,9 +934,31 @@ __global__ void findNSdivphivv(
 
         // This function finds the divergence of (phi v v), which is a vector
 
-        // Calculate the divergence
-        const Float3 div = MAKE_FLOAT3(0.0,0.0,0.0);
-        
+        // Calculate the divergence. See
+        // https://en.wikipedia.org/wiki/Divergence#Application_in_Cartesian_coordinates
+        // The symmetry described in findvvOuterProdNS is used
+        __syncthreads();
+        const Float3 div = MAKE_FLOAT3(
+                ((dev_ns_v_prod[idx(x+1,y,z)*6]*phi_xp
+                  - dev_ns_v_prod[idx(x-1,y,z)*6]*phi_xn)/(2.0*dx) +
+                 (dev_ns_v_prod[idx(x,y+1,z)*6+1]*phi_yp
+                  - dev_ns_v_prod[idx(x,y-1,z)*6+1]*phi_yn)/(2.0*dy) +
+                 (dev_ns_v_prod[idx(x,y,z+1)*6+2]*phi_zp
+                  - dev_ns_v_prod[idx(x,y,z-1)*6+2]*phi_zn)/(2.0*dz)),
+                ((dev_ns_v_prod[idx(x+1,y,z)*6+1]*phi_xp
+                  - dev_ns_v_prod[idx(x-1,y,z)*6+1]*phi_xn)/(2.0*dx) +
+                 (dev_ns_v_prod[idx(x,y+1,z)*6+3]*phi_yp
+                  - dev_ns_v_prod[idx(x,y-1,z)*6+3]*phi_yn)/(2.0*dy) +
+                 (dev_ns_v_prod[idx(x,y,z+1)*6+4]*phi_zp
+                  - dev_ns_v_prod[idx(x,y,z-1)*6+4]*phi_zn)/(2.0*dz)),
+                ((dev_ns_v_prod[idx(x+1,y,z)*6+2]*phi_xp
+                  - dev_ns_v_prod[idx(x-1,y,z)*6+2]*phi_xn)/(2.0*dx) +
+                 (dev_ns_v_prod[idx(x,y+1,z)*6+4]*phi_yp
+                  - dev_ns_v_prod[idx(x,y-1,z)*6+4]*phi_yn)/(2.0*dy) +
+                 (dev_ns_v_prod[idx(x,y,z+1)*6+5]*phi_zp
+                  - dev_ns_v_prod[idx(x,y,z-1)*6+5]*phi_zn)/(2.0*dz)) );
+
+        //printf("div[%d,%d,%d] = %f\t%f\t%f\n", x, y, z, div.x, div.y, div.z);
 
         // Write divergence
         __syncthreads();
@@ -799,12 +968,12 @@ __global__ void findNSdivphivv(
 
 
 // Find predicted fluid velocity
-__global__ void findPredNSvelocitiesDev(
-        Float*  dev_ns_p,
-        Float3* dev_ns_v,
-        Float*  dev_ns_phi,
-        Float3* dev_ns_div_phi_v_v,
-        Float3* dev_ns_v_p)
+__global__ void findPredNSvelocities(
+        Float*  dev_ns_p,               // in
+        Float3* dev_ns_v,               // in
+        Float*  dev_ns_phi,             // in
+        Float3* dev_ns_div_phi_v_v,     // in
+        Float3* dev_ns_v_p)             // out
 {
     // 3D thread index
     const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -840,8 +1009,8 @@ __global__ void findPredNSvelocitiesDev(
         const Float3 f_i = MAKE_FLOAT3(0.0, 0.0, 0.0);
 
         // Gravitational drag force on cell fluid mass
-        const Float3 f_g = MAKE_FLOAT3(
-                devC_params.g[0], devC_params.g[1], devC_params.g[2])
+        const Float3 f_g
+            = MAKE_FLOAT3(devC_params.g[0], devC_params.g[1], devC_params.g[2])
             * rho * dx*dy*dz * phi;
 
         // Find pressure gradient
@@ -855,8 +1024,111 @@ __global__ void findPredNSvelocitiesDev(
             + devC_dt*phi*f_g;
 
         // Save the predicted velocity
+        //printf("v_p[%d,%d,%d] = \t%f\t%f\t%f\n", x, y, z, v_p.x, v_p.y, v_p.z);
         __syncthreads();
         dev_ns_v_p[cellidx] = v_p;
+    }
+}
+
+// Find the value of the forcing functioin. Only grad(epsilon) changes during
+// the Jacobi iterations. The remaining, constant terms are only calculated
+// during the first iteration.
+// The forcing function is:
+//   f = (div(v_p)*rho)/dt
+//     + (grad(phi) dot v_p*rho)/(dt*phi)
+//     + (dphi*rho)/(dt*dt*phi)
+//     - (grad(phi) dot grad(epsilon))/phi
+// The following is calculated in the first Jacobi iteration and saved:
+//   f1 = (div(v_p)*rho)/dt
+//      + (grad(phi) dot v_p*rho)/(dt*phi)
+//      + (dphi*rho)/(dt*dt*phi)
+//   f2 = grad(phi)/phi
+// At each iteration, the value of the forcing function is found as:
+//   f = f1 - f2 dot grad(epsilon)
+__global__ void findNSforcing(
+        Float*  dev_ns_epsilon,
+        Float*  dev_ns_f1,
+        Float3* dev_ns_f2,
+        Float*  dev_ns_f,
+        Float*  dev_ns_phi,
+        Float*  dev_ns_dphi,
+        Float3* dev_ns_v_p,
+        unsigned int nijac)
+{
+    // 3D thread index
+    const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
+    const unsigned int y = blockDim.y * blockIdx.y + threadIdx.y;
+    const unsigned int z = blockDim.z * blockIdx.z + threadIdx.z;
+
+    // Grid dimensions
+    const unsigned int nx = devC_grid.num[0];
+    const unsigned int ny = devC_grid.num[1];
+    const unsigned int nz = devC_grid.num[2];
+
+    // Cell sizes
+    const Float dx = devC_grid.L[0]/nx;
+    const Float dy = devC_grid.L[1]/ny;
+    const Float dz = devC_grid.L[2]/nz;
+
+    // 1D thread index
+    const unsigned int cellidx = idx(x,y,z);
+
+
+    // Check that we are not outside the fluid grid
+    if (x < nx && y < ny && z < nz) {
+
+        // Constant forcing function terms
+        Float f1;
+        Float3 f2;
+
+        // Check if this is the first Jacobi iteration. If it is, find f1 and f2
+        if (nijac == 0) {
+
+            // Read needed values
+            __syncthreads();
+            const Float3 v_p  = dev_ns_v_p[cellidx];
+            const Float  phi  = dev_ns_phi[cellidx];
+            const Float  dphi = dev_ns_dphi[cellidx];
+            const Float  rho  = 1000.0;
+
+            // Calculate derivatives
+            const Float  div_v_p
+                = divergence(dev_ns_v_p, x, y, z, dx, dy, dz);
+            const Float3 grad_phi
+                = gradient(dev_ns_phi, x, y, z, dx, dy, dz);
+
+            // Find coefficients
+            f1 = div_v_p*rho/devC_dt;
+                //+ dot(grad_phi, v_p)*rho/(devC_dt*phi)
+                //+ dphi*rho/(devC_dt*devC_dt*phi);
+
+            f2 = grad_phi/phi;
+
+            // Save values
+            __syncthreads();
+            dev_ns_f1[cellidx] = f1;
+            dev_ns_f2[cellidx] = f2;
+
+        } else {
+
+            // Read previously found values
+            __syncthreads();
+            f1 = dev_ns_f1[cellidx];
+            f2 = dev_ns_f2[cellidx];
+        }
+
+        // Find the gradient of epsilon, which changes during Jacobi iterations
+        const Float3 grad_epsilon
+            = gradient(dev_ns_epsilon, x, y, z, dx, dy, dz);
+
+        // Forcing function value
+        //const Float f = f1 - dot(f2, grad_epsilon);
+        const Float f = f1;
+        //printf("f[%d,%d,%d] = %f\n", x,y,z, f);
+
+        // Save forcing function value
+        __syncthreads();
+        dev_ns_f[cellidx] = f;
     }
 }
 
@@ -886,9 +1158,14 @@ __global__ void jacobiIterationNS(
     const unsigned int cellidx = idx(x,y,z);
 
     // Check that we are not outside the fluid grid
-    if (x < nx && y < ny && z < nz) {
+    //if (x < nx && y < ny && z < nz) {
 
-        //Float e, e_xn, e_xp, e_, e_new, res;
+    // internal nodes only
+    //if (x > 0 && x < nx-1 && y > 0 && y < ny-1 && z > 0 && z < nz-1) {
+
+    // Perform the epsilon updates for all non-ghost nodes except the Dirichlet
+    // boundaries at z=0 and z=nz-1
+    if (x < nx && y < ny && z > 0 && z < nz-1) {
 
         // Read the epsilon values from the cell and its 6 neighbors
         __syncthreads();
@@ -901,20 +1178,70 @@ __global__ void jacobiIterationNS(
         const Float e_zp = dev_ns_epsilon[idx(x,y,z+1)];
 
         // Read the value of the forcing function
-        const Float f = dev_ns_f[cellidx];
+        //const Float f = dev_ns_f[cellidx];
+        const Float f = 0.0;
 
         // Calculate grid coefficients
-        const Float div = 2.0*(dx*dx + dy*dy + dz*dz);
-        const Float ax = dy*dy*dz*dz/div;
-        const Float ay = dz*dz*dx*dx/div;
-        const Float az = dx*dx*dy*dy/div;
-        const Float af = dx*dx*dy*dy*dz*dz/div;
+        const Float denominator = 2.0*(dx*dx + dy*dy + dz*dz);
+        const Float ax = dy*dy*dz*dz/denominator;
+        const Float ay = dz*dz*dx*dx/denominator;
+        const Float az = dx*dx*dy*dy/denominator;
+        const Float af = dx*dx*dy*dy*dz*dz/denominator;
 
+        // New value of epsilon in 3D update
+        const Float e_new
+            = ax*(e_xn + e_xp)
+            + ay*(e_yn + e_yp)
+            + az*(e_zn + e_zp)
+            - af*f;
 
+        // New value of epsilon in 1D update
+        //const Float e_new = (e_zp + e_zn - dz*dz*f)/2.0;
 
+        //if (z == 0 || z == nz-1)
+            //e_new = 0.0;
+
+        // Find the normalized residual value. A small value is added to the
+        // denominator to avoid a divide by zero.
+        const Float res_norm = (e_new - e)*(e_new - e)/(e_new*e_new + 1.0e-16);
+
+        // Write results
+        __syncthreads();
+        dev_ns_epsilon_new[cellidx] = e_new;
+        dev_ns_norm[cellidx] = res_norm;
     }
 }
 
+///////////////////////////////// UNUSED ///////////////////////////////////////
+// Copy all values from one array to the other
+template<typename T>
+__global__ void copyValues(
+        T* dev_read,
+        T* dev_write)
+{
+    // 3D thread index
+    const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
+    const unsigned int y = blockDim.y * blockIdx.y + threadIdx.y;
+    const unsigned int z = blockDim.z * blockIdx.z + threadIdx.z;
+
+    // 1D thread index
+    const unsigned int cellidx = idx(x,y,z);
+
+    // Check that we are not outside the fluid grid
+    if (x < devC_grid.num[0] && y < devC_grid.num[1] && z < devC_grid.num[2]) {
+
+        // Read
+        __syncthreads();
+        const T val = dev_read[cellidx];
+
+        //printf("[%d,%d,%d] = %f\n", x, y, z, val);
+
+        // Write
+        __syncthreads();
+        dev_write[cellidx] = val;
+    }
+}
+///////////////////////////////// UNUSED END ///////////////////////////////////
 
 // Computes the new velocity and pressure using the corrector
 __global__ void updateNSvelocityPressure(
@@ -951,7 +1278,8 @@ __global__ void updateNSvelocityPressure(
         const Float3 v_p     = dev_ns_v_p[cellidx];
 
         // New pressure
-        const Float p = BETA*p_old + epsilon;
+        //Float p = BETA*p_old + epsilon;
+        Float p = epsilon;
 
         // Find corrector gradient
         const Float3 grad_epsilon
@@ -961,13 +1289,17 @@ __global__ void updateNSvelocityPressure(
         const Float rho = 1000.0;
 
         // Find new velocity
-        const Float3 v = v_p - devC_dt/rho*grad_epsilon;
+        Float3 v = v_p - devC_dt/rho*grad_epsilon;
+
+        /*if (z == 0 || z == nz-1) {
+            p = p_old;
+            v.z = 0.0;
+        }*/
 
         // Write new values
         __syncthreads();
         dev_ns_p[cellidx] = p;
         dev_ns_v[cellidx] = v;
-
     }
 }
 

@@ -28,6 +28,8 @@ void DEM::initNSmem()
     ns.phi   = new Float[ncells];  // porosity
     ns.dphi  = new Float[ncells];  // porosity change
     ns.norm  = new Float[ncells];  // normalized residual of epsilon
+    ns.epsilon = new Float[ncells];  // normalized residual of epsilon
+    ns.epsilon_new = new Float[ncells];  // normalized residual of epsilon
 }
 
 unsigned int DEM::NScells()
@@ -47,6 +49,8 @@ void DEM::freeNSmem()
     delete[] ns.phi;
     delete[] ns.dphi;
     delete[] ns.norm;
+    delete[] ns.epsilon;
+    delete[] ns.epsilon_new;
 }
 
 // 3D index to 1D index
@@ -67,9 +71,17 @@ unsigned int DEM::idx(
 void DEM::printNSarray(FILE* stream, Float* arr)
 {
     int x, y, z;
-    for (z=0; z<ns.nz; z++) {
+
+    // show ghost nodes
+    for (z=-1; z<=ns.nz; z++) {
+        for (y=-1; y<=ns.ny; y++) {
+            for (x=-1; x<=ns.nx; x++) {
+
+    // hide ghost nodes
+    /*for (z=0; z<ns.nz; z++) {
         for (y=0; y<ns.ny; y++) {
-            for (x=0; x<ns.nx; x++) {
+            for (x=0; x<ns.nx; x++) {*/
+
                 fprintf(stream, "%f\t", arr[idx(x,y,z)]);
             }
             fprintf(stream, "\n");
@@ -118,6 +130,55 @@ Float DEM::meanRadius()
     for (i=0; i<np; ++i)
         r_sum += k.x[i].w;
     return r_sum/((Float)np);
+}
+
+// Returns the average value of the normalized residuals
+double DEM::avgNormResNS()
+{
+    double norm_res_sum, norm_res;
+
+    // do not consider the values of the ghost nodes
+    for (int z=0; z<grid.num[2]; ++z) {
+        for (int y=0; y<grid.num[1]; ++y) {
+            for (int x=0; x<grid.num[0]; ++x) {
+                norm_res = static_cast<double>(ns.norm[idx(x,y,z)]);
+                if (norm_res != norm_res) {
+                    std::cerr << "\nError: normalized residual is NaN ("
+                        << norm_res << ") in cell "
+                        << x << "," << y << "," << z << std::endl;
+                    exit(1);
+                }
+                norm_res_sum += norm_res;
+            }
+        }
+    }
+    return norm_res_sum/(grid.num[0]*grid.num[1]*grid.num[2]);
+}
+
+
+// Returns the average value of the normalized residuals
+double DEM::maxNormResNS()
+{
+    double max_norm_res = -1.0e9; // initialized to a small number
+    double norm_res;
+
+    // do not consider the values of the ghost nodes
+    for (int z=0; z<grid.num[2]; ++z) {
+        for (int y=0; y<grid.num[1]; ++y) {
+            for (int x=0; x<grid.num[0]; ++x) {
+                norm_res = static_cast<double>(ns.norm[idx(x,y,z)]);
+                if (norm_res != norm_res) {
+                    std::cerr << "\nError: normalized residual is NaN ("
+                        << norm_res << ") in cell "
+                        << x << "," << y << "," << z << std::endl;
+                    exit(1);
+                }
+                if (norm_res > max_norm_res)
+                    max_norm_res = norm_res;
+            }
+        }
+    }
+    return max_norm_res;
 }
 
 // Initialize fluid parameters

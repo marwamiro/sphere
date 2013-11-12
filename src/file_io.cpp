@@ -243,7 +243,7 @@ void DEM::readbin(const char *target)
     if (verbose == 1)
         cout << "Done\n";
 
-    if (params.nu > 0.0 && darcy == 0) {    // Lattice-Boltzmann flow
+    if (params.nu > 0.0 && navierstokes == 0) {    // Lattice-Boltzmann flow
 
         if (verbose == 1)
             cout << "  - Reading LBM values:\t\t\t\t  ";
@@ -267,24 +267,22 @@ void DEM::readbin(const char *target)
         if (verbose == 1)
             cout << "Done" << std::endl;
 
-    } else if (params.nu > 0.0 && darcy == 1) {    // Darcy flow
+    } else if (params.nu > 0.0 && navierstokes == 1) {    // Navier Stokes flow
 
-        const Float cellsizemultiplier = 1.0;
-        initDarcyMem(cellsizemultiplier);
+        initNSmem();
 
         if (verbose == 1)
-            cout << "  - Reading Darcy values:\t\t\t  ";
+            cout << "  - Reading fluid values:\t\t\t  ";
 
         for (z = 0; z<grid.num[2]; ++z) {
             for (y = 0; y<grid.num[1]; ++y) {
                 for (x = 0; x<grid.num[0]; ++x) {
                     i = idx(x,y,z);
-                    ifs.read(as_bytes(d.V[i].x), sizeof(Float));
-                    ifs.read(as_bytes(d.V[i].y), sizeof(Float));
-                    ifs.read(as_bytes(d.V[i].z), sizeof(Float));
-                    ifs.read(as_bytes(d.H[i]), sizeof(Float));
-                    ifs.read(as_bytes(d.phi[i]), sizeof(Float));
-                    ifs.read(as_bytes(d.K[i]), sizeof(Float));
+                    ifs.read(as_bytes(ns.v[i].x), sizeof(Float));
+                    ifs.read(as_bytes(ns.v[i].y), sizeof(Float));
+                    ifs.read(as_bytes(ns.v[i].z), sizeof(Float));
+                    ifs.read(as_bytes(ns.p[i]), sizeof(Float));
+                    ifs.read(as_bytes(ns.phi[i]), sizeof(Float));
                 }
             }
         }
@@ -451,7 +449,7 @@ void DEM::writebin(const char *target)
 
         ofs.write(as_bytes(params.nu), sizeof(params.nu));
         int x, y, z;
-        if (params.nu > 0.0 && darcy == 0) {    // Lattice Boltzmann flow
+        if (params.nu > 0.0 && navierstokes == 0) {    // Lattice Boltzmann flow
             for (z = 0; z<grid.num[2]; ++z) {
                 for (y = 0; y<grid.num[1]; ++y) {
                     for (x = 0; x<grid.num[0]; ++x) {
@@ -463,17 +461,16 @@ void DEM::writebin(const char *target)
                     }
                 }
             }
-        } else if (params.nu > 0.0 && darcy == 1) { // Darcy flow
-            for (z=0; z<d.nz; z++) {
-                for (y=0; y<d.ny; y++) {
-                    for (x=0; x<d.nx; x++) {
+        } else if (params.nu > 0.0 && navierstokes == 1) { // Navier Stokes flow
+            for (z=0; z<ns.nz; z++) {
+                for (y=0; y<ns.ny; y++) {
+                    for (x=0; x<ns.nx; x++) {
                         i = idx(x,y,z);
-                        ofs.write(as_bytes(d.V[i].x), sizeof(Float));
-                        ofs.write(as_bytes(d.V[i].y), sizeof(Float));
-                        ofs.write(as_bytes(d.V[i].z), sizeof(Float));
-                        ofs.write(as_bytes(d.H[i]), sizeof(Float));
-                        ofs.write(as_bytes(d.phi[i]), sizeof(Float));
-                        ofs.write(as_bytes(d.K[i]), sizeof(Float));
+                        ofs.write(as_bytes(ns.v[i].x), sizeof(Float));
+                        ofs.write(as_bytes(ns.v[i].y), sizeof(Float));
+                        ofs.write(as_bytes(ns.v[i].z), sizeof(Float));
+                        ofs.write(as_bytes(ns.p[i]), sizeof(Float));
+                        ofs.write(as_bytes(ns.phi[i]), sizeof(Float));
                     }
                 }
             }
