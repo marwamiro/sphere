@@ -61,9 +61,9 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
         Float m = 4.0/3.0 * PI * radius*radius*radius * rho;
 
         // Update acceleration of particle
-        acc.x = force.x*dt + devC_params.g[0];
-        acc.y = force.y*dt + devC_params.g[1];
-        acc.z = force.z*dt + devC_params.g[2];
+        acc.x = force.x/m + devC_params.g[0];
+        acc.y = force.y/m + devC_params.g[1];
+        acc.z = force.z/m + devC_params.g[2];
 
         // Update angular acceleration of particle 
         // (angacc = (total moment)/Intertia, intertia = 2/5*m*r^2)
@@ -87,9 +87,9 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
         }
 
         // Velocity Verlet algorithm using old and new accelerations
-        pos.x += vel.x*dt + 0.5*acc0.x*dt*dt;
-        pos.y += vel.y*dt + 0.5*acc0.y*dt*dt;
-        pos.z += vel.z*dt + 0.5*acc0.z*dt*dt;
+        x.x += vel.x*dt + 0.5*acc0.x*dt*dt;
+        x.y += vel.y*dt + 0.5*acc0.y*dt*dt;
+        x.z += vel.z*dt + 0.5*acc0.z*dt*dt;
 
         angpos.x += angvel.x*dt + 0.5*angacc0.x*dt*dt;
         angpos.y += angvel.y*dt + 0.5*angacc0.y*dt*dt;
