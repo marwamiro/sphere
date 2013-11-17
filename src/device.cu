@@ -29,6 +29,19 @@
 #include "navierstokes.cuh"
 
 
+
+//// Parameters for the iterative Jacobi solver
+
+// Tolerance criteria for the normalized residual
+const double tolerance = 1.0e-4;
+
+// The maximal number of iterations to perform
+const unsigned int maxiter = 1e4;
+
+// The number of iterations to perform between checking the norm. residual value
+const unsigned int nijacnorm = 10;
+
+
 // Wrapper function for initializing the CUDA components.
 // Called from main.cpp
 //extern "C"
@@ -900,7 +913,7 @@ __host__ void DEM::startTime()
 
         }
 
-        // Solve navierstokes flow through grid
+        // Solve Navier Stokes flow through the grid
         if (params.nu > 0.0 && navierstokes == 1) {
 
             checkForCudaErrors("Before findPorositiesDev", iter);
@@ -921,11 +934,10 @@ __host__ void DEM::startTime()
             checkForCudaErrors("Post findPorositiesDev", iter);
 
             // Set the values of the ghost nodes in the grid
-            /*if (PROFILING == 1)
+            if (PROFILING == 1)
                 startTimer(&kernel_tic);
             setNSghostNodesDev<<<dimGridFluid, dimBlockFluid>>>(
                     dev_ns_p,
-                    //dev_ns_p_new,
                     dev_ns_dp,
                     dev_ns_v,
                     dev_ns_v_p,
@@ -936,7 +948,7 @@ __host__ void DEM::startTime()
             if (PROFILING == 1)
                 stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
                         &t_setNSghostNodesDev);
-            checkForCudaErrors("Post setNSghostNodesDev", iter);*/
+            checkForCudaErrors("Post setNSghostNodesDev", iter);
 
             // Find the outer product of v v, meeded for predicting the fluid
             // velocities
@@ -951,10 +963,10 @@ __host__ void DEM::startTime()
                         &t_findvvOuterProdNS);
             checkForCudaErrors("Post findvvouterprodNS", iter);
 
-            /*setNSghostNodes_v_prod<<<dimGridFluid, dimBlockFluid>>>(
+            setNSghostNodes_v_prod<<<dimGridFluid, dimBlockFluid>>>(
                     dev_ns_v_prod);
             cudaThreadSynchronize();
-            checkForCudaErrors("Post setNSghostNodes_v_prod", iter);*/
+            checkForCudaErrors("Post setNSghostNodes_v_prod", iter);
 
             // Find the divergence of phi v v, needed for predicting the fluid
             // velocities
@@ -970,11 +982,11 @@ __host__ void DEM::startTime()
                         &t_findNSdivphivv);
             checkForCudaErrors("Post findNSdivphiVV", iter);
 
-            /*setNSghostNodes<Float3><<<dimGridFluid, dimBlockFluid>>>(
+            setNSghostNodes<Float3><<<dimGridFluid, dimBlockFluid>>>(
                     dev_ns_div_phi_v_v);
             cudaThreadSynchronize();
             checkForCudaErrors("Post setNSghostNodesFloat3(dev_ns_div_phi_v_v)",
-                    iter);*/
+                    iter);
 
             // Predict the fluid velocities on the base of the old pressure
             // field and ignoring the incompressibility constraint
@@ -992,10 +1004,11 @@ __host__ void DEM::startTime()
                         &t_findPredNSvelocities);
             checkForCudaErrors("Post findPredNSvelocities", iter);
 
-            /*setNSghostNodes<Float3><<<dimGridFluid, dimBlockFluid>>>(dev_ns_v_p);
+            setNSghostNodes<Float3><<<dimGridFluid, dimBlockFluid>>>(
+                    dev_ns_v_p);
             cudaThreadSynchronize();
             checkForCudaErrors("Post setNSghostNodesFloat3(dev_ns_v_p)",
-                    iter);*/
+                    iter);
 
             // In the first iteration of the sphere program, we'll need to
             // manually estimate the values of epsilon. In the subsequent
@@ -1004,7 +1017,8 @@ __host__ void DEM::startTime()
                 // Define the first estimate of the values of epsilon
                 if (PROFILING == 1)
                     startTimer(&kernel_tic);
-                setNSepsilon<<<dimGridFluid, dimBlockFluid>>>(dev_ns_epsilon);
+                setNSepsilon<<<dimGridFluid, dimBlockFluid>>>(
+                        dev_ns_epsilon);
                 cudaThreadSynchronize();
                 if (PROFILING == 1)
                     stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
@@ -1033,29 +1047,30 @@ __host__ void DEM::startTime()
             // The average normalized residual is initialized to a large value.
             //double avg_norm_res;
             double max_norm_res;
-            const double tolerance = 1.0e-5;
-            const unsigned int maxiter = 1e4;
 
-            // Write average normalized residual to file
-            std::ofstream reslog;
-            reslog.open("max_res_norm.dat");
+            // Write a log file of the normalized residuals during the Jacobi
+            // iterations
+            //std::ofstream reslog;
+            //reslog.open("max_res_norm.dat");
 
             // transfer normalized residuals from GPU to CPU
-            transferNSnormFromGlobalDeviceMemory();
+            /*transferNSnormFromGlobalDeviceMemory();
             transferNSepsilonFromGlobalDeviceMemory();
+            transferNSepsilonNewFromGlobalDeviceMemory();
             std::cout << "\n###### BEFORE FIRST JACOBI ITERATION ######"
                 << std::endl;
             printNSarray(stdout, ns.epsilon, "epsilon");
+            printNSarray(stdout, ns.epsilon_new, "epsilon_new");*/
 
             for (unsigned int nijac = 0; nijac<maxiter; ++nijac) {
 
-                std::cout << "\n###### JACOBI ITERATION " << nijac << " ######"
-                    << std::endl;
+                //std::cout << "\n###### JACOBI ITERATION "
+                //<< nijac << " ######" << std::endl;
 
                 // Only grad(epsilon) changes during the Jacobi iterations. The
                 // remaining terms of the forcing function are only calculated
                 // during the first iteration.
-                /*if (PROFILING == 1)
+                if (PROFILING == 1)
                     startTimer(&kernel_tic);
                 findNSforcing<<<dimGridFluid, dimBlockFluid>>>(
                         dev_ns_epsilon,
@@ -1071,7 +1086,7 @@ __host__ void DEM::startTime()
                     stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
                             &t_findNSforcing);
                 checkForCudaErrors("Post findNSforcing", iter);
-                setNSghostNodesForcing<<<dimGridFluid, dimBlockFluid>>>(
+                /*setNSghostNodesForcing<<<dimGridFluid, dimBlockFluid>>>(
                         dev_ns_f1,
                         dev_ns_f2,
                         dev_ns_f,
@@ -1112,19 +1127,29 @@ __host__ void DEM::startTime()
                         iter);*/
 
                 // transfer normalized residuals from GPU to CPU
-                transferNSnormFromGlobalDeviceMemory();
-                transferNSepsilonFromGlobalDeviceMemory();
+                //transferNSepsilonFromGlobalDeviceMemory();
                 //transferNSepsilonNewFromGlobalDeviceMemory();
-                printNSarray(stdout, ns.epsilon, "epsilon");
+                //printNSarray(stdout, ns.epsilon, "epsilon");
                 //printNSarray(stdout, ns.epsilon_new, "epsilon_new");
-                //printNSarray(stdout, ns.norm, "norm");
 
-                // find average value of the normalized residuals
-                max_norm_res = maxNormResNS();
-                reslog << nijac << '\t' << max_norm_res << std::endl;
+                if (nijac % nijacnorm == 0) {
+
+                    // Read the normalized residuals from the device
+                    transferNSnormFromGlobalDeviceMemory();
+
+                    // Write the normalized residuals to the terminal
+                    //printNSarray(stdout, ns.norm, "norm");
+
+                    // Find the maximum value of the normalized residuals
+                    max_norm_res = maxNormResNS();
+
+                    // Write the Jacobi iteration number and maximum value of
+                    // the normalized residual to the log file
+                    //reslog << nijac << '\t' << max_norm_res << std::endl;
+                }
 
                 if (max_norm_res < tolerance)
-                    break;  // solution has converged, exit for-loop
+                    break;  // solution has converged, exit jacobi iter. loop
 
                 if (nijac == maxiter-1) {
                     std::cerr << "\nIteration " << iter << ", time " 
@@ -1136,7 +1161,8 @@ __host__ void DEM::startTime()
                 }
                 //break; // end after Jacobi first iteration
             } // end Jacobi iteration loop
-            reslog.close();
+
+            //reslog.close();
 
             // Find the new pressures and velocities
             if (PROFILING == 1)
@@ -1170,7 +1196,8 @@ __host__ void DEM::startTime()
                 dev_vel0,
                 dev_angvel0,
                 dev_xysum,
-                dev_gridParticleIndex);
+                dev_gridParticleIndex,
+                iter);
         cudaThreadSynchronize();
         checkForCudaErrors("Post integrate");
 
@@ -1293,7 +1320,7 @@ __host__ void DEM::startTime()
         }
 
         // Uncomment break command to stop after the first iteration
-        break;
+        //break;
     }
 
     // Stop clock and display calculation time spent

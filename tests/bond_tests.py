@@ -27,7 +27,8 @@ s2_1 = numpy.ones((2,1))*smallval
 
 # Inter-particle distances to try (neg. for overlap)
 #distances = [0.2, 0.0, -0.2]
-distances = [0.2, 0.0]
+#distances = [0.2, 0.0]
+distances = []
 #distances = [0.2]
 
 for d in distances:
@@ -191,4 +192,3 @@ for d in distances:
     #visualize(sb.sid, "energy")
     #'''
 
-cleanup(sb)

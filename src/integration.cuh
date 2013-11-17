@@ -13,7 +13,8 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
         Float4* dev_acc, Float4* dev_angacc,
         Float4* dev_vel0, Float4* dev_angvel0,
         Float2* dev_xysum,
-        unsigned int* dev_gridParticleIndex) // Input: Sorted-Unsorted key
+        unsigned int* dev_gridParticleIndex, // Input: Sorted-Unsorted key
+        unsigned int iter)
 {
     unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x; // Thread id
 
@@ -25,41 +26,50 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
         Float4 force   = dev_force[orig_idx];
         Float4 torque  = dev_torque[orig_idx];
         Float4 angpos  = dev_angpos[orig_idx];
-        Float4 acc     = dev_acc[orig_idx];
-        Float4 angacc  = dev_angacc[orig_idx];
-        Float4 vel0    = dev_vel0[orig_idx];
-        Float4 angvel0 = dev_angvel0[orig_idx];
+        const Float4 acc0    = dev_acc[orig_idx];
+        const Float4 angacc0 = dev_angacc[orig_idx];
+        //Float4 vel0    = dev_vel0[orig_idx];
+        //Float4 angvel0 = dev_angvel0[orig_idx];
         Float4 x       = dev_x_sorted[idx];
         Float4 vel     = dev_vel_sorted[idx];
         Float4 angvel  = dev_angvel_sorted[idx];
-        Float  radius  = x.w;
+        const Float  radius  = x.w;
 
         Float2 xysum  = MAKE_FLOAT2(0.0f, 0.0f);
 
+        Float4 acc, angacc;
+        if (iter == 0) {
+            // in the first iterations, the accelerations havn't been set yet.
+            // Therefore, they are defined.
+            acc = MAKE_FLOAT4(0.0, 0.0, 0.0, 0.0);
+            angacc = MAKE_FLOAT4(0.0, 0.0, 0.0, 0.0);
+        }
+
         // Coherent read from constant memory to registers
-        Float  dt    = devC_dt;
-        Float3 origo = MAKE_FLOAT3(devC_grid.origo[0], devC_grid.origo[1], devC_grid.origo[2]); 
-        Float3 L     = MAKE_FLOAT3(devC_grid.L[0], devC_grid.L[1], devC_grid.L[2]);
-        Float  rho   = devC_params.rho;
+        const Float dt = devC_dt;
+        const Float3 origo = MAKE_FLOAT3(
+                devC_grid.origo[0],
+                devC_grid.origo[1],
+                devC_grid.origo[2]); 
+        const Float3 L = MAKE_FLOAT3(
+                devC_grid.L[0],
+                devC_grid.L[1],
+                devC_grid.L[2]);
+        const Float rho = devC_params.rho;
 
         // Particle mass
         Float m = 4.0/3.0 * PI * radius*radius*radius * rho;
 
-        // Update linear acceleration of particle
-        acc.x = force.x / m;
-        acc.y = force.y / m;
-        acc.z = force.z / m;
+        // Update acceleration of particle
+        acc.x = force.x*dt + devC_params.g[0];
+        acc.y = force.y*dt + devC_params.g[1];
+        acc.z = force.z*dt + devC_params.g[2];
 
         // Update angular acceleration of particle 
         // (angacc = (total moment)/Intertia, intertia = 2/5*m*r^2)
         angacc.x = torque.x * 1.0 / (2.0/5.0 * m * radius*radius);
         angacc.y = torque.y * 1.0 / (2.0/5.0 * m * radius*radius);
         angacc.z = torque.z * 1.0 / (2.0/5.0 * m * radius*radius);
-
-        // Add gravity
-        acc.x += devC_params.g[0];
-        acc.y += devC_params.g[1];
-        acc.z += devC_params.g[2];
 
         // Check if particle has a fixed horizontal velocity
         if (vel.w > 0.0f) {
@@ -73,11 +83,27 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
             acc.z -= devC_params.g[2];
 
             // Zero the angular acceleration
-            angacc = MAKE_FLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-        } 
+            angacc = MAKE_FLOAT4(0.0, 0.0, 0.0, 0.0);
+        }
 
+        // Velocity Verlet algorithm using old and new accelerations
+        pos.x += vel.x*dt + 0.5*acc0.x*dt*dt;
+        pos.y += vel.y*dt + 0.5*acc0.y*dt*dt;
+        pos.z += vel.z*dt + 0.5*acc0.z*dt*dt;
 
-        // Move particle across boundary if it is periodic
+        angpos.x += angvel.x*dt + 0.5*angacc0.x*dt*dt;
+        angpos.y += angvel.y*dt + 0.5*angacc0.y*dt*dt;
+        angpos.z += angvel.z*dt + 0.5*angacc0.z*dt*dt;
+
+        vel.x += (acc0.x + acc.x)/2.0*dt;
+        vel.y += (acc0.y + acc.y)/2.0*dt;
+        vel.z += (acc0.z + acc.z)/2.0*dt;
+
+        angvel.x += (angacc0.x + angacc.x)/2.0*dt;
+        angvel.y += (angacc0.y + angacc.y)/2.0*dt;
+        angvel.z += (angacc0.z + angacc.z)/2.0*dt;
+
+        // Move particles outside the domain across periodic boundaries
         if (devC_grid.periodic == 1) {
             if (x.x < origo.x)
                 x.x += L.x;
@@ -94,37 +120,36 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
                 x.x -= L.x;
         }
 
-
         //// Half-step leapfrog Verlet integration scheme ////
         // Update half-step linear velocities
-        vel0.x += acc.x * dt;
+        /*vel0.x += acc.x * dt;
         vel0.y += acc.y * dt;
         vel0.z += acc.z * dt;
 
         // Update half-step angular velocities
         angvel0.x += angacc.x * dt;
         angvel0.y += angacc.y * dt;
-        angvel0.z += angacc.z * dt;
+        angvel0.z += angacc.z * dt;*/
 
         // Update positions
-        x.x += vel0.x * dt;
-        x.y += vel0.y * dt;
-        x.z += vel0.z * dt;
+        //x.x += vel0.x * dt;
+        //x.y += vel0.y * dt;
+        //x.z += vel0.z * dt;
 
         // Update angular positions
-        angpos.x += angvel0.x * dt;
-        angpos.y += angvel0.y * dt;
-        angpos.z += angvel0.z * dt;
+        //angpos.x += angvel0.x * dt;
+        //angpos.y += angvel0.y * dt;
+        //angpos.z += angvel0.z * dt;
 
         // Update full-step linear velocity
-        vel.x = vel0.x + 0.5 * acc.x * dt;
-        vel.y = vel0.y + 0.5 * acc.y * dt;
-        vel.z = vel0.z + 0.5 * acc.z * dt;
+        //vel.x = vel0.x + 0.5 * acc.x * dt;
+        //vel.y = vel0.y + 0.5 * acc.y * dt;
+        //vel.z = vel0.z + 0.5 * acc.z * dt;
 
         // Update full-step angular velocity
-        angvel.x = angvel0.x + 0.5 * angacc.x * dt;
-        angvel.y = angvel0.y + 0.5 * angacc.y * dt;
-        angvel.z = angvel0.z + 0.5 * angacc.z * dt;
+        //angvel.x = angvel0.x + 0.5 * angacc.x * dt;
+        //angvel.y = angvel0.y + 0.5 * angacc.y * dt;
+        //angvel.z = angvel0.z + 0.5 * angacc.z * dt;
 
         /*
         //// First-order Euler integration scheme ///
@@ -167,8 +192,8 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
         // Add x-displacement for this time step to 
         // sum of x-displacements
         //x.w += vel.x * dt + (acc.x * dt*dt)/2.0f;
-        xysum.x += vel.x * dt;
-        xysum.y += vel.y * dt;// + (acc.y * dt*dt * 0.5f;
+        xysum.x += vel.x*dt + 0.5*acc0.x*dt*dt;
+        xysum.y += vel.y*dt + 0.5*acc0.y*dt*dt;
 
         // Hold threads for coalesced write
         __syncthreads();
@@ -178,9 +203,7 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
         dev_acc[orig_idx]     = acc;
         dev_angacc[orig_idx]  = angacc;
         dev_angvel[orig_idx]  = angvel;
-        dev_angvel0[orig_idx] = angvel0;
         dev_vel[orig_idx]     = vel;
-        dev_vel0[orig_idx]    = vel0;
         dev_angpos[orig_idx]  = angpos;
         dev_x[orig_idx]       = x;
     } 
