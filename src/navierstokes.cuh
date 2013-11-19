@@ -146,8 +146,10 @@ __inline__ __device__ unsigned int idx(
         (devC_grid.num[0]+2)*(devC_grid.num[1]+2)*(z+1);
 }
 
-// Set the initial guess of the values of epsilon.  
-__global__ void setNSepsilon(Float* dev_ns_epsilon)
+// Set the initial guess of the values of epsilon.
+// The normalized residuals are given an initial value of 0, since the values at
+// the Dirichlet boundaries aren't written during the iterations.
+__global__ void setNSepsilon(Float* dev_ns_epsilon, Float* dev_ns_norm)
 {
     // 3D thread index
     const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -157,7 +159,9 @@ __global__ void setNSepsilon(Float* dev_ns_epsilon)
     // check that we are not outside the fluid grid
     if (x < devC_grid.num[0] && y < devC_grid.num[1] && z < devC_grid.num[2]) {
         __syncthreads();
-        dev_ns_epsilon[idx(x,y,z)] = 1.0;
+        const unsigned int cellidx = idx(x,y,z);
+        dev_ns_epsilon[cellidx] = 1.0;
+        dev_ns_norm[cellidx]    = 1.0;
     }
 }
 
