@@ -1022,7 +1022,7 @@ __host__ void DEM::startTime()
                 if (PROFILING == 1)
                     startTimer(&kernel_tic);
                 setNSepsilon<<<dimGridFluid, dimBlockFluid>>>(
-                        dev_ns_epsilon);
+                        dev_ns_epsilon, dev_ns_norm);
                 cudaThreadSynchronize();
                 if (PROFILING == 1)
                     stopTimer(&kernel_tic, &kernel_toc, &kernel_elapsed,
