@@ -41,6 +41,10 @@ const unsigned int maxiter = 1e4;
 // The number of iterations to perform between checking the norm. residual value
 const unsigned int nijacnorm = 10;
 
+// Write max. residual to logfile 'max_norm_res.dat'
+// 0: False, 1: True
+const int write_reslog = 1;
+
 
 // Wrapper function for initializing the CUDA components.
 // Called from main.cpp
@@ -1050,8 +1054,9 @@ __host__ void DEM::startTime()
 
             // Write a log file of the normalized residuals during the Jacobi
             // iterations
-            //std::ofstream reslog;
-            //reslog.open("max_res_norm.dat");
+            std::ofstream reslog;
+            if (write_reslog == 1)
+                reslog.open("max_res_norm.dat");
 
             // transfer normalized residuals from GPU to CPU
             /*transferNSnormFromGlobalDeviceMemory();
@@ -1145,7 +1150,8 @@ __host__ void DEM::startTime()
 
                     // Write the Jacobi iteration number and maximum value of
                     // the normalized residual to the log file
-                    //reslog << nijac << '\t' << max_norm_res << std::endl;
+                    if (write_reslog == 1)
+                        reslog << nijac << '\t' << max_norm_res << std::endl;
                 }
 
                 if (max_norm_res < tolerance)
@@ -1162,7 +1168,8 @@ __host__ void DEM::startTime()
                 //break; // end after Jacobi first iteration
             } // end Jacobi iteration loop
 
-            //reslog.close();
+            if (write_reslog == 1)
+                reslog.close();
 
             // Find the new pressures and velocities
             if (PROFILING == 1)
