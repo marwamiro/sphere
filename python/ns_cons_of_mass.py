@@ -16,7 +16,7 @@ figformat = 'pdf'
 
 # Number of particles
 #np = 1e4
-np = 1e2
+np = 50
 
 # Common simulation id
 sim_id = "ns"
