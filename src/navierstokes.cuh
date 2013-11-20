@@ -160,8 +160,8 @@ __global__ void setNSepsilon(Float* dev_ns_epsilon, Float* dev_ns_norm)
     if (x < devC_grid.num[0] && y < devC_grid.num[1] && z < devC_grid.num[2]) {
         __syncthreads();
         const unsigned int cellidx = idx(x,y,z);
-        dev_ns_epsilon[cellidx] = 1.0;
-        dev_ns_norm[cellidx]    = 1.0;
+        dev_ns_epsilon[cellidx] = 0.0;
+        dev_ns_norm[cellidx]    = 0.0;
     }
 }
 
