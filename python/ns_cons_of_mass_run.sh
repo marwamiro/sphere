@@ -1,0 +1,3 @@
+#!/bin/sh
+rm ~/code/sphere-cfd/output/*.{vtu,vti}; cd ~/code/sphere-cfd && cmake . && make
+-j2 && cd ~/code/sphere-cfd/python && python ns_cons_of_mass.py
