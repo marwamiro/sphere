@@ -160,7 +160,7 @@ cb.set_label('H [m]')
 pylab.savefig('darcy_cons_of_mass2.' + figformat)
 pylab.clf()
 
-t = 50
+t = init.status()
 fn = "../output/{0}.output{1:0=5}.bin".format(project, t)
 sb.sid = project + ".output{:0=5}".format(i)
 sb.readbin(fn, verbose = False)
