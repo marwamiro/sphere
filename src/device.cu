@@ -47,7 +47,7 @@ const int write_reslog = 1;
 
 // Report epsilon values during Jacobi iterations to stdout
 // 0: False, 1: True
-const int report_epsilon = 0;
+const int report_epsilon = 1;
 
 
 // Wrapper function for initializing the CUDA components.

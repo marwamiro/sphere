@@ -1108,8 +1108,8 @@ __global__ void jacobiIterationNS(
         const Float e_zp = dev_ns_epsilon[idx(x,y,z+1)];
 
         // Read the value of the forcing function
-        const Float f = dev_ns_f[cellidx];
-        //const Float f = 0.0;
+        //const Float f = dev_ns_f[cellidx];
+        const Float f = 0.0;
 
         // New value of epsilon in 3D update
         const Float dxdx = dx*dx;
@@ -1217,10 +1217,10 @@ __global__ void updateNSvelocityPressure(
         // Find new velocity
         Float3 v = v_p - devC_dt/rho*grad_epsilon;
 
-        if (z == 0 || z == nz-1) {
+        /*if (z == 0 || z == nz-1) {
             p = p_old;
             v.z = 0.0;
-        }
+        }*/
 
         // Write new values
         __syncthreads();

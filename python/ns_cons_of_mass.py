@@ -7,11 +7,6 @@ import sys
 import numpy
 import pylab
 
-### EXPERIMENT SETUP ###
-initialization = True
-consolidation  = True
-#shearing       = True
-
 figformat = 'pdf'
 
 # Number of particles
@@ -20,12 +15,6 @@ np = 50
 
 # Common simulation id
 sim_id = "ns"
-
-# Deviatoric stress [Pa]
-#devs = 10e3
-devslist = [10.0e3]
-
-### INITIALIZATION ###
 
 # New class
 init = sphere.Spherebin(np = np, nd = 3, nw = 0, sid = sim_id + "-init")
@@ -45,8 +34,15 @@ init.initRandomGridPos(gridnum = numpy.array([6, 6, 1000]), periodic = 1, contac
 # Set duration of simulation
 #init.initTemporal(total = 2.5)
 #init.time_file_dt[0] = 0.05
-init.initTemporal(total = 0.05)
-init.time_file_dt[0] = 0.005
+
+#init.initTemporal(total = 0.05)
+#init.time_file_dt[0] = 0.005
+
+init.initTemporal(1)
+init.time_file_dt[0] = init.time_dt[0]*0.9
+init.time_total[0] = init.time_file_dt[0]*10.5
+
+
 
 # Small pertubation
 #init.p_f[init.num[0]/2,init.num[1]/2,init.num[2]/2] = 2.0
