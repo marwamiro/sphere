@@ -136,7 +136,7 @@ cb = pylab.colorbar(orientation = 'horizontal', shrink=0.8, pad=0.23, ticks=[sb.
 cb.ax.set_xticklabels([1.0, sb.p_f[:,y,:].max()])
 cb.set_label('H [m]')
 
-pylab.savefig('darcy_cons_of_mass1.' + figformat)
+pylab.savefig('ns_cons_of_mass1.' + figformat)
 pylab.clf()
 
 t = 1
@@ -157,7 +157,7 @@ cb = pylab.colorbar(orientation = 'horizontal', shrink=0.8, pad=0.23, ticks=[sb.
 cb.ax.set_xticklabels([sb.p_f[:,y,:].min(), sb.p_f[:,y,:].max()])
 cb.set_label('H [m]')
 #pylab.tight_layout()
-pylab.savefig('darcy_cons_of_mass2.' + figformat)
+pylab.savefig('ns_cons_of_mass2.' + figformat)
 pylab.clf()
 
 t = init.status()
@@ -178,7 +178,7 @@ cb = pylab.colorbar(orientation = 'horizontal', shrink=0.8, pad=0.23, ticks=[sb.
 cb.ax.set_xticklabels([sb.p_f[:,y,:].min(), sb.p_f[:,y,:].max()])
 cb.set_label('H [m]')
 #pylab.tight_layout()
-pylab.savefig('darcy_cons_of_mass3.' + figformat)
+pylab.savefig('ns_cons_of_mass3.' + figformat)
 pylab.clf()
 
 #pylab.axes([0.125,0.2,0.95-0.125,0.95-0.2])
@@ -191,14 +191,14 @@ pylab.ylim([0,sum_op_f.max()*1.1])
 #pylab.legend()
 #pylab.tight_layout()
 pylab.grid()
-pylab.savefig('darcy_cons_of_mass4.' + figformat)
+pylab.savefig('ns_cons_of_mass4.' + figformat)
 pylab.clf()
 
 #pylab.tight_layout(h_pad=6.0)
-#pylab.savefig('darcy_cons_of_mass.eps')
+#pylab.savefig('ns_cons_of_mass.eps')
 
 #fig = matplotlib.pyplot.figure(figsize=(10,5),dpi=300)
 #ax = matplotlib.pyplot.subplot2grid((1, 1), (0, 0))
 #ax.plot(time, sum_op_f)
-#fig.savefig("darcy_cons_of_mass.png")
+#fig.savefig("ns_cons_of_mass.png")
 #fig.clf()
