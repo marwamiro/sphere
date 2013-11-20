@@ -974,8 +974,8 @@ __global__ void findPredNSvelocities(
             + devC_dt*phi*f_g;
 
         // Save the predicted velocity
-        printf("[%d,%d,%d] v_p = %f\t%f\t%f,\tgrad_p = %f\t%f\t%f\n",
-                x, y, z, v_p.x, v_p.y, v_p.z, grad_p.x, grad_p.y, grad_p.z);
+        //printf("[%d,%d,%d] v_p = %f\t%f\t%f,\tgrad_p = %f\t%f\t%f\n",
+         //       x, y, z, v_p.x, v_p.y, v_p.z, grad_p.x, grad_p.y, grad_p.z);
         __syncthreads();
         dev_ns_v_p[cellidx] = v_p;
     }
