@@ -527,85 +527,8 @@ __global__ void setNSghostNodesForcing(
     }
 }
 
-// Find the porosity in each cell on the base of a cubic grid, binning particles
-// into the cells containing their centers. This approximation causes
-// non-continuous porosities through time.
-__global__ void findPorositiesCubicDev(
-        unsigned int* dev_cellStart,
-        unsigned int* dev_cellEnd,
-        Float4* dev_x_sorted,
-        Float* dev_ns_phi,
-        Float* dev_ns_dphi)
-{
-    // 3D thread index
-    const unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
-    const unsigned int y = blockDim.y * blockIdx.y + threadIdx.y;
-    const unsigned int z = blockDim.z * blockIdx.z + threadIdx.z;
-    
-    // Grid dimensions
-    const unsigned int nx = devC_grid.num[0];
-    const unsigned int ny = devC_grid.num[1];
-    const unsigned int nz = devC_grid.num[2];
-
-    // Cell dimensions
-    const Float dx = devC_grid.L[0]/nx;
-    const Float dy = devC_grid.L[1]/ny;
-    const Float dz = devC_grid.L[2]/nz;
-    const Float cell_volume = dx*dy*dz;
-
-    Float void_volume = cell_volume;
-    Float4 xr;  // particle pos. and radius
-
-    // check that we are not outside the fluid grid
-    if (x < nx && y < ny && z < nz) {
-
-        // Calculate linear cell ID
-        const unsigned int cellID = x + y*devC_grid.num[0]
-            + (devC_grid.num[0] * devC_grid.num[1])*z;
-
-        // Lowest particle index in cell
-        const unsigned int startIdx = dev_cellStart[cellID];
-
-        // Read old porosity
-        __syncthreads();
-        Float phi_0 = dev_ns_phi[idx(x,y,z)];
-
-        Float phi = 1.00;
-
-        // Make sure cell is not empty
-        if (startIdx != 0xffffffff) {
-
-            // Highest particle index in cell
-            const unsigned int endIdx = dev_cellEnd[cellID];
-
-            // Iterate over cell particles
-            for (unsigned int i = startIdx; i<endIdx; ++i) {
-
-                // Read particle position and radius
-                __syncthreads();
-                xr = dev_x_sorted[i];
-
-                // Subtract particle volume from void volume
-                void_volume -= 4.0/3.0*M_PI*xr.w*xr.w*xr.w;
-            }
-
-            // Make sure that the porosity is in the interval ]0.0;1.0[
-            phi = fmin(0.99, fmax(0.01, void_volume/cell_volume));
-        }
-
-        // Save porosity and porosity change
-        __syncthreads();
-        phi = 0.99;
-        phi_0 = phi;
-        dev_ns_phi[idx(x,y,z)]  = phi;
-        dev_ns_dphi[idx(x,y,z)] = phi - phi_0;
-    }
-}
-
-
 // Find the porosity in each cell on the base of a sphere, centered at the cell
-// center. This approximation is continuous through time and generally
-// preferable to findPorositiesCubicDev, although it's slower.
+// center. 
 __global__ void findPorositiesSphericalDev(
         unsigned int* dev_cellStart,
         unsigned int* dev_cellEnd,
@@ -739,6 +662,7 @@ __global__ void findPorositiesSphericalDev(
 
         // Save porosity and porosity change
         __syncthreads();
+        phi = 1.0; dphi = 0.0; // disable porosity effects
         dev_ns_phi[idx(x,y,z)]  = phi;
         dev_ns_dphi[idx(x,y,z)] = dphi;
     }
@@ -1092,9 +1016,9 @@ __global__ void findNSforcing(
 
             // Read needed values
             __syncthreads();
-            //const Float3 v_p  = dev_ns_v_p[cellidx];
+            const Float3 v_p  = dev_ns_v_p[cellidx];
             const Float  phi  = dev_ns_phi[cellidx];
-            //const Float  dphi = dev_ns_dphi[cellidx];
+            const Float  dphi = dev_ns_dphi[cellidz];
             const Float  rho  = 1000.0;
 
             // Calculate derivatives
@@ -1104,9 +1028,9 @@ __global__ void findNSforcing(
                 = gradient(dev_ns_phi, x, y, z, dx, dy, dz);
 
             // Find coefficients
-            f1 = div_v_p*rho/devC_dt;
-                //+ dot(grad_phi, v_p)*rho/(devC_dt*phi)
-                //+ dphi*rho/(devC_dt*devC_dt*phi);
+            f1 = div_v_p*rho/devC_dt
+                + dot(grad_phi, v_p)*rho/(devC_dt*phi)
+                + dphi*rho/(devC_dt*devC_dt*phi);
 
             f2 = grad_phi/phi;
 
@@ -1128,8 +1052,8 @@ __global__ void findNSforcing(
             = gradient(dev_ns_epsilon, x, y, z, dx, dy, dz);
 
         // Forcing function value
-        //const Float f = f1 - dot(f2, grad_epsilon);
-        const Float f = f1;
+        const Float f = f1 - dot(f2, grad_epsilon);
+        //const Float f = f1;
         //printf("f[%d,%d,%d] = %f\n", x,y,z, f);
 
         // Save forcing function value
@@ -1184,8 +1108,8 @@ __global__ void jacobiIterationNS(
         const Float e_zp = dev_ns_epsilon[idx(x,y,z+1)];
 
         // Read the value of the forcing function
-        //const Float f = dev_ns_f[cellidx];
-        const Float f = 0.0;
+        const Float f = dev_ns_f[cellidx];
+        //const Float f = 0.0;
 
         // New value of epsilon in 3D update
         const Float dxdx = dx*dx;
