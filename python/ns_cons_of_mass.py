@@ -15,8 +15,8 @@ consolidation  = True
 figformat = 'pdf'
 
 # Number of particles
-#np = 2e2
-np = 1e4
+#np = 1e4
+np = 1e2
 
 # Common simulation id
 sim_id = "ns"
@@ -39,14 +39,17 @@ init.generateRadii(radius_mean = 0.05, histogram=False)
 init.defaultParams(mu_s = 0.4, mu_d = 0.4, nu = 8.9e-4)
 
 # Initialize positions in random grid (also sets world size)
-init.initRandomGridPos(gridnum = numpy.array([80, 80, 1000]), periodic = 1, contactmodel = 1)
+#init.initRandomGridPos(gridnum = numpy.array([80, 80, 1000]), periodic = 1, contactmodel = 1)
+init.initRandomGridPos(gridnum = numpy.array([6, 6, 1000]), periodic = 1, contactmodel = 1)
 
 # Set duration of simulation
-init.initTemporal(total = 2.5)
-init.time_file_dt[0] = 0.05
+#init.initTemporal(total = 2.5)
+#init.time_file_dt[0] = 0.05
+init.initTemporal(total = 0.05)
+init.time_file_dt[0] = 0.005
 
 # Small pertubation
-init.p_f[4,4,4] = 2.0
+#init.p_f[init.num[0]/2,init.num[1]/2,init.num[2]/2] = 2.0
 
 
 # Write input file for sphere
@@ -55,6 +58,8 @@ init.writebin()
 # Run sphere
 init.run(dry=True)
 init.run(cfd=True)
+
+init.writeVTKall()
 
 #if (plots == True):
     # Make a graph of energies
@@ -109,7 +114,7 @@ pylab.rcParams.update(params)
 #y2 = pylab.cos(x)
 
 
-y = 4
+y = init.num[1]/2
 
 t = 0
 fn = "../output/{0}.output{1:0=5}.bin".format(project, t)
