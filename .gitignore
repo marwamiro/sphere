@@ -49,6 +49,7 @@ CMakeFiles
 doc/doctrees
 doc/doxygen/man
 doc/doxygen/xml
+doc/html
 src/CMakeFiles
 src/forcechains.dir
 src/porosity.dir
