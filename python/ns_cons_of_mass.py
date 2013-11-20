@@ -46,156 +46,154 @@ init.initTemporal(total = 2.5)
 init.time_file_dt[0] = 0.05
 
 # Small pertubation
-init.f_rho[4,4,4] = 2.0
+init.p_f[4,4,4] = 2.0
 
 
-if (initialization == True):
+# Write input file for sphere
+init.writebin()
 
-    # Write input file for sphere
-    init.writebin()
+# Run sphere
+init.run(dry=True)
+init.run(cfd=True)
 
-    # Run sphere
-    init.run(dry=True)
-    init.run(darcyflow=True)
+#if (plots == True):
+    # Make a graph of energies
+    #visualize(init.sid, "energy", savefig=True, outformat='png')
 
-    #if (plots == True):
-        # Make a graph of energies
-        #visualize(init.sid, "energy", savefig=True, outformat='png')
+#if (rendering == True):
+    # Render images with raytracer
+    #init.render(method = "pres", max_val = 2.0*devs, verbose = False)
 
-    #if (rendering == True):
-        # Render images with raytracer
-        #init.render(method = "pres", max_val = 2.0*devs, verbose = False)
-
-    project = init.sid
-    lastfile = status(init.sid)
-    sb = sphere.Spherebin()
-    time = numpy.zeros(lastfile+1)
-    sum_of_rho = numpy.zeros(lastfile+1)
-    for i in range(lastfile+1):
-        fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
-        sb.sid = project + ".output{:0=5}".format(i)
-        sb.readbin(fn, verbose = False)
-        #for y in range(0,sb.num[1]):
-            #sb.plotFluidDensities(y = y)
-            #sb.plotFluidVelocities(y = y)
-
-        time[i] = sb.time_current[0]
-        sum_of_rho[i] = sb.f_rho.sum()
-
-    #stack = numpy.vstack((time,sum_of_rho))
-    #numpy.savetxt("sum_of_rho", stack)
-
-    # Set figure parameters
-    fig_width_pt = 246.0  # Get this from LaTeX using \showthe\columnwidth
-    #fig_width_pt = 50.0  # Get this from LaTeX using \showthe\columnwidth
-    inches_per_pt = 1.0/72.27               # Convert pt to inch
-    golden_mean = (pylab.sqrt(5)-1.0)/2.0         # Aesthetic ratio
-    fig_width = fig_width_pt*inches_per_pt  # width in inches
-    fig_height = fig_width*golden_mean      # height in inches
-    fig_size =  [fig_width,fig_height]
-    params = {'backend': 'ps',
-        'axes.labelsize': 10,
-        'text.fontsize': 10,
-        'legend.fontsize': 10,
-        'xtick.labelsize': 8,
-        'ytick.labelsize': 8,
-        'text.usetex':
-        True,
-        'figure.figsize':
-        fig_size}
-    pylab.rcParams.update(params)
-
-    # generate data
-    #x = pylab.arange(-2*pylab.pi,2*pylab.pi,0.01)
-    #y1 = pylab.sin(x)
-    #y2 = pylab.cos(x)
-
-
-    y = 4
-
-    t = 0
-    fn = "../output/{0}.output{1:0=5}.bin".format(project, t)
+project = init.sid
+lastfile = status(init.sid)
+sb = sphere.Spherebin()
+time = numpy.zeros(lastfile+1)
+sum_op_f = numpy.zeros(lastfile+1)
+for i in range(lastfile+1):
+    fn = "../output/{0}.output{1:0=5}.bin".format(project, i)
     sb.sid = project + ".output{:0=5}".format(i)
     sb.readbin(fn, verbose = False)
-    pylab.figure(1)
-    pylab.clf()
-    pylab.axes([0.125,0.2,0.95-0.125,0.95-0.2])
-    pylab.imshow(sb.f_rho[:,y,:].T, origin='lower', interpolation='nearest',
-            cmap=pylab.cm.Blues)
-    #imgplt.set_interpolation('nearest')
-    #pylab.set_interpolation('bicubic')
-    #imgplt.set_cmap('hot')
-    pylab.xlabel('$i_x$')
-    pylab.ylabel('$i_z$')
-    pylab.title('$t = {}$ s'.format(t*sb.time_file_dt[0]))
-    #cb = pylab.colorbar(orientation = 'horizontal', shrink=0.8, pad=0.23)
-    cb = pylab.colorbar(orientation = 'horizontal', shrink=0.8, pad=0.23, ticks=[sb.f_rho[:,y,:].min(), sb.f_rho[:,y,:].max()])
-    cb.ax.set_xticklabels([1.0, sb.f_rho[:,y,:].max()])
-    cb.set_label('H [m]')
+    #for y in range(0,sb.num[1]):
+        #sb.plotFluidDensities(y = y)
+        #sb.plotFluidVelocities(y = y)
 
-    pylab.savefig('darcy_cons_of_mass1.' + figformat)
-    pylab.clf()
+    time[i] = sb.time_current[0]
+    sum_op_f[i] = sb.p_f.sum()
 
-    t = 1
-    fn = "../output/{0}.output{1:0=5}.bin".format(project, t)
-    sb.sid = project + ".output{:0=5}".format(i)
-    sb.readbin(fn, verbose = False)
-    pylab.figure(1)
-    pylab.clf()
-    pylab.axes([0.125,0.2,0.95-0.125,0.95-0.2])
-    pylab.imshow(sb.f_rho[:,y,:].T, origin='lower', interpolation='nearest',
-            cmap=pylab.cm.Blues)
-    #pylab.set_interpolation('bicubic')
-    pylab.xlabel('$i_x$')
-    pylab.ylabel('$i_z$')
-    pylab.title('$t = {}$ s'.format(t*sb.time_file_dt[0]))
-    cb = pylab.colorbar(orientation = 'horizontal', shrink=0.8, pad=0.23, ticks=[sb.f_rho[:,y,:].min(), sb.f_rho[:,y,:].max()])
-    #cb.ax.set_xticklabels([1.0, sb.f_rho[:,y,:].max()])
-    cb.ax.set_xticklabels([sb.f_rho[:,y,:].min(), sb.f_rho[:,y,:].max()])
-    cb.set_label('H [m]')
-    #pylab.tight_layout()
-    pylab.savefig('darcy_cons_of_mass2.' + figformat)
-    pylab.clf()
+#stack = numpy.vstack((time,sum_op_f))
+#numpy.savetxt("sum_op_f", stack)
 
-    t = 50
-    fn = "../output/{0}.output{1:0=5}.bin".format(project, t)
-    sb.sid = project + ".output{:0=5}".format(i)
-    sb.readbin(fn, verbose = False)
-    pylab.figure(1)
-    pylab.clf()
-    pylab.axes([0.125,0.2,0.95-0.125,0.95-0.2])
-    pylab.imshow(sb.f_rho[:,y,:].T, origin='lower', interpolation='nearest',
-            cmap=pylab.cm.Blues)
-    #pylab.set_interpolation('bicubic')
-    pylab.xlabel('$i_x$')
-    pylab.ylabel('$i_z$')
-    pylab.title('$t = {}$ s'.format(t*sb.time_file_dt[0]))
-    cb = pylab.colorbar(orientation = 'horizontal', shrink=0.8, pad=0.23, ticks=[sb.f_rho[:,y,:].min(), sb.f_rho[:,y,:].max()])
-    #cb.ax.set_xticklabels([1.0, sb.f_rho[:,y,:].max()])
-    cb.ax.set_xticklabels([sb.f_rho[:,y,:].min(), sb.f_rho[:,y,:].max()])
-    cb.set_label('H [m]')
-    #pylab.tight_layout()
-    pylab.savefig('darcy_cons_of_mass3.' + figformat)
-    pylab.clf()
+# Set figure parameters
+fig_width_pt = 246.0  # Get this from LaTeX using \showthe\columnwidth
+#fig_width_pt = 50.0  # Get this from LaTeX using \showthe\columnwidth
+inches_per_pt = 1.0/72.27               # Convert pt to inch
+golden_mean = (pylab.sqrt(5)-1.0)/2.0         # Aesthetic ratio
+fig_width = fig_width_pt*inches_per_pt  # width in inches
+fig_height = fig_width*golden_mean      # height in inches
+fig_size =  [fig_width,fig_height]
+params = {'backend': 'ps',
+    'axes.labelsize': 10,
+    'text.fontsize': 10,
+    'legend.fontsize': 10,
+    'xtick.labelsize': 8,
+    'ytick.labelsize': 8,
+    'text.usetex':
+    True,
+    'figure.figsize':
+    fig_size}
+pylab.rcParams.update(params)
 
-    #pylab.axes([0.125,0.2,0.95-0.125,0.95-0.2])
-    pylab.axes([0.20,0.2,0.95-0.20,0.95-0.2])
-    pylab.plot(time, sum_of_rho, '-k')
-    pylab.xlabel('$t$ [s]')
-    pylab.ylabel('$\sum H_i$ [m]')
-    pylab.xlim([0,time.max()])
-    pylab.ylim([0,sum_of_rho.max()*1.1])
-    #pylab.legend()
-    #pylab.tight_layout()
-    pylab.grid()
-    pylab.savefig('darcy_cons_of_mass4.' + figformat)
-    pylab.clf()
+# generate data
+#x = pylab.arange(-2*pylab.pi,2*pylab.pi,0.01)
+#y1 = pylab.sin(x)
+#y2 = pylab.cos(x)
 
-    #pylab.tight_layout(h_pad=6.0)
-    #pylab.savefig('darcy_cons_of_mass.eps')
 
-    #fig = matplotlib.pyplot.figure(figsize=(10,5),dpi=300)
-    #ax = matplotlib.pyplot.subplot2grid((1, 1), (0, 0))
-    #ax.plot(time, sum_of_rho)
-    #fig.savefig("darcy_cons_of_mass.png")
-    #fig.clf()
+y = 4
+
+t = 0
+fn = "../output/{0}.output{1:0=5}.bin".format(project, t)
+sb.sid = project + ".output{:0=5}".format(i)
+sb.readbin(fn, verbose = False)
+pylab.figure(1)
+pylab.clf()
+pylab.axes([0.125,0.2,0.95-0.125,0.95-0.2])
+pylab.imshow(sb.p_f[:,y,:].T, origin='lower', interpolation='nearest',
+        cmap=pylab.cm.Blues)
+#imgplt.set_interpolation('nearest')
+#pylab.set_interpolation('bicubic')
+#imgplt.set_cmap('hot')
+pylab.xlabel('$i_x$')
+pylab.ylabel('$i_z$')
+pylab.title('$t = {}$ s'.format(t*sb.time_file_dt[0]))
+#cb = pylab.colorbar(orientation = 'horizontal', shrink=0.8, pad=0.23)
+cb = pylab.colorbar(orientation = 'horizontal', shrink=0.8, pad=0.23, ticks=[sb.p_f[:,y,:].min(), sb.p_f[:,y,:].max()])
+cb.ax.set_xticklabels([1.0, sb.p_f[:,y,:].max()])
+cb.set_label('H [m]')
+
+pylab.savefig('darcy_cons_of_mass1.' + figformat)
+pylab.clf()
+
+t = 1
+fn = "../output/{0}.output{1:0=5}.bin".format(project, t)
+sb.sid = project + ".output{:0=5}".format(i)
+sb.readbin(fn, verbose = False)
+pylab.figure(1)
+pylab.clf()
+pylab.axes([0.125,0.2,0.95-0.125,0.95-0.2])
+pylab.imshow(sb.p_f[:,y,:].T, origin='lower', interpolation='nearest',
+        cmap=pylab.cm.Blues)
+#pylab.set_interpolation('bicubic')
+pylab.xlabel('$i_x$')
+pylab.ylabel('$i_z$')
+pylab.title('$t = {}$ s'.format(t*sb.time_file_dt[0]))
+cb = pylab.colorbar(orientation = 'horizontal', shrink=0.8, pad=0.23, ticks=[sb.p_f[:,y,:].min(), sb.p_f[:,y,:].max()])
+#cb.ax.set_xticklabels([1.0, sb.p_f[:,y,:].max()])
+cb.ax.set_xticklabels([sb.p_f[:,y,:].min(), sb.p_f[:,y,:].max()])
+cb.set_label('H [m]')
+#pylab.tight_layout()
+pylab.savefig('darcy_cons_of_mass2.' + figformat)
+pylab.clf()
+
+t = 50
+fn = "../output/{0}.output{1:0=5}.bin".format(project, t)
+sb.sid = project + ".output{:0=5}".format(i)
+sb.readbin(fn, verbose = False)
+pylab.figure(1)
+pylab.clf()
+pylab.axes([0.125,0.2,0.95-0.125,0.95-0.2])
+pylab.imshow(sb.p_f[:,y,:].T, origin='lower', interpolation='nearest',
+        cmap=pylab.cm.Blues)
+#pylab.set_interpolation('bicubic')
+pylab.xlabel('$i_x$')
+pylab.ylabel('$i_z$')
+pylab.title('$t = {}$ s'.format(t*sb.time_file_dt[0]))
+cb = pylab.colorbar(orientation = 'horizontal', shrink=0.8, pad=0.23, ticks=[sb.p_f[:,y,:].min(), sb.p_f[:,y,:].max()])
+#cb.ax.set_xticklabels([1.0, sb.p_f[:,y,:].max()])
+cb.ax.set_xticklabels([sb.p_f[:,y,:].min(), sb.p_f[:,y,:].max()])
+cb.set_label('H [m]')
+#pylab.tight_layout()
+pylab.savefig('darcy_cons_of_mass3.' + figformat)
+pylab.clf()
+
+#pylab.axes([0.125,0.2,0.95-0.125,0.95-0.2])
+pylab.axes([0.20,0.2,0.95-0.20,0.95-0.2])
+pylab.plot(time, sum_op_f, '-k')
+pylab.xlabel('$t$ [s]')
+pylab.ylabel('$\sum H_i$ [m]')
+pylab.xlim([0,time.max()])
+pylab.ylim([0,sum_op_f.max()*1.1])
+#pylab.legend()
+#pylab.tight_layout()
+pylab.grid()
+pylab.savefig('darcy_cons_of_mass4.' + figformat)
+pylab.clf()
+
+#pylab.tight_layout(h_pad=6.0)
+#pylab.savefig('darcy_cons_of_mass.eps')
+
+#fig = matplotlib.pyplot.figure(figsize=(10,5),dpi=300)
+#ax = matplotlib.pyplot.subplot2grid((1, 1), (0, 0))
+#ax.plot(time, sum_op_f)
+#fig.savefig("darcy_cons_of_mass.png")
+#fig.clf()
