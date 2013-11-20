@@ -290,7 +290,25 @@ __global__ void setNSghostNodesDev(
                     dev_ns_epsilon);
         }
 
-        // Z bounadies aren't periodic
+        // Z boundaries fixed
+        if (z == 0) {
+            writeidx = idx(x,y,-1);
+            copyNSvalsDev(cellidx, writeidx,
+                    dev_ns_p, dev_ns_dp,
+                    dev_ns_v, dev_ns_v_p,
+                    dev_ns_phi, dev_ns_dphi,
+                    dev_ns_epsilon);
+        }
+        if (z == nz-1) {
+            writeidx = idx(x,y,nz);
+            copyNSvalsDev(cellidx, writeidx,
+                    dev_ns_p, dev_ns_dp,
+                    dev_ns_v, dev_ns_v_p,
+                    dev_ns_phi, dev_ns_dphi,
+                    dev_ns_epsilon);
+        }
+
+        // Z boundaries periodic
         /*if (z == 0) {
             writeidx = idx(x,y,nz);
             copyNSvalsDev(cellidx, writeidx,
@@ -342,9 +360,11 @@ __global__ void setNSghostNodes(T* dev_scalarfield)
             dev_scalarfield[idx(x,-1,z)] = val;
 
         if (z == 0)
-            dev_scalarfield[idx(x,y,nz)] = val;
+            dev_scalarfield[idx(x,y,-1)] = val;     // Dirichlet
+            //dev_scalarfield[idx(x,y,nz)] = val;    // Periodic -z
         if (z == nz-1)
-            dev_scalarfield[idx(x,y,-1)] = val;
+            dev_scalarfield[idx(x,y,nz)] = val;     // Dirichlet
+            //dev_scalarfield[idx(x,y,-1)] = val;    // Periodic +z
     }
 }
 
@@ -954,13 +974,14 @@ __global__ void findPredNSvelocities(
             + devC_dt*phi*f_g;
 
         // Save the predicted velocity
-        //printf("v_p[%d,%d,%d] = \t%f\t%f\t%f\n", x, y, z, v_p.x, v_p.y, v_p.z);
+        printf("[%d,%d,%d] v_p = %f\t%f\t%f,\tgrad_p = %f\t%f\t%f\n",
+                x, y, z, v_p.x, v_p.y, v_p.z, grad_p.x, grad_p.y, grad_p.z);
         __syncthreads();
         dev_ns_v_p[cellidx] = v_p;
     }
 }
 
-// Find the value of the forcing functioin. Only grad(epsilon) changes during
+// Find the value of the forcing function. Only grad(epsilon) changes during
 // the Jacobi iterations. The remaining, constant terms are only calculated
 // during the first iteration.
 // The forcing function is:
@@ -1027,14 +1048,14 @@ __global__ void findNSforcing(
             const Float3 grad_phi
                 = gradient(dev_ns_phi, x, y, z, dx, dy, dz);
 
-            // Find coefficients
+            // Find forcing function coefficients
             f1 = div_v_p*rho/devC_dt
                 + dot(grad_phi, v_p)*rho/(devC_dt*phi)
                 + dphi*rho/(devC_dt*devC_dt*phi);
-
             f2 = grad_phi/phi;
 
             // Save values
+            //printf("[%d,%d,%d] v_p = %f\tdiv_v_p = %f\n", x,y,z, v_p, div_v_p);
             __syncthreads();
             dev_ns_f1[cellidx] = f1;
             dev_ns_f2[cellidx] = f2;
@@ -1053,8 +1074,7 @@ __global__ void findNSforcing(
 
         // Forcing function value
         const Float f = f1 - dot(f2, grad_epsilon);
-        //const Float f = f1;
-        //printf("f[%d,%d,%d] = %f\n", x,y,z, f);
+        //printf("[%d,%d,%d] f1 = %f\tf2 = %f\tf = %f\n", x,y,z, f1, f2, f);
 
         // Save forcing function value
         __syncthreads();
@@ -1108,8 +1128,8 @@ __global__ void jacobiIterationNS(
         const Float e_zp = dev_ns_epsilon[idx(x,y,z+1)];
 
         // Read the value of the forcing function
-        //const Float f = dev_ns_f[cellidx];
-        const Float f = 0.0;
+        const Float f = dev_ns_f[cellidx];
+        //const Float f = 0.0;
 
         // New value of epsilon in 3D update
         const Float dxdx = dx*dx;
