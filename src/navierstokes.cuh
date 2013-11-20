@@ -1276,13 +1276,12 @@ __global__ void updateNSvelocityPressure(
 
         // Read values
         __syncthreads();
-        //const Float  p_old   = dev_ns_p[cellidx];
+        const Float  p_old   = dev_ns_p[cellidx];
         const Float  epsilon = dev_ns_epsilon[cellidx];
         const Float3 v_p     = dev_ns_v_p[cellidx];
 
         // New pressure
-        //Float p = BETA*p_old + epsilon;
-        Float p = epsilon;
+        Float p = BETA*p_old + epsilon;
 
         // Find corrector gradient
         const Float3 grad_epsilon
@@ -1294,10 +1293,10 @@ __global__ void updateNSvelocityPressure(
         // Find new velocity
         Float3 v = v_p - devC_dt/rho*grad_epsilon;
 
-        /*if (z == 0 || z == nz-1) {
+        if (z == 0 || z == nz-1) {
             p = p_old;
             v.z = 0.0;
-        }*/
+        }
 
         // Write new values
         __syncthreads();
