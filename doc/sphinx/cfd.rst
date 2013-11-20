@@ -149,18 +149,35 @@ The pressure difference in time becomes a `Poisson equation`_ with added terms:
     + \frac{\Delta \phi^t \rho}{\Delta t^2 \phi^t}
 
 The right hand side of the above equation is termed the *forcing function*
-:math:`f`.  See the `Jacobi iterative solution procedure of a Poisson
-equation`_.  The value of :math:`\epsilon` is found `iteratively`_ by using the
-discrete Laplacian previously mentioned. The value of :math:`\epsilon(x,y,z)` is
-the solution sought, and the right hand side of the above equation is the
-forcing function.  Using second-order finite difference approximations of the
-Laplace operator second-order partial derivatives, the differential equations
-become a system of equations that is solved using Jacobi iterations. The total
+:math:`f`, which is decomposed into two functions, :math:`f_1` and :math:`f_2`:
+
+.. math::
+    f_1 
+    = \frac{\nabla \cdot \bar{\boldsymbol{v}}^*_f \rho}{\Delta t}
+    + \frac{\nabla \phi^t \cdot \bar{\boldsymbol{v}}^*_f \rho}{\Delta t \phi^t}
+    + \frac{\Delta \phi^t \rho}{\Delta t^2 \phi^t}
+
+    f_2 =
+    \frac{\nabla \phi^t \cdot \nabla \epsilon}{\phi^t}
+
+
+During the `Jacobi iterative solution procedure`_ :math:`f_1` remains constant,
+while :math:`f_2` changes value. For this reason, :math:`f_1` is found only at
+the first iteration, while :math:`f_2` is updated every time. The value of the
+forcing function is found as:
+
+.. math::
+    f = f_1 - f_2
+
+Using second-order finite difference approximations of the Laplace operator
+second-order partial derivatives, the differential equations become a system of
+equations that is solved using `iteratively`_ using Jacobi updates. The total
 number of unknowns is :math:`(n_x - 1)(n_y - 1)(n_z - 1)`.
 
 The discrete Laplacian (approximation of the Laplace operator) can be obtained
 by a finite-difference seven-point stencil in a three-dimensional, cubic
-grid with cell spacing :math:`\Delta x, \Delta y, \Delta z`, considering the 6 face neighbors:
+grid with cell spacing :math:`\Delta x, \Delta y, \Delta z`, considering the six
+face neighbors:
 
 .. math::
     \nabla^2 \epsilon_{i_x,i_y,i_z}  \approx 
@@ -190,10 +207,12 @@ The solution for the updated value takes the form:
       + \Delta x^2 \Delta z^2
       + \Delta y^2 \Delta z^2) }
 
-The difference between the current and updated value is termed the *normalized residual*:
+The difference between the current and updated value is termed the *normalized
+residual*:
 
 .. math::
-    r_{i_x,i_y,i_z} = \frac{(\epsilon^{n+1}_{i_x,i_y,i_z} - \epsilon^n_{i_x,i_y,i_z})^2}{(\epsilon^{n+1}_{i_x,i_y,i_z})^2}
+    r_{i_x,i_y,i_z} = \frac{(\epsilon^{n+1}_{i_x,i_y,i_z}
+    - \epsilon^n_{i_x,i_y,i_z})^2}{(\epsilon^{n+1}_{i_x,i_y,i_z})^2}
 
 Note that the :math:`\epsilon` values cannot be 0 due to the above normalization
 of the residual.
@@ -221,6 +240,6 @@ pressures and velocities:
 .. _gradient: https://en.wikipedia.org/wiki/Gradient
 .. _split: http://www.wolframalpha.com/input/?i=div(p+v)
 .. _Poisson equation: https://en.wikipedia.org/wiki/Poisson's_equation
-.. _`Jacobi iterative solution procedure of a Poisson equation`: http://www.rsmas.miami.edu/personal/miskandarani/Courses/MSC321/Projects/prjpoisson.pdf
+.. _`Jacobi iterative solution procedure`: http://www.rsmas.miami.edu/personal/miskandarani/Courses/MSC321/Projects/prjpoisson.pdf
 .. _iteratively: https://en.wikipedia.org/wiki/Relaxation_(iterative_method)
 
