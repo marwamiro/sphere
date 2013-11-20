@@ -179,21 +179,16 @@ The solution for the updated value takes the form:
 
 .. math::
     \epsilon^{n+1}_{i_x,i_y,i_z}
-    = a_x (\epsilon^n_{i_x-1,i_y,i_z} + \epsilon^n_{i_x+1,i_y,i_z})
-    + a_y (\epsilon^n_{i_x,i_y-1,i_z} + \epsilon^n_{i_x,i_y+1,i_z})
-
-    + a_z (\epsilon^n_{i_x,i_y,i_z-1} + \epsilon^n_{i_x,i_y,i_z+1})
-    - a_f f_{i_x,i_y,i_z}
-
-    \text{where}
-
-    a_x = \frac{\Delta y^2 \Delta z^2}{2(\Delta x^2 + \Delta y^2 + \Delta z^2)}
-
-    a_y = \frac{\Delta z^2 \Delta x^2}{2(\Delta x^2 + \Delta y^2 + \Delta z^2)}
-
-    a_z = \frac{\Delta x^2 \Delta y^2}{2(\Delta x^2 + \Delta y^2 + \Delta z^2)}
-
-    a_f = \frac{\Delta x^2 \Delta y^2 \Delta x^2}{2(\Delta x^2 + \Delta y^2 + \Delta z^2)}
+    = \frac{-\Delta x^2 \Delta y^2 \Delta z^2 f_{i_x,i_y,i_z}
+    + \Delta y^2 \Delta z^2 (\epsilon^n_{i_x-1,i_y,i_z} +
+      \epsilon^n_{i_x+1,i_y,i_z})
+    + \Delta x^2 \Delta z^2 (\epsilon^n_{i_x,i_y-1,i_z} +
+      \epsilon^n_{i_x,i_y+1,i_z})
+    + \Delta x^2 \Delta y^2 (\epsilon^n_{i_x,i_y,i_z-1} +
+      \epsilon^n_{i_x,i_y,i_z+1})}
+      {2 (\Delta x^2 \Delta y^2
+      + \Delta x^2 \Delta z^2
+      + \Delta y^2 \Delta z^2) }
 
 The difference between the current and updated value is termed the *normalized residual*:
 
@@ -204,7 +199,7 @@ Note that the :math:`\epsilon` values cannot be 0 due to the above normalization
 of the residual.
 
 The updated values are at the end of the iteration stored as the current values,
-and the average value of the normalized residual is found. If this value is
+and the maximal value of the normalized residual is found. If this value is
 larger than a tolerance criteria, the procedure is repeated. The iterative
 procedure is ended if the number of iterations exceeds a defined limit. 
 

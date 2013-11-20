@@ -1185,19 +1185,16 @@ __global__ void jacobiIterationNS(
         //const Float f = dev_ns_f[cellidx];
         const Float f = 0.0;
 
-        // Calculate grid coefficients
-        const Float denominator = 2.0*(dx*dx + dy*dy + dz*dz);
-        const Float ax = dy*dy*dz*dz/denominator;
-        const Float ay = dz*dz*dx*dx/denominator;
-        const Float az = dx*dx*dy*dy/denominator;
-        const Float af = dx*dx*dy*dy*dz*dz/denominator;
-
         // New value of epsilon in 3D update
+        const Float dxdx = dx*dx;
+        const Float dydy = dy*dy;
+        const Float dzdz = dz*dz;
         const Float e_new
-            = ax*(e_xn + e_xp)
-            + ay*(e_yn + e_yp)
-            + az*(e_zn + e_zp)
-            - af*f;
+            = (-dxdx*dydy*dzdz*f
+                    + dydy*dzdz*(e_xn + e_xp)
+                    + dxdx*dzdz*(e_yn + e_yp)
+                    + dxdx*dydy*(e_zn + e_zp))
+            /(2.0*(dxdx*dydy + dxdx*dzdz + dydy*dzdz));
 
         // New value of epsilon in 1D update
         //const Float e_new = (e_zp + e_zn - dz*dz*f)/2.0;
