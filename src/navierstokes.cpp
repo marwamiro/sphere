@@ -82,7 +82,12 @@ void DEM::printNSarray(FILE* stream, Float* arr)
         for (y=0; y<ns.ny; y++) {
             for (x=0; x<ns.nx; x++) {*/
 
-                fprintf(stream, "%f\t", arr[idx(x,y,z)]);
+                if (x > -1 && x < ns.nx &&
+                        y > -1 && y < ns.ny &&
+                        z > -1 && z < ns.nz)
+                    fprintf(stream, "%f\t", arr[idx(x,y,z)]);
+                else
+                    fprintf(stream, "\x1b[30;1m%f\x1b[0m\t", arr[idx(x,y,z)]);
             }
             fprintf(stream, "\n");
         }
