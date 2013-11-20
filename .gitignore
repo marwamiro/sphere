@@ -45,6 +45,7 @@ helper_math.h
 *.dat
 
 # Folders
+output/
 CMakeFiles
 doc/doctrees
 doc/doxygen/man
