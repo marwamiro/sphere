@@ -45,6 +45,10 @@ const unsigned int nijacnorm = 10;
 // 0: False, 1: True
 const int write_reslog = 1;
 
+// Report epsilon values during Jacobi iterations to stdout
+// 0: False, 1: True
+const int report_epsilon = 1;
+
 
 // Wrapper function for initializing the CUDA components.
 // Called from main.cpp
@@ -1059,18 +1063,14 @@ __host__ void DEM::startTime()
                 reslog.open("max_res_norm.dat");
 
             // transfer normalized residuals from GPU to CPU
-            /*transferNSnormFromGlobalDeviceMemory();
-            transferNSepsilonFromGlobalDeviceMemory();
-            transferNSepsilonNewFromGlobalDeviceMemory();
-            std::cout << "\n###### BEFORE FIRST JACOBI ITERATION ######"
-                << std::endl;
-            printNSarray(stdout, ns.epsilon, "epsilon");
-            printNSarray(stdout, ns.epsilon_new, "epsilon_new");*/
+            if (report_epsilon == 1) {
+                std::cout << "\n###### BEFORE FIRST JACOBI ITERATION ######"
+                    << std::endl;
+                transferNSepsilonFromGlobalDeviceMemory();
+                printNSarray(stdout, ns.epsilon, "epsilon");
+            }
 
             for (unsigned int nijac = 0; nijac<maxiter; ++nijac) {
-
-                //std::cout << "\n###### JACOBI ITERATION "
-                //<< nijac << " ######" << std::endl;
 
                 // Only grad(epsilon) changes during the Jacobi iterations. The
                 // remaining terms of the forcing function are only calculated
@@ -1131,11 +1131,16 @@ __host__ void DEM::startTime()
                 checkForCudaErrors("Post copyValues (epsilon->epsilon_new)",
                         iter);*/
 
-                // transfer normalized residuals from GPU to CPU
-                //transferNSepsilonFromGlobalDeviceMemory();
-                //transferNSepsilonNewFromGlobalDeviceMemory();
-                //printNSarray(stdout, ns.epsilon, "epsilon");
-                //printNSarray(stdout, ns.epsilon_new, "epsilon_new");
+                if (report_epsilon == 1) {
+                    std::cout << "\n###### JACOBI ITERATION "
+                        << nijac << " ######" << std::endl;
+                    transferNSepsilonFromGlobalDeviceMemory();
+                    printNSarray(stdout, ns.epsilon, "epsilon");
+                    //transferNSepsilonNewFromGlobalDeviceMemory();
+                    //printNSarray(stdout, ns.epsilon_new, "epsilon_new");
+                }
+
+
 
                 if (nijac % nijacnorm == 0) {
 

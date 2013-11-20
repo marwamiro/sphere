@@ -1090,9 +1090,9 @@ __global__ void findNSforcing(
 
             // Read needed values
             __syncthreads();
-            const Float3 v_p  = dev_ns_v_p[cellidx];
+            //const Float3 v_p  = dev_ns_v_p[cellidx];
             const Float  phi  = dev_ns_phi[cellidx];
-            const Float  dphi = dev_ns_dphi[cellidx];
+            //const Float  dphi = dev_ns_dphi[cellidx];
             const Float  rho  = 1000.0;
 
             // Calculate derivatives
@@ -1274,7 +1274,7 @@ __global__ void updateNSvelocityPressure(
 
         // Read values
         __syncthreads();
-        const Float  p_old   = dev_ns_p[cellidx];
+        //const Float  p_old   = dev_ns_p[cellidx];
         const Float  epsilon = dev_ns_epsilon[cellidx];
         const Float3 v_p     = dev_ns_v_p[cellidx];
 
