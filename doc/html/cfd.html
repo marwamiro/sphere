@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Fluid dynamics by CFD &mdash; sphere 0.35 documentation</title>
+    <title>Fluid simulation by CFD &mdash; sphere 0.35 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -47,8 +47,8 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="fluid-dynamics-by-cfd">
-<h1>Fluid dynamics by CFD<a class="headerlink" href="#fluid-dynamics-by-cfd" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="fluid-simulation-by-cfd">
+<h1>Fluid simulation by CFD<a class="headerlink" href="#fluid-simulation-by-cfd" title="Permalink to this headline">¶</a></h1>
 <p>Fluid flow is governed by the Navier-Stokes continuity and momentum equations,
 assuming that the fluid is incompressible. In a single phase fluid without
 grains, the continuity equation is:</p>
@@ -56,12 +56,12 @@ grains, the continuity equation is:</p>
 <p><img src="_images/math/8a322e242c02e6e3f6456bc1c76dce8c49278c57.png" alt="\nabla \cdot \boldsymbol{v}_f = 0"/></p>
 </div><p>and the momentum equation:</p>
 <div class="math">
-<p><img src="_images/math/00d04ecbd040dc341b29c1fa4f8b9d0414ce0042.png" alt="\frac{\partial \boldsymbol{v}_f}{\partial t}
-+ \bar{\boldsymbol{v}}_f \cdot \nabla \bar{\boldsymbol{v}}_f =
-- \frac{1}{\rho_f} \nabla p_f + \nu \nabla^2 \bar{\boldsymbol{v}}_f
+<p><img src="_images/math/73131948405aa019f72c0fd603c04cdc8771bb8c.png" alt="\frac{\partial \boldsymbol{v}_f}{\partial t}
++ \boldsymbol{v}_f \cdot \nabla \boldsymbol{v}_f =
+- \frac{1}{\rho_f} \nabla p_f + \nu \nabla^2 \boldsymbol{v}_f
 + \boldsymbol{f}_g"/></p>
-</div><p>Here, <img class="math" src="_images/math/66827e948e4818d3ec677995210f1bdb15909fb7.png" alt="\bar{\boldsymbol{v}}_f"/> is the averaged fluid velocity,
-and <img class="math" src="_images/math/c15a871ddb0fa13b8be399034a63cb533befb6e0.png" alt="\bar{p}_f"/> is the averaged fluid pressure. <img class="math" src="_images/math/d6a7ccf879c4a4fe694033606332cb83806db296.png" alt="\nu"/> is the fluid
+</div><p>Here, <img class="math" src="_images/math/cbe3f817ae974accdf9d422c0df8f6c90721037c.png" alt="\boldsymbol{v}_f"/> is the fluid velocity,
+and <img class="math" src="_images/math/e9ef7a2428b418f501c51688765df5b233b94e4b.png" alt="p_f"/> is the fluid pressure. <img class="math" src="_images/math/d6a7ccf879c4a4fe694033606332cb83806db296.png" alt="\nu"/> is the fluid
 viscosity, and <img class="math" src="_images/math/25e76bc25e44f13c8ab8dbad4adc0cac4f874ffe.png" alt="\boldsymbol{f}_g"/> is the gravitational force.  The
 <a class="reference external" href="https://en.wikipedia.org/wiki/Laplace_operator">Laplacian</a> (<img class="math" src="_images/math/601942ed0022ec9cd1c0b629f9b136761dfb9e24.png" alt="\nabla^2"/>) is the <a class="reference external" href="https://en.wikipedia.org/wiki/Divergence">divergence</a> (<img class="math" src="_images/math/7ece103a81e5a32a7c5b2bfc0077d84982b1ceb5.png" alt="\nabla \cdot"/>) of
 the <a class="reference external" href="https://en.wikipedia.org/wiki/Gradient">gradient</a> (<img class="math" src="_images/math/53196dddfbaf8145fd14be11cf568c5154588ed5.png" alt="\nabla"/>):</p>
@@ -70,22 +70,12 @@ the <a class="reference external" href="https://en.wikipedia.org/wiki/Gradient">
 \frac{\partial^2}{\partial x^2} +
 \frac{\partial^2}{\partial y^2} +
 \frac{\partial^2}{\partial z^2}"/></p>
-</div><p>The discrete Laplacian (approximation of the Laplace operator) can be obtained
-by a finite-difference seven-point stencil in a three-dimensional regular, cubic
-grid with cell spacing <img class="math" src="_images/math/8189a5b5a0917b8c93350827be4038af1839139d.png" alt="h"/>, considering the 6 face neighbors (O&#8217;Reilly and
-Beck 2006):</p>
-<div class="math">
-<p><img src="_images/math/76ba284f05a673fc5449d48ada7c65e0ebccc20c.png" alt="% OReilly and Beck 2006 A Family of Large-Stencil Discrete Laplacian
-% Approximations in Three Dimensions
-\nabla^2 f(x,y,z) \approx \frac{1}{h^2} \left(
-f(x-h,y,z) + f(x+h,y,z) + f(x,y-h,z) +
-f(x,y+h,z) + f(x,y,z-h) + f(x,y,z+h) - 6f(x,y) \right)"/></p>
-</div><p>In an averaged discretization, assuming that that the fluid is inviscid (zero
-viscosity), the continuity equation becomes:</p>
+</div><p>In an averaged discretization the continuity equation becomes:</p>
 <div class="math">
 <p><img src="_images/math/3d9c3be726284ea10391a06e5c7092fdbd9a3be9.png" alt="\nabla \cdot \bar{\boldsymbol{v}}_f = 0"/></p>
 </div><p>The bar symbol denotes that the value is averaged in the cell. The momentum
-equation becomes:</p>
+equation, assuming that that the fluid is inviscid (zero
+viscosity), becomes:</p>
 <div class="math">
 <p><img src="_images/math/5f50b00d26eadec7bee517dc1175d599662bded1.png" alt="\frac{\partial \bar{\boldsymbol{v}}_f}{\partial t}
 + \bar{\boldsymbol{v}}_f \cdot \nabla \bar{\boldsymbol{v}}_f =
@@ -100,12 +90,16 @@ model A in Zhu et al. 2007). The continuity equation becomes:</p>
 + \nabla \cdot (\phi \bar{\boldsymbol{v}}_f) = 0"/></p>
 </div><p>and the momentum equation becomes:</p>
 <div class="math">
-<p><img src="_images/math/3f1463d07e5dbcbe7a94f15d7da66f588add5d7e.png" alt="\frac{\partial (\phi \bar{\boldsymbol{v}}_f)}{\partial t}
-+ \nabla \cdot (\phi \bar{\boldsymbol{v}}_f \bar{\boldsymbol{v}}_f) =
+<p><img src="_images/math/fb9dda95ef702c70ad2fe9566d8f772b035e2ed4.png" alt="\frac{\partial (\phi \bar{\boldsymbol{v}}_f)}{\partial t}
++ \nabla \cdot (\phi \bar{\boldsymbol{v}}_f \otimes \bar{\boldsymbol{v}}_f) =
 - \frac{1}{\rho_f} \phi \nabla \bar{p}_f
 - \frac{1}{\rho_f} \boldsymbol{\bar{f}}_i
 + \phi \boldsymbol{f}_g"/></p>
-</div><p>The solution of the above equations is performed by operator splitting methods.
+</div><p>The outer product <img class="math" src="_images/math/7814f355f21a8807efcea4bf8328d74a987d3b85.png" alt="\bar{\boldsymbol{v}}_f \otimes \bar{\boldsymbol{v}}_f"/>
+is equivalent to a matrix multiplication <img class="math" src="_images/math/bdca570c6e1fc074d8b7813c6b51b215967410bc.png" alt="\bar{\boldsymbol{v}}_f
+\bar{\boldsymbol{v}}_f^T"/>, and results in a 3-by-3 matrix. The divergence of a
+matrix yields a vector field.
+The solution of the above equations is performed by operator splitting methods.
 The methodology presented by Langtangen et al. (2002) is for a viscous fluid
 without particles. A velocity prediction after a forward step in time
 (<img class="math" src="_images/math/a1ffc0a012620941fe660cedabff822ce7162eca.png" alt="\Delta t"/>) in the momentum equation is found using an explicit scheme:</p>
@@ -120,21 +114,21 @@ The parameter <img class="math" src="_images/math/fdb63b9e51abe6bbb16acfb5d7b773
 parameter. The above velocity prediction is modified to account for the presence
 of particles and the fluid inviscidity:</p>
 <div class="math">
-<p><img src="_images/math/acc0a8cb6a2ff751faf90438538ed2d858b9f57a.png" alt="\bar{\boldsymbol{v}}^*_f = \bar{\boldsymbol{v}}^t_f
-- \Delta t \nabla \cdot (\phi^t \bar{\boldsymbol{v}}_f^t \bar{\boldsymbol{v}}_f^t)
-- \Delta t \frac{\beta}{\rho_f} \phi \nabla \bar{p}_f^t
+<p><img src="_images/math/98c627b30f46b5976f75404563780b61d12d5ae1.png" alt="\bar{\boldsymbol{v}}^*_f = \bar{\boldsymbol{v}}^t_f
+- \Delta t \nabla \cdot (\phi^t \bar{\boldsymbol{v}}_f^t \otimes \bar{\boldsymbol{v}}_f^t)
+- \Delta t \frac{\beta}{\rho_f} \phi^t \nabla \bar{p}_f^t
 - \frac{\Delta t}{\rho_f} \boldsymbol{\bar{f}}_i^t
 + \Delta t \phi^t \boldsymbol{f}_g^t"/></p>
 </div><p>The new velocities should fulfill the continuity (here incompressibility)
 equation:</p>
 <div class="math">
-<p><img src="_images/math/b8177a765f1ef9ce10e7c068ef2694a016fca598.png" alt="\frac{\Delta \phi}{\Delta t} + \nabla \cdot (\phi
+<p><img src="_images/math/6632c39b1efc17f4246f532821b044216cd21605.png" alt="\frac{\Delta \phi^t}{\Delta t} + \nabla \cdot (\phi^t
 \bar{\boldsymbol{v}}_f^{t+\Delta t}) = 0"/></p>
 </div><p>The divergence of a scalar and vector can be <a class="reference external" href="http://www.wolframalpha.com/input/?i=div(p+v)">split</a>:</p>
 <div class="math">
-<p><img src="_images/math/dcaa76ccb952af552ea420c054a1265bfacff670.png" alt="\phi \nabla \cdot \bar{\boldsymbol{v}}_f^{t+\Delta t} +
-\bar{\boldsymbol{v}}_f^{t+\Delta t} \cdot \nabla \phi
-+ \frac{\Delta \phi}{\Delta t} = 0"/></p>
+<p><img src="_images/math/fe03736fc5e21e12bb10d1024896be8859864d2a.png" alt="\phi^t \nabla \cdot \bar{\boldsymbol{v}}_f^{t+\Delta t} +
+\bar{\boldsymbol{v}}_f^{t+\Delta t} \cdot \nabla \phi^t
++ \frac{\Delta \phi^t}{\Delta t} = 0"/></p>
 </div><p>The predicted velocity is corrected using the new pressure (Langtangen et al.
 2002):</p>
 <div class="math">
@@ -145,42 +139,87 @@ equation:</p>
 </div><p>The above formulation of the future velocity is put into the continuity
 equation:</p>
 <div class="math">
-<p><img src="_images/math/6fa5eb45222e5fe87c6356ff57e36f4de4b72f06.png" alt="\Rightarrow
-\phi \nabla \cdot
+<p><img src="_images/math/f75656abd7bac307e3f919ad4c807425fa0c8d71.png" alt="\Rightarrow
+\phi^t \nabla \cdot
 \left( \bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho_f} \nabla \epsilon \right)
 +
 \left( \bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho_f} \nabla \epsilon \right)
-\cdot \nabla \phi + \frac{\Delta \phi}{\Delta t} = 0"/></p>
+\cdot \nabla \phi^t + \frac{\Delta \phi^t}{\Delta t} = 0"/></p>
 </div><div class="math">
-<p><img src="_images/math/3c5cc3d744aa9e6b9efc6107d6569fadfda9c5ae.png" alt="\Rightarrow
-\phi \nabla \cdot
-\bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho_f} \phi \nabla^2 \epsilon
-+ \nabla \phi \cdot \bar{\boldsymbol{v}}^*_f
-- \nabla \phi \cdot \nabla \epsilon \frac{\Delta t}{\rho}
-+ \frac{\Delta \phi}{\Delta t} = 0"/></p>
+<p><img src="_images/math/aeb5ca98cc664d55194e2ae5ed0faf863534d9af.png" alt="\Rightarrow
+\phi^t \nabla \cdot
+\bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho_f} \phi^t \nabla^2 \epsilon
++ \nabla \phi^t \cdot \bar{\boldsymbol{v}}^*_f
+- \nabla \phi^t \cdot \nabla \epsilon \frac{\Delta t}{\rho}
++ \frac{\Delta \phi^t}{\Delta t} = 0"/></p>
 </div><div class="math">
-<p><img src="_images/math/d7c73dc33cff75969256aa43b0e909415a8219ea.png" alt="\Rightarrow
-\frac{\Delta t}{\rho} \phi \nabla^2 \epsilon
-= \phi \nabla \cdot \bar{\boldsymbol{v}}^*_f
-+ \nabla \phi \cdot \bar{\boldsymbol{v}}^*_f
-- \nabla \phi \cdot \nabla \epsilon \frac{\Delta t}{\rho}
-+ \frac{\Delta \phi}{\Delta t}"/></p>
+<p><img src="_images/math/47b80ed90864176da276c16c539ebebffe06e4ff.png" alt="\Rightarrow
+\frac{\Delta t}{\rho} \phi^t \nabla^2 \epsilon
+= \phi^t \nabla \cdot \bar{\boldsymbol{v}}^*_f
++ \nabla \phi^t \cdot \bar{\boldsymbol{v}}^*_f
+- \nabla \phi^t \cdot \nabla \epsilon \frac{\Delta t}{\rho}
++ \frac{\Delta \phi^t}{\Delta t}"/></p>
 </div><p>The pressure difference in time becomes a <a class="reference external" href="https://en.wikipedia.org/wiki/Poisson's_equation">Poisson equation</a> with added terms:</p>
 <div class="math">
-<p><img src="_images/math/9025f3143e085f3e9f1a887fb495a4f839419bf0.png" alt="\Rightarrow
+<p><img src="_images/math/2dfba9e72a69e05ad8664b7e8beef7540c044ffa.png" alt="\Rightarrow
 \nabla^2 \epsilon
 = \frac{\nabla \cdot \bar{\boldsymbol{v}}^*_f \rho}{\Delta t}
-+ \frac{\nabla \phi \cdot \bar{\boldsymbol{v}}^*_f \rho}{\Delta t \phi}
-- \frac{\nabla \phi \cdot \nabla \epsilon}{\phi}
-+ \frac{\Delta \phi \rho}{\Delta t^2 \phi}"/></p>
-</div><p>The value of <img class="math" src="_images/math/eaf4418fbe935c15a606516d8f55dc380cd8e822.png" alt="\epsilon"/> is found <a class="reference external" href="https://en.wikipedia.org/wiki/Relaxation_(iterative_method)">iteratively</a> by using the discrete
-Laplacian previously mentioned. When the solution is found, the value is used to
-find the new pressure and velocity:</p>
++ \frac{\nabla \phi^t \cdot \bar{\boldsymbol{v}}^*_f \rho}{\Delta t \phi^t}
+- \frac{\nabla \phi^t \cdot \nabla \epsilon}{\phi^t}
++ \frac{\Delta \phi^t \rho}{\Delta t^2 \phi^t}"/></p>
+</div><p>The right hand side of the above equation is termed the <em>forcing function</em>
+<img class="math" src="_images/math/bb2c93730dbb48558bb3c4738c956c4e8f816437.png" alt="f"/>.  See the <a class="reference external" href="http://www.rsmas.miami.edu/personal/miskandarani/Courses/MSC321/Projects/prjpoisson.pdf">Jacobi iterative solution procedure of a Poisson
+equation</a>.  The value of <img class="math" src="_images/math/eaf4418fbe935c15a606516d8f55dc380cd8e822.png" alt="\epsilon"/> is found <a class="reference external" href="https://en.wikipedia.org/wiki/Relaxation_(iterative_method)">iteratively</a> by using the
+discrete Laplacian previously mentioned. The value of <img class="math" src="_images/math/947d50b29e9abfafccc1f67a1f801d313b34c44a.png" alt="\epsilon(x,y,z)"/> is
+the solution sought, and the right hand side of the above equation is the
+forcing function.  Using second-order finite difference approximations of the
+Laplace operator second-order partial derivatives, the differential equations
+become a system of equations that is solved using Jacobi iterations. The total
+number of unknowns is <img class="math" src="_images/math/954afa1fc1c88d82f51ab22e64b4a7450a89f755.png" alt="(n_x - 1)(n_y - 1)(n_z - 1)"/>.</p>
+<p>The discrete Laplacian (approximation of the Laplace operator) can be obtained
+by a finite-difference seven-point stencil in a three-dimensional, cubic
+grid with cell spacing <img class="math" src="_images/math/3d41adff4943d60236fa626d0bae8e238483278a.png" alt="\Delta x, \Delta y, \Delta z"/>, considering the 6 face neighbors:</p>
+<div class="math">
+<p><img src="_images/math/6e1feb8f41fb33ffbf60f657c5e095c2bb780e4d.png" alt="\nabla^2 \epsilon_{i_x,i_y,i_z}  \approx
+\frac{\epsilon_{i_x-1,i_y,i_z} - 2 \epsilon_{i_x,i_y,i_z}
++ \epsilon_{i_x+1,i_y,i_z}}{\Delta x^2}
++ \frac{\epsilon_{i_x,i_y-1,i_z} - 2 \epsilon_{i_x,i_y,i_z}
++ \epsilon_{i_x,i_y+1,i_z}}{\Delta y^2}
+
++ \frac{\epsilon_{i_x,i_y,i_z-1} - 2 \epsilon_{i_x,i_y,i_z}
++ \epsilon_{i_x,i_y,i_z+1}}{\Delta z^2}
+\approx f_{i_x,i_y,i_z}"/></p>
+</div><p>Within a Jacobi iteration, the value of the unknowns (<img class="math" src="_images/math/07ff47f8ccf9ac490e023817a9241de75c30340c.png" alt="\epsilon^n"/>) is
+used to find an updated solution estimate (<img class="math" src="_images/math/0f06d8c03699aa966cd6c94d11850ede3c97dc41.png" alt="\epsilon^{n+1}"/>).
+The solution for the updated value takes the form:</p>
+<div class="math">
+<p><img src="_images/math/5dfeda3ba68db3f629c37ad0b4cc75095c2d6570.png" alt="\epsilon^{n+1}_{i_x,i_y,i_z}
+= \frac{-\Delta x^2 \Delta y^2 \Delta z^2 f_{i_x,i_y,i_z}
++ \Delta y^2 \Delta z^2 (\epsilon^n_{i_x-1,i_y,i_z} +
+  \epsilon^n_{i_x+1,i_y,i_z})
++ \Delta x^2 \Delta z^2 (\epsilon^n_{i_x,i_y-1,i_z} +
+  \epsilon^n_{i_x,i_y+1,i_z})
++ \Delta x^2 \Delta y^2 (\epsilon^n_{i_x,i_y,i_z-1} +
+  \epsilon^n_{i_x,i_y,i_z+1})}
+  {2 (\Delta x^2 \Delta y^2
+  + \Delta x^2 \Delta z^2
+  + \Delta y^2 \Delta z^2) }"/></p>
+</div><p>The difference between the current and updated value is termed the <em>normalized residual</em>:</p>
+<div class="math">
+<p><img src="_images/math/42dd646859cb77fb91f5751eafca9ea32d8325e8.png" alt="r_{i_x,i_y,i_z} = \frac{(\epsilon^{n+1}_{i_x,i_y,i_z} - \epsilon^n_{i_x,i_y,i_z})^2}{(\epsilon^{n+1}_{i_x,i_y,i_z})^2}"/></p>
+</div><p>Note that the <img class="math" src="_images/math/eaf4418fbe935c15a606516d8f55dc380cd8e822.png" alt="\epsilon"/> values cannot be 0 due to the above normalization
+of the residual.</p>
+<p>The updated values are at the end of the iteration stored as the current values,
+and the maximal value of the normalized residual is found. If this value is
+larger than a tolerance criteria, the procedure is repeated. The iterative
+procedure is ended if the number of iterations exceeds a defined limit.</p>
+<p>After the values of <img class="math" src="_images/math/eaf4418fbe935c15a606516d8f55dc380cd8e822.png" alt="\epsilon"/> are found, they are used to find the new
+pressures and velocities:</p>
 <div class="math">
 <p><img src="_images/math/e56e5eb570de1ee059a5ff63362b614af30f2d38.png" alt="\bar{p}_f^{t+\Delta t} = \beta \bar{p}^t + \epsilon"/></p>
 </div><div class="math">
-<p><img src="_images/math/b6c0be5d6af8394d5e559a0a74f4aa9fa5c0d81a.png" alt="\bar{\boldsymbol{v}}_f^{t+\Delta t} =
-\bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho} \nabla \phi"/></p>
+<p><img src="_images/math/6d7236e247908b84f834378defd549723059e609.png" alt="\bar{\boldsymbol{v}}_f^{t+\Delta t} =
+\bar{\boldsymbol{v}}^*_f - \frac{\Delta t}{\rho} \nabla \epsilon"/></p>
 </div></div>
 
 
