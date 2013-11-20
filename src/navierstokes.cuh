@@ -1018,7 +1018,7 @@ __global__ void findNSforcing(
             __syncthreads();
             const Float3 v_p  = dev_ns_v_p[cellidx];
             const Float  phi  = dev_ns_phi[cellidx];
-            const Float  dphi = dev_ns_dphi[cellidz];
+            const Float  dphi = dev_ns_dphi[cellidx];
             const Float  rho  = 1000.0;
 
             // Calculate derivatives

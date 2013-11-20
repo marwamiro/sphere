@@ -51,6 +51,7 @@ init.time_file_dt[0] = 0.005
 # Small pertubation
 #init.p_f[init.num[0]/2,init.num[1]/2,init.num[2]/2] = 2.0
 
+init.g[2] = 0.0
 
 # Write input file for sphere
 init.writebin()
