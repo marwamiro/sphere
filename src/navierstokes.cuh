@@ -181,20 +181,22 @@ __global__ void setNSdirichlet(
     if (x < devC_grid.num[0] && y < devC_grid.num[1] &&
             (z == devC_grid.num[2]-1 || z == 0)) {
 
-        Float val;
+        /*Float val;
 
         if (z == 0)
             val = 0.0;
         if (z == devC_grid.num[2]-1)
             val = devC_grid.num[2]-1;
-            //val = 0.0;
+            //val = 0.0;*/
 
         // the new value should be identical to the old value, i.e. the temporal
         // gradient is 0
         __syncthreads();
-        //dev_ns_epsilon[idx(x,y,z)] = 0.0;
-        dev_ns_epsilon[idx(x,y,z)]     = val;
-        dev_ns_epsilon_new[idx(x,y,z)] = val;
+        const unsigned int cellidx = idx(x,y,z);
+        dev_ns_epsilon[cellidx]     = 0.0;
+        dev_ns_epsilon_new[cellidx] = 0.0;
+        //dev_ns_epsilon[idx(x,y,z)]     = val;
+        //dev_ns_epsilon_new[idx(x,y,z)] = val;
     }
 }
 
