@@ -135,6 +135,8 @@ class Spherebin:
                                dtype=numpy.float64)
         self.phi = numpy.zeros((self.num[0], self.num[1], self.num[2]),
                                dtype=numpy.float64)
+        self.dphi = numpy.zeros((self.num[0], self.num[1], self.num[2]),
+                               dtype=numpy.float64)
 
     def __cmp__(self, other):
         """ Called when to Spherebin objects are compared.
@@ -204,7 +206,8 @@ class Spherebin:
                 self.nu == other.nu and\
                 (self.v_f == other.v_f).all() and\
                 (self.p_f == other.p_f).all() and\
-                (self.phi == other.phi).all()\
+                (self.phi == other.phi).all() and\
+                (self.dphi == other.dphi).all()\
                 ).all() == True):
                     return 0 # All equal
         else:
@@ -386,8 +389,16 @@ class Spherebin:
                     self.v_f = numpy.empty(
                             (self.num[0], self.num[1], self.num[2], self.nd),
                             dtype=numpy.float64)
-                    self.p_f = numpy.empty((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
-                    self.phi = numpy.empty((self.num[0],self.num[1],self.num[2]), dtype=numpy.float64)
+                    self.p_f = \
+                            numpy.empty((self.num[0],self.num[1],self.num[2]),
+                            dtype=numpy.float64)
+                    self.phi = \
+                            numpy.empty((self.num[0],self.num[1],self.num[2]),
+                            dtype=numpy.float64)
+                    self.dphi = \
+                            numpy.empty((self.num[0],self.num[1],self.num[2]),
+                            dtype=numpy.float64)
+
                     for z in range(self.num[2]):
                         for y in range(self.num[1]):
                             for x in range(self.num[0]):
@@ -400,6 +411,8 @@ class Spherebin:
                                 self.p_f[x,y,z] = \
                                 numpy.fromfile(fh, dtype=numpy.float64, count=1)
                                 self.phi[x,y,z] = \
+                                numpy.fromfile(fh, dtype=numpy.float64, count=1)
+                                self.dphi[x,y,z] = \
                                 numpy.fromfile(fh, dtype=numpy.float64, count=1)
 
         finally:
@@ -515,6 +528,7 @@ class Spherebin:
                             fh.write(self.v_f[x,y,z,2].astype(numpy.float64))
                             fh.write(self.p_f[x,y,z].astype(numpy.float64))
                             fh.write(self.phi[x,y,z].astype(numpy.float64))
+                            fh.write(self.dphi[x,y,z].astype(numpy.float64))
 
         finally:
             if fh is not None:
@@ -726,6 +740,12 @@ class Spherebin:
         poros.SetNumberOfComponents(1)
         poros.SetNumberOfTuples(grid.GetNumberOfPoints())
 
+        # array of scalars: porosity change
+        dporos = vtk.vtkDoubleArray()
+        dporos.SetName("Porosity change")
+        dporos.SetNumberOfComponents(1)
+        dporos.SetNumberOfTuples(grid.GetNumberOfPoints())
+
         # insert values
         for z in range(self.num[2]):
             for y in range(self.num[1]):
@@ -734,11 +754,13 @@ class Spherebin:
                     pres.SetValue(idx, self.p_f[x,y,z])
                     vel.SetTuple(idx, self.v_f[x,y,z,:])
                     poros.SetValue(idx, self.phi[x,y,z])
+                    dporos.SetValue(idx, self.dphi[x,y,z])
 
         # add pres array to grid
         grid.GetPointData().AddArray(pres)
         grid.GetPointData().AddArray(vel)
         grid.GetPointData().AddArray(poros)
+        grid.GetPointData().AddArray(dporos)
 
         # write VTK XML image data file
         writer = vtk.vtkXMLImageDataWriter()
@@ -1349,6 +1371,8 @@ class Spherebin:
         self.v_f = numpy.zeros((self.num[0], self.num[1], self.num[2], self.nd),
                 dtype=numpy.float64)
         self.phi = numpy.ones((self.num[0], self.num[1], self.num[2]),
+                dtype=numpy.float64)
+        self.dphi = numpy.ones((self.num[0], self.num[1], self.num[2]),
                 dtype=numpy.float64)
 
     def defaultParams(self,
