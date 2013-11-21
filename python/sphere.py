@@ -1372,7 +1372,7 @@ class Spherebin:
                 dtype=numpy.float64)
         self.phi = numpy.ones((self.num[0], self.num[1], self.num[2]),
                 dtype=numpy.float64)
-        self.dphi = numpy.ones((self.num[0], self.num[1], self.num[2]),
+        self.dphi = numpy.zeros((self.num[0], self.num[1], self.num[2]),
                 dtype=numpy.float64)
 
     def defaultParams(self,
