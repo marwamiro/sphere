@@ -589,7 +589,7 @@ __global__ void findPorositiesSphericalDev(
                 z*dz + 0.5*dz);
 
         Float d, r;
-        Float phi = 0.99;
+        Float phi = 1.00;
 
         // Read old porosity
         __syncthreads();
@@ -670,8 +670,8 @@ __global__ void findPorositiesSphericalDev(
             }
         }
 
-        // Make sure that the porosity is in the interval ]0.0;1.0[
-        phi = fmin(0.99, fmax(0.01, void_volume/cell_volume));
+        // Make sure that the porosity is in the interval [0.0;1.0]
+        phi = fmin(1.00, fmax(0.00, void_volume/cell_volume));
         //phi = void_volume/cell_volume;
 
         Float dphi = phi - phi_0;
@@ -682,7 +682,7 @@ __global__ void findPorositiesSphericalDev(
 
         // Save porosity and porosity change
         __syncthreads();
-        phi = 1.0; dphi = 0.0; // disable porosity effects
+        //phi = 1.0; dphi = 0.0; // disable porosity effects
         dev_ns_phi[idx(x,y,z)]  = phi;
         dev_ns_dphi[idx(x,y,z)] = dphi;
     }
@@ -1055,6 +1055,7 @@ __global__ void findNSforcing(
             f2 = grad_phi/phi;
 
             // Save values
+            //printf("[%d,%d,%d] dphi = %f\n", x,y,z, dphi);
             //printf("[%d,%d,%d] v_p = %f\tdiv_v_p = %f\n", x,y,z, v_p, div_v_p);
             __syncthreads();
             dev_ns_f1[cellidx] = f1;
