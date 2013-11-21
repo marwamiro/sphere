@@ -959,9 +959,10 @@ __global__ void findPredNSvelocities(
         const Float3 f_i = MAKE_FLOAT3(0.0, 0.0, 0.0);
 
         // Gravitational drag force on cell fluid mass
-        const Float3 f_g
-            = MAKE_FLOAT3(devC_params.g[0], devC_params.g[1], devC_params.g[2])
-            * rho * dx*dy*dz * phi;
+        //const Float3 f_g
+            //= MAKE_FLOAT3(devC_params.g[0], devC_params.g[1], devC_params.g[2])
+            //* rho * dx*dy*dz * phi;
+        const Float3 f_g = MAKE_FLOAT3(0.0, 0.0, 0.0);
 
         // Find pressure gradient
         const Float3 grad_p = gradient(dev_ns_p, x, y, z, dx, dy, dz);
