@@ -4,7 +4,7 @@
 from sphere import *
 
 ### EXPERIMENT SETUP ###
-initialization = True
+initialization = False
 consolidation  = True
 shearing       = True
 rendering      = True
@@ -29,7 +29,7 @@ init = Spherebin(np = np, nd = 3, nw = 0, sid = sim_id + "-init")
 init.generateRadii(radius_mean = 0.02)
 
 # Use default params
-init.defaultParams(gamma_n = 0.0, mu_s = 0.3, mu_d = 0.3)
+init.defaultParams(gamma_n = 100.0, mu_s = 0.6, mu_d = 0.6)
 
 # Initialize positions in random grid (also sets world size)
 hcells = np**(1.0/3.0)
@@ -48,6 +48,8 @@ if (initialization == True):
   if (plots == True):
     # Make a graph of energies
     visualize(init.sid, "energy", savefig=True, outformat='png')
+
+  init.writeVTKall()
 
   if (rendering == True):
     # Render images with raytracer
@@ -91,6 +93,8 @@ for devs in devslist:
       visualize(cons.sid, "energy", savefig=True, outformat='png')
       visualize(cons.sid, "walls", savefig=True, outformat='png')
 
+    cons.writeVTKall()
+
     if (rendering == True):
       # Render images with raytracer
       cons.render(method = "pres", max_val = 2.0*devs, verbose = False)
@@ -123,6 +127,8 @@ for devs in devslist:
       # Make a graph of energies
       visualize(shear.sid, "energy", savefig=True, outformat='png')
       visualize(shear.sid, "shear", savefig=True, outformat='png')
+
+    shear.writeVTKall()
 
     if (rendering == True):
       # Render images with raytracer
