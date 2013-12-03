@@ -614,7 +614,6 @@ __global__ void findPorositiesSphericalDev(
 
                     // Get distance modifier for interparticle
                     // vector, if it crosses a periodic boundary
-                    // DISTMOD IS NEVER NOT 0,0,0 !!!!!!
                     distmod = MAKE_FLOAT3(0.0, 0.0, 0.0);
                     if (findDistMod(&targetCell, &distmod) != -1) {
 
@@ -682,7 +681,7 @@ __global__ void findPorositiesSphericalDev(
 
         // Save porosity and porosity change
         __syncthreads();
-        //phi = 1.0; dphi = 0.0; // disable porosity effects
+        phi = 1.0; dphi = 0.0; // disable porosity effects
         dev_ns_phi[idx(x,y,z)]  = phi;
         dev_ns_dphi[idx(x,y,z)] = dphi;
     }

@@ -63,13 +63,16 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
         // Update acceleration of particle
         acc.x = force.x/m + devC_params.g[0];
         acc.y = force.y/m + devC_params.g[1];
-        acc.z = force.z/m + devC_params.g[2];
+        if (ND == 3)
+            acc.z = force.z/m + devC_params.g[2];
 
         // Update angular acceleration of particle 
         // (angacc = (total moment)/Intertia, intertia = 2/5*m*r^2)
-        angacc.x = torque.x * 1.0 / (2.0/5.0 * m * radius*radius);
+        if (ND == 3)
+            angacc.x = torque.x * 1.0 / (2.0/5.0 * m * radius*radius);
         angacc.y = torque.y * 1.0 / (2.0/5.0 * m * radius*radius);
-        angacc.z = torque.z * 1.0 / (2.0/5.0 * m * radius*radius);
+        if (ND == 3)
+            angacc.z = torque.z * 1.0 / (2.0/5.0 * m * radius*radius);
 
         // Check if particle has a fixed horizontal velocity
         if (vel.w > 0.0f) {
@@ -80,7 +83,8 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
             // to allow for dilation.
             acc.x = 0.0;
             acc.y = 0.0;
-            acc.z -= devC_params.g[2];
+            if (ND == 3)
+                acc.z -= devC_params.g[2];
 
             // Zero the angular acceleration
             angacc = MAKE_FLOAT4(0.0, 0.0, 0.0, 0.0);
@@ -89,19 +93,25 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
         // Velocity Verlet algorithm using old and new accelerations
         x.x += vel.x*dt + 0.5*acc0.x*dt*dt;
         x.y += vel.y*dt + 0.5*acc0.y*dt*dt;
-        x.z += vel.z*dt + 0.5*acc0.z*dt*dt;
+        if (ND == 3)
+            x.z += vel.z*dt + 0.5*acc0.z*dt*dt;
 
-        angpos.x += angvel.x*dt + 0.5*angacc0.x*dt*dt;
+        if (ND == 3)
+            angpos.x += angvel.x*dt + 0.5*angacc0.x*dt*dt;
         angpos.y += angvel.y*dt + 0.5*angacc0.y*dt*dt;
-        angpos.z += angvel.z*dt + 0.5*angacc0.z*dt*dt;
+        if (ND == 3)
+            angpos.z += angvel.z*dt + 0.5*angacc0.z*dt*dt;
 
         vel.x += (acc0.x + acc.x)/2.0*dt;
         vel.y += (acc0.y + acc.y)/2.0*dt;
-        vel.z += (acc0.z + acc.z)/2.0*dt;
+        if (ND == 3)
+            vel.z += (acc0.z + acc.z)/2.0*dt;
 
-        angvel.x += (angacc0.x + angacc.x)/2.0*dt;
+        if (ND == 3)
+            angvel.x += (angacc0.x + angacc.x)/2.0*dt;
         angvel.y += (angacc0.y + angacc.y)/2.0*dt;
-        angvel.z += (angacc0.z + angacc.z)/2.0*dt;
+        if (ND == 3)
+            angvel.z += (angacc0.z + angacc.z)/2.0*dt;
 
         // Move particles outside the domain across periodic boundaries
         if (devC_grid.periodic == 1) {
@@ -109,10 +119,12 @@ __global__ void integrate(Float4* dev_x_sorted, Float4* dev_vel_sorted, // Input
                 x.x += L.x;
             if (x.x > L.x)
                 x.x -= L.x;
-            if (x.y < origo.y)
-                x.y += L.y;
-            if (x.y > L.y)
-                x.y -= L.y;
+            if (ND == 3) {
+                if (x.y < origo.y)
+                    x.y += L.y;
+                if (x.y > L.y)
+                    x.y -= L.y;
+            }
         } else if (devC_grid.periodic == 2) {
             if (x.x < origo.x)
                 x.x += L.x;
