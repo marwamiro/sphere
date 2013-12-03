@@ -736,6 +736,10 @@ __host__ void DEM::startTime()
         cudaEventCreate(&kernel_toc);
     }
 
+    // The model start time is saved for profiling performance
+    double t_start = time.current;
+    double t_ratio;     // ration between time flow in model vs. reality
+
     if (verbose == 1)
         cout << "  Current simulation time: " << time.current << " s.";
 
@@ -1260,9 +1264,17 @@ __host__ void DEM::startTime()
 
         // Report time to console
         if (verbose == 1 && (iter % stdout_report == 0)) {
+
+            toc = clock();
+            time_spent = (toc - tic)/(CLOCKS_PER_SEC); // real time spent
+
+            // Real time it takes to compute a second of model time
+            t_ratio = time_spent/(time.current - t_start);
+
             cout << "\r  Current simulation time: " 
                 << time.current << "/"
-                << time.total << " s.        "; // << std::flush;
+                << time.total << " s. ("
+                << t_ratio << " s/s)       "; // << std::flush;
         }
 
 
