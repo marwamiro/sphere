@@ -608,8 +608,10 @@ __host__ void DEM::startTime()
     // Write initial data to output/<sid>.output00000.bin
     writebin(("output/" + sid + ".output00000.bin").c_str());
 
-    // Model world variables
-    float tic, toc, filetimeclock, time_spent, dev_time_spent;
+    // Time variables
+    clock_t tic, toc;
+    double filetimeclock, time_spent;
+    float dev_time_spent;
 
     // Start CPU clock
     tic = clock();
